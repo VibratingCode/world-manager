@@ -2293,9 +2293,19 @@ const SYMBOLS = (() => {
     ['v:tower', 'Watchtower', 'fort'], ['v:bunker', 'Bunker', 'fort'], ['v:outpost', 'Outpost', 'fort'], ['v:palisade', 'Palisade fort', 'fort'],
     ['v:gate', 'Gatehouse', 'fort'], ['v:barracks', 'Barracks', 'fort'], ['v:firebase', 'Firebase', 'fort'], ['v:siege', 'Siege camp', 'camp'],
     ['v:hillfort', 'Hill fort', 'fort'], ['v:seafort', 'Sea fort', 'fort'], ['v:ruinfort', 'Ruined fortress', 'ruin'],
+    // land use and ecology: tinted area badges
+    ['v:farm', 'Farming area', 'other', 'eco'], ['v:herd', 'Herd area', 'other', 'eco'], ['v:graze', 'Grazing land', 'other', 'eco'],
+    ['v:orchard', 'Orchard area', 'other', 'eco'], ['v:vine', 'Vineyard area', 'other', 'eco'], ['v:paddy', 'Rice paddies', 'other', 'eco'],
+    ['v:irrig', 'Irrigated land', 'other', 'eco'], ['v:fallow', 'Fallow land', 'other', 'eco'], ['v:forestry', 'Managed forest', 'other', 'eco'],
+    ['v:logging', 'Logging area', 'other', 'eco'], ['v:fish', 'Fishing grounds', 'other', 'eco'], ['v:spawn', 'Spawning grounds', 'other', 'eco'],
+    ['v:hunt', 'Hunting grounds', 'other', 'eco'], ['v:wetland', 'Wetland', 'other', 'eco'], ['v:reserve', 'Nature reserve', 'other', 'eco'],
+    ['v:nesting', 'Nesting area', 'other', 'eco'], ['v:migrate', 'Migration route', 'other', 'eco'], ['v:mining', 'Mining area', 'other', 'eco'],
+    ['v:blight', 'Blighted land', 'other', 'eco'], ['v:flood', 'Flood zone', 'other', 'eco'], ['v:drought', 'Drought area', 'other', 'eco'],
+    ['v:forage', 'Foraging area', 'other', 'eco'],
   ];
   const CATS = [
     ['defaults', 'Cities & forts', 'town', null],
+    ['eco', 'Ecology & land use', 'other', '🌾 Grain fields;🐄 Cattle range;🐑 Sheep grazing;🐐 Goat range;🐖 Swine forage;🐎 Horse range;🦬 Bison herds;🦌 Deer range;🐫 Camel range;🦙 Llama pasture;🐓 Fowl yards;🐝 Pollinator meadow;🍯 Wild honey;🌳 Old-growth forest;🌲 Timber stand;🌱 Reforestation;🌿 Herb gathering;🍄 Mushroom gathering;🫐 Berry picking;🌰 Nut forage;🎣 Angling waters;🐟 Salmon run;🦪 Shellfish beds;🦐 Shrimp grounds;🐋 Whale migration;🦆 Waterfowl marsh;🦩 Wading birds;🐸 Amphibian breeding;🪺 Bird colony;🦅 Raptor territory;🐺 Predator range;🐻 Bear country;🦇 Bat roost;🦋 Butterfly migration;🐾 Game trail;🏹 Game reserve;🪤 Trapping lines;🌊 Tidal marsh;🪸 Coral reef;🌴 Mangroves;🏜️ Desertification;🔥 Burn scar;🪨 Erosion;💧 Aquifer;🚰 Irrigation canal;☀️ Arid zone;❄️ Permafrost;🧂 Salt marsh;🌻 Oilseed fields;🌽 Grain belt;🥔 Tuber fields;🍇 Wine country;🍎 Orchard belt;🍚 Rice terraces;🌵 Arid range;🦠 Crop blight;☣️ Contaminated land;♻️ Restoration site;🛡️ Protected area;🚫 No hunting;🐛 Pest outbreak;🦗 Locust swarms;🌬️ Wind erosion;🪷 Lotus ponds;🌼 Wildflower meadow;🐢 Turtle nesting;🦭 Seal haul-out;🦈 Shark nursery;🐊 Crocodile habitat;🐘 Elephant corridor;🦒 Savanna grazing;🌫️ Cloud forest'],
     ['settle', 'Settlements', 'town', '🏠 House;🏡 Homestead;🏘️ Houses;🏚️ Abandoned house;🏢 Office block;🏬 Market hall;🏣 Post office;🏤 Courier office;🏥 Hospital;🏦 Bank;🏨 Inn;🏪 Shop;🏫 School;🏛️ Hall of state;🏗️ Construction site;🏯 Pagoda castle;🏰 Castle;🗼 Tower;🗽 Statue;⛲ Fountain;🏙️ City;🌆 City at dusk;🌃 City at night;🌉 Bridge;🏟️ Arena;🎪 Circus;🎡 Fair;🏠 Cottage;🛖 Hut;🏕️ Campsite;🏞️ Park;🏤 Guild house;🏛️ Senate;🏬 Bazaar;🪧 Notice board;🧱 Brickworks;🏛️ Museum;📚 Library;🎭 Theatre;🎨 Gallery;🏩 Pleasure house;🏢 Tenement;🏟️ Colosseum;🗿 Monument;🛝 Playground;🧺 Laundry;💈 Barber;🪦 Graveyard;⚰️ Tomb;🏺 Pottery'],
     ['military', 'Military', 'fort', '⚔️ Battlefield;🛡️ Defence;🗡️ Ambush;🏹 Archery range;🪖 Garrison;🎖️ Command post;🔫 Armoury;💣 Minefield;🧨 Demolition site;💥 Explosion;🚩 Rally point;🏴 Enemy territory;🏳️ Truce;🎯 Target;🪓 Axe camp;🔪 Raider camp;🛡️ Bulwark;🧰 Supply depot;📯 Signal horn;🥁 War drums;🐎 Cavalry;🚀 Missile site;🛩️ Airfield;✈️ Air base;🚁 Helipad;🚢 Naval base;⛴️ Troop ferry;🚓 Patrol;🚨 Alarm;🔭 Lookout;📡 Radar;🧱 Wall;⛓️ Prison;🔒 Locked gate;🗝️ Postern;🪤 Trap;🏯 Bastion;☠️ Massacre site;🦺 Engineers;🎗️ Memorial;🪦 War grave;🥾 March route;🗺️ War room;📜 Treaty;🔥 Burned village;🐲 War beast pen;🛰️ Orbital strike;🪝 Grapple point;⚙️ Siege works'],
     ['faith', 'Faith & magic', 'landmark', '⛪ Church;🕌 Mosque;🛕 Temple;🕍 Synagogue;⛩️ Shrine;🕋 Holy stone;🛐 Altar;✝️ Cross;☪️ Crescent;🕉️ Om;☸️ Wheel;✡️ Star;☯️ Yin yang;🔯 Hexagram;🪯 Khanda;☦️ Orthodox cross;🙏 Pilgrimage;📿 Prayer beads;🕯️ Candle shrine;🔮 Oracle;🪄 Wizard tower;✨ Ley node;💫 Rift;🌀 Portal;🧿 Ward;🪬 Hamsa;⚗️ Alchemist;🧪 Laboratory;🧙 Mage;🧝 Elf grove;🧚 Fairy ring;🧞 Djinn lamp;🧛 Vampire lair;🧟 Undead;👻 Haunting;💀 Necropolis;🦴 Bone field;🪦 Barrow;⚱️ Urn;🗝️ Sealed vault;📖 Grimoire;🌟 Holy site;☄️ Fallen star;🌙 Moon shrine;☀️ Sun temple;⭐ Star shrine;🔆 Blessing;♾️ Eternal flame;🪷 Lotus garden;🌌 Astral gate'],
@@ -2316,7 +2326,7 @@ const SYMBOLS = (() => {
     ['things', 'Objects & misc', 'other', '🏮 Lantern;🪔 Oil lamp;💡 Bulb;🔦 Torch;🧯 Extinguisher;🪣 Bucket;🧹 Broom;🧺 Basket;🪑 Chair;🛋️ Lounge;🛏️ Bed;🚪 Door;🪟 Window;🪜 Ladder;🧳 Luggage;🎒 Pack;👜 Bag;🪖 Helmet;🎩 Top hat;🧢 Cap;👒 Sun hat;🥾 Boots;🧤 Gloves;🧣 Scarf;🧥 Coat;🪢 Rope;🧵 Thread;🧷 Pin;📎 Clip;✂️ Scissors;📏 Ruler;📐 Set square;✏️ Pencil;🖊️ Pen;🖌️ Brush;🖍️ Crayon;📷 Camera;📹 Video;📺 Screen;📻 Radio;☎️ Telephone;📱 Phone;⏰ Clock;🕰️ Mantel clock;⌚ Watch;🔔 Bell;📢 Loudspeaker;📣 Megaphone;🧩 Puzzle;🪅 Piñata;🎀 Ribbon'],
   ];
   const list = [], byKey = {};
-  for (const [k, name, type] of DRAWN) { const s = { key: k, name, type, cat: 'defaults', drawn: true }; list.push(s); byKey[k] = s; }
+  for (const [k, name, type, cat] of DRAWN) { const s = { key: k, name, type, cat: cat || 'defaults', drawn: true }; list.push(s); byKey[k] = s; }
   for (const [cat, , type, src] of CATS) if (src) for (const part of src.split(';')) {
     const i = part.indexOf(' '), e = part.slice(0, i), name = part.slice(i + 1).trim();
     const key = 'e:' + e + ':' + name;
@@ -2333,6 +2343,46 @@ const SYMBOLS = (() => {
     const box = (a, b, w, hh) => { g.beginPath(); g.rect(a * u, b * u, w * u, hh * u); };
     const fs = () => { g.fill(); g.stroke(); };
     const crenel = (a, b, w, n) => { const s = w / (2 * n - 1); for (let q = 0; q < n; q++) { box(a + q * 2 * s, b - s, s, s); fs(); } };
+    // area badge: a tinted rounded square, then a pattern in ink clipped to it
+    const ECO = { farm: '#e7c75a', herd: '#b9d77a', graze: '#9fd36b', orchard: '#7cc46a', vine: '#b48cd6', paddy: '#7fd1c0', irrig: '#76c3d9', fallow: '#d9c6a0',
+      forestry: '#4f9a55', logging: '#c79b6a', fish: '#6fb2e8', spawn: '#8ccbf0', hunt: '#c58a5a', wetland: '#6fc0a5', reserve: '#69c27a', nesting: '#e3b97a',
+      migrate: '#f0d27a', mining: '#a9a9a9', blight: '#a68f7a', flood: '#7aa6e0', drought: '#e6a35a', forage: '#a7cf6b' };
+    const ek = k.slice(2);
+    if (ECO[ek]) {
+      const rr = (x0, y0, w, hh, c) => { g.beginPath(); g.moveTo(x0 + c, y0); g.arcTo(x0 + w, y0, x0 + w, y0 + hh, c); g.arcTo(x0 + w, y0 + hh, x0, y0 + hh, c); g.arcTo(x0, y0 + hh, x0, y0, c); g.arcTo(x0, y0, x0 + w, y0, c); g.closePath(); };
+      rr(-9.5 * u, -9.5 * u, 19 * u, 19 * u, 4 * u); g.fillStyle = ECO[ek]; g.fill(); g.lineWidth = Math.max(1.2, r * 0.11); g.strokeStyle = topo ? '#1a1a1a' : '#fff'; g.stroke();
+      g.save(); rr(-9.5 * u, -9.5 * u, 19 * u, 19 * u, 4 * u); g.clip();
+      const D = '#1d2a16'; g.strokeStyle = D; g.fillStyle = D; g.lineWidth = Math.max(1, r * 0.1);
+      const L = (x0, y0, x1, y1) => { g.beginPath(); g.moveTo(x0 * u, y0 * u); g.lineTo(x1 * u, y1 * u); g.stroke(); };
+      const C = (x0, y0, rad, fill) => { g.beginPath(); g.arc(x0 * u, y0 * u, rad * u, 0, Math.PI * 2); fill ? g.fill() : g.stroke(); };
+      const tuft = (x0, y0) => { L(x0 - 2, y0, x0 - 1, y0 - 3); L(x0, y0, x0, y0 - 4); L(x0 + 2, y0, x0 + 1, y0 - 3); };
+      const tree = (x0, y0, sz) => { g.beginPath(); g.moveTo(x0 * u, (y0 - sz) * u); g.lineTo((x0 + sz * 0.7) * u, (y0 + sz * 0.5) * u); g.lineTo((x0 - sz * 0.7) * u, (y0 + sz * 0.5) * u); g.closePath(); g.fill(); L(x0, y0 + sz * 0.5, x0, y0 + sz * 0.9); };
+      switch (ek) {
+        case 'farm': for (let q = -14; q < 14; q += 4) L(q, 10, q + 10, -10); break;
+        case 'herd': for (const [x0, y0] of [[-4, -3], [4, 1], [-2, 5]]) { g.beginPath(); g.ellipse((x0 - 1.1) * u, y0 * u, 0.9 * u, 1.6 * u, -0.2, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse((x0 + 1.1) * u, y0 * u, 0.9 * u, 1.6 * u, 0.2, 0, Math.PI * 2); g.fill(); } break;
+        case 'graze': for (const [x0, y0] of [[-5, -2], [3, -4], [-1, 5], [6, 4]]) tuft(x0, y0); break;
+        case 'orchard': for (let x0 = -5; x0 <= 5; x0 += 5) for (let y0 = -5; y0 <= 5; y0 += 5) C(x0, y0, 1.6, true); break;
+        case 'vine': for (let y0 = -5; y0 <= 5; y0 += 5) { L(-8, y0, 8, y0); for (let x0 = -6; x0 <= 6; x0 += 4) C(x0, y0, 1.1, true); } break;
+        case 'paddy': for (let q = -6; q <= 6; q += 4) { L(-10, q, 10, q); } for (let q = -4; q <= 4; q += 8) L(q, -10, q, 10); break;
+        case 'irrig': for (let y0 = -5; y0 <= 5; y0 += 5) { g.beginPath(); for (let x0 = -10; x0 <= 10; x0 += 1) g.lineTo(x0 * u, (y0 + Math.sin(x0 * 0.9) * 1.3) * u); g.stroke(); } break;
+        case 'fallow': for (let x0 = -7; x0 <= 7; x0 += 3.5) for (let y0 = -7; y0 <= 7; y0 += 3.5) C(x0 + (y0 % 7 ? 1.7 : 0), y0, 0.55, true); break;
+        case 'forestry': tree(-4, -1, 4); tree(4, -2, 4); tree(0, 4, 3.5); break;
+        case 'logging': for (const [x0, y0] of [[-4, -3], [4, 0], [-2, 5]]) { C(x0, y0, 2.4, false); C(x0, y0, 1, false); } break;
+        case 'fish': g.beginPath(); g.ellipse(-1 * u, 0, 5 * u, 2.8 * u, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.moveTo(3.5 * u, 0); g.lineTo(8 * u, -3.5 * u); g.lineTo(8 * u, 3.5 * u); g.closePath(); g.fill(); break;
+        case 'spawn': for (const [x0, y0] of [[-5, -4], [0, -5], [5, -3], [-3, 1], [3, 2], [-5, 6], [1, 6], [6, 6]]) C(x0, y0, 1.4, false); break;
+        case 'hunt': L(-7, 7, 6, -6); g.beginPath(); g.moveTo(7 * u, -7 * u); g.lineTo(2 * u, -6 * u); g.lineTo(6 * u, -2 * u); g.closePath(); g.fill(); L(-7, 7, -7, 3); L(-7, 7, -3, 7); break;
+        case 'wetland': for (const [x0, y0] of [[-5, -2], [4, -4], [0, 4]]) { tuft(x0, y0); L(x0 - 3, y0 + 1.5, x0 + 3, y0 + 1.5); } break;
+        case 'reserve': g.beginPath(); g.moveTo(0, -7 * u); g.quadraticCurveTo(8 * u, -2 * u, 0, 7 * u); g.quadraticCurveTo(-8 * u, -2 * u, 0, -7 * u); g.fill(); g.strokeStyle = ECO.reserve; L(0, -4, 0, 6); break;
+        case 'nesting': g.beginPath(); g.arc(0, 0, 6 * u, 0.15 * Math.PI, 0.85 * Math.PI); g.lineWidth = 2.2 * u; g.stroke(); for (const x0 of [-2.5, 0, 2.5]) { g.beginPath(); g.ellipse(x0 * u, 1.5 * u, 1.3 * u, 1.8 * u, 0, 0, Math.PI * 2); g.fill(); } break;
+        case 'migrate': for (const x0 of [-6, -1, 4]) { g.beginPath(); g.moveTo(x0 * u, -5 * u); g.lineTo((x0 + 4) * u, 0); g.lineTo(x0 * u, 5 * u); g.stroke(); } break;
+        case 'mining': L(-6, 6, 6, -6); L(-6, -6, 6, 6); g.fillRect(-8 * u, -8 * u, 4 * u, 3 * u); g.fillRect(4 * u, -8 * u, 4 * u, 3 * u); break;
+        case 'blight': for (let q = -14; q < 14; q += 4) { L(q, 10, q + 10, -10); L(q, -10, q + 10, 10); } break;
+        case 'flood': for (let y0 = -4; y0 <= 6; y0 += 5) { g.beginPath(); for (let x0 = -10; x0 <= 10; x0 += 1) g.lineTo(x0 * u, (y0 + Math.sin(x0 * 0.8) * 1.6) * u); g.stroke(); } L(0, -9, 0, -5); break;
+        case 'drought': C(0, 0, 3, true); for (let q = 0; q < 8; q++) { const a2 = q * Math.PI / 4; L(Math.cos(a2) * 4.5, Math.sin(a2) * 4.5, Math.cos(a2) * 7, Math.sin(a2) * 7); } break;
+        case 'forage': for (const [x0, y0] of [[-4, -3], [4, -2], [0, 4]]) { C(x0, y0, 1.8, true); L(x0, y0 - 1.8, x0 + 1, y0 - 3.6); } break;
+      }
+      g.restore(); g.restore(); return;
+    }
     switch (k) {
       case 'v:walled': g.beginPath(); g.arc(0, 0, 9 * u, 0, Math.PI * 2); fs(); g.beginPath(); g.arc(0, 0, 5.5 * u, 0, Math.PI * 2); g.stroke();
         for (let q = 0; q < 6; q++) { const a = q * Math.PI / 3; g.beginPath(); g.arc(Math.cos(a) * 9 * u, Math.sin(a) * 9 * u, 2 * u, 0, Math.PI * 2); fs(); } g.fillStyle = ink; g.beginPath(); g.arc(0, 0, 2.2 * u, 0, Math.PI * 2); g.fill(); break;
@@ -2751,7 +2801,7 @@ const MapView = (() => {
       if (lay.grid) drawGraticuleLocal(st.topo);
     }
     if (lay.features) drawFeatures(st.topo); else featureHits = [];
-    if (!ex) drawShape();
+    if (!ex) { drawRouteHL(); drawShape(); }
     if (lay.places) drawPlaces(st.topo, labelBoxes);
     if (lay.features) drawFeatureLabels(st.topo, labelBoxes);
     if (st.topo) drawTileLabels(fresh, Sz, st, labelBoxes);
@@ -2985,6 +3035,14 @@ const MapView = (() => {
       strokeFeature(f, scr, topo);
     }
   }
+  // road classes: [casing colour, casing width, line colour, line width] on map sheets (topo) and the atlas
+  const ROAD_STYLE = {
+    highway: { name: 'Highway', speed: 1.25, topo: ['#3a2a1a', 6.6, '#e8762b', 4.2], atlas: ['rgba(250,240,224,.95)', 5.6, '#c0392b', 3.1] },
+    road: { name: 'Road', speed: 1, topo: ['#4b3a2a', 4.4, '#f2c14e', 2.4], atlas: ['rgba(250,240,224,.92)', 3.4, '#a63d26', 1.7] },
+    lane: { name: 'Lane', speed: 0.9, topo: ['#4b3a2a', 3, '#ffffff', 1.5], atlas: ['rgba(250,240,224,.85)', 2.4, '#8a4a2a', 1.1] },
+    track: { name: 'Track', speed: 0.75, dash: [5, 3], topo: [null, 0, '#6b4a2b', 1.7], atlas: [null, 0, 'rgba(235,215,180,.95)', 1.8] },
+  };
+  const roadCls = f => (ROAD_STYLE[f.cls] ? f.cls : 'road');
   function polyline(r) { ctx.beginPath(); ctx.moveTo(r[0], r[1]); for (let i = 3; i < r.length; i += 3) ctx.lineTo(r[i], r[i + 1]); }
   function strokeFeature(f, runs, topo) {
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -3006,8 +3064,11 @@ const MapView = (() => {
         }
       }
     } else if (k === 'road') {
-      for (const r of runs) { polyline(r); ctx.strokeStyle = topo ? '#4b3a2a' : 'rgba(250,240,224,.92)'; ctx.lineWidth = topo ? 4.4 : 3.4; ctx.stroke(); }
-      for (const r of runs) { polyline(r); ctx.strokeStyle = topo ? '#f2c14e' : '#a63d26'; ctx.lineWidth = topo ? 2.4 : 1.7; ctx.stroke(); }
+      const R = ROAD_STYLE[f.cls] || ROAD_STYLE.road, v = topo ? R.topo : R.atlas;
+      if (R.dash) ctx.setLineDash(R.dash);
+      if (v[1]) for (const r of runs) { polyline(r); ctx.strokeStyle = v[0]; ctx.lineWidth = v[1]; ctx.stroke(); }
+      for (const r of runs) { polyline(r); ctx.strokeStyle = v[2]; ctx.lineWidth = v[3]; ctx.stroke(); }
+      if (R.dash) ctx.setLineDash([]);
     } else if (k === 'trail') {
       ctx.setLineDash([6, 4]);
       for (const r of runs) { polyline(r); ctx.strokeStyle = topo ? '#262626' : 'rgba(250,240,224,.95)'; ctx.lineWidth = 1.5; ctx.stroke(); }
@@ -3403,6 +3464,7 @@ const MapView = (() => {
         party.length ? h('button', { class: 'btn small', onclick: () => { for (const c of party) c.at = p.id; const hr = S.world.here; setHere([p.lat, p.lon], hr ? brgDeg([hr.lat, hr.lon], [p.lat, p.lon]) : 0); save(); emit('data'); sh.close(); openPlace(p); toast(`The party is now at ${p.name}`); } }, 'Party is here') : null),
         chars.length ? chars.map(c => h('div', { class: 'list-row tap', onclick: () => { sh.close(); Chars.open(c.id); } }, avatar(c, 30),
           h('div', { class: 'main' }, h('div', { class: 'title' }, c.name), h('div', { class: 'sub' }, [c.at === p.id ? 'Currently here' : null, c.home === p.id ? 'Home' : null].filter(Boolean).join(' · '))))) : h('div', { class: 'small muted' }, 'Nobody is here or lives here.')),
+      p.type !== 'region' && p.type !== 'water' ? placeRoadsCard(p, () => sh.close()) : null,
       evs.length ? h('div', { class: 'card' }, h('h3', null, icon('timeline', 15), 'Events here'), evs.map(e => h('div', { class: 'list-row tap', onclick: () => { sh.close(); Timeline.focusEvent(e.id); } },
         h('div', { class: 'main' }, h('div', { class: 'title' }, e.title), h('div', { class: 'sub' }, Cal.fmt(e.start)))))) : null,
       near.length ? h('div', { class: 'card' }, h('h3', null, icon('pin', 15), 'Nearby'), near.map(n => h('div', { class: 'list-row tap', onclick: () => { sh.close(); openPlace(n.p); } },
@@ -3659,6 +3721,8 @@ const MapView = (() => {
       f.from = A.p.id; f.to = B.p.id;
       markCells(scr);
       if (['city', 'capital', 'port'].includes(A.p.type) && ['city', 'capital', 'port'].includes(B.p.type)) { f.name = Names.make('road'); for (let k = 0; k < 10 && S.world.features.concat(recs).some(x => x.name === f.name); k++) f.name = Names.make('road'); }
+      const big = t => ['city', 'capital', 'port'].includes(t);
+      f.cls = big(A.p.type) && big(B.p.type) ? 'highway' : A.p.type === 'village' || B.p.type === 'village' ? 'lane' : 'road';
       recs.push(f);
     }
     if (!recs.length) { toast('Could not find overland routes between these settlements.'); return; }
@@ -3720,6 +3784,9 @@ const MapView = (() => {
         line('<path d="M1 9c6-6 10 4 16-2s10-3 16-4" stroke="#1f4f86" stroke-width="4"/><path d="M1 9c6-6 10 4 16-2s10-3 16-4" stroke="#3a7cc2" stroke-width="2.2"/>', 'River'),
         line('<path d="M1 7h32" stroke="#4b3a2a" stroke-width="4.4"/><path d="M1 7h32" stroke="#f2c14e" stroke-width="2.4"/>', 'Road (map sheet)'),
         line('<path d="M1 7h32" stroke="rgba(250,240,224,.92)" stroke-width="3.4"/><path d="M1 7h32" stroke="#a63d26" stroke-width="1.7"/>', 'Road (atlas)'),
+        line('<path d="M1 7h32" stroke="rgba(250,240,224,.95)" stroke-width="5.6"/><path d="M1 7h32" stroke="#c0392b" stroke-width="3.1"/>', 'Highway (atlas)'),
+        line('<path d="M1 7h32" stroke="rgba(250,240,224,.85)" stroke-width="2.4"/><path d="M1 7h32" stroke="#8a4a2a" stroke-width="1.1"/>', 'Lane (atlas)'),
+        line('<path d="M1 7h32" stroke="rgba(235,215,180,.95)" stroke-width="1.8" stroke-dasharray="5 3"/>', 'Track (atlas)'),
         line('<path d="M1 7h32" stroke="#8a8a8a" stroke-width="1.6" stroke-dasharray="6 4"/>', 'Trail'),
         line('<path d="M1 7h32" stroke="rgba(255,255,255,.6)" stroke-width="4.6" stroke-dasharray="12 5 3 5"/><path d="M1 7h32" stroke="#8e44ad" stroke-width="2.2" stroke-dasharray="12 5 3 5"/>', 'Border')),
       h('div', { class: 'lbl' }, 'PLACES'),
@@ -3731,7 +3798,7 @@ const MapView = (() => {
 
   /* ---------- tools: sculpt, paint, stamps, measure ---------- */
   function setTool(t) {
-    tool = t; shape = null;
+    tool = t; shape = null; routeHL = null;
     for (const b of $$('#map-tools button')) b.classList.toggle('on', b.dataset.tool === t);
     if (t !== 'measure' && t !== 'pan') hideChip();
     if (t === 'sculpt' || t === 'paint' || t === 'stamp') hover = null;
@@ -3768,7 +3835,9 @@ const MapView = (() => {
     const s = stroke; stroke = null; if (!s) return;
     if (s.kind === 'line') {
       if (s.raw.length < 3) { toast(`Drag across the map to draw a ${STAMPS[s.fk].name.toLowerCase()}`); dirty = true; return; }
-      addFeature(createLineFeature(s.fk, s.raw)); return;
+      const f = createLineFeature(s.fk, s.raw);
+      if (s.fk === 'road' || s.fk === 'trail') snapEnds(f);
+      addFeature(f); return;
     }
     if (!s.pts.length) return;
     let rec, kind;
@@ -3886,7 +3955,7 @@ const MapView = (() => {
     const s = SYMBOLS.get(stamp.sym) || SYMBOLS.list[0];
     const used = new Set(S.world.places.map(p => lc(p.name)));
     let name = s.name;
-    if (s.drawn && s.type !== 'camp') {
+    if (s.drawn && s.cat === 'defaults' && s.type !== 'camp') {
       const nk = s.type === 'capital' ? 'city' : s.type;
       name = Names.make(nk); for (let k = 0; k < 15 && used.has(lc(name)); k++) name = Names.make(nk);
     } else if (used.has(lc(name))) { let n = 2; while (used.has(lc(`${s.name} ${n}`))) n++; name = `${s.name} ${n}`; }
@@ -3965,6 +4034,7 @@ const MapView = (() => {
     const st = STAMPS[f.kind] || { name: f.kind };
     if (f.pts) {
       const g = geomOf(f), bits = [`${fmtDist(g.total)} long`];
+      if (f.kind === 'road') { const [a, b] = roadEnds(f); bits.unshift(ROAD_STYLE[roadCls(f)].name + (a || b ? ` · ${a ? a.name : '…'} – ${b ? b.name : '…'}` : '')); bits.push(`≈ ${daysTxt(roadDays(f))} ${TRAVEL[travelMode()][0].toLowerCase()}`); }
       if (f.kind === 'river') bits.push(`${fmtDist(f.w0 * 2)} → ${fmtDist(f.w1 * 2)} wide`);
       if (f.kind === 'canyon') bits.push(`${fmtElev(f.gorge)} deep`);
       return bits.join(' · ');
@@ -3981,6 +4051,272 @@ const MapView = (() => {
       flyTo(ll[0], ll[1], Math.max(1, g.total / T.MI * 0.9));
     } else flyTo(f.lat, f.lon, Math.max(0.5, f.r * T.RM / T.MI * 5));
   }
+  /* ---------- roads: ends, network, terrain routing, planner ---------- */
+  const daysTxt = d => { const v = fmtNum(d, 1); return v === '1' ? '1 day' : v + ' days'; };
+  const travelMode = () => (TRAVEL[S.ui.travel] ? S.ui.travel : 'foot');
+  const roadDays = f => geomOf(f).total / T.MI / (TRAVEL[travelMode()][1] * ROAD_STYLE[roadCls(f)].speed);
+  const wrapDeg = x => ((((x + 180) % 360) + 360) % 360) - 180;
+  // the places at each end of a road: stored ids first, else the nearest place close to that end
+  function roadEnds(f) {
+    const n = f.pts.length / 2, ends = [[f.pts[0], f.pts[1]], [f.pts[2 * n - 2], f.pts[2 * n - 1]]];
+    const tol = Math.max(2 * T.MI, geomOf(f).total * 0.03);
+    return [f.from, f.to].map((id, i) => {
+      if (id) { const p = S.world.places.find(q => q.id === id); if (p) return p; }
+      let best = null, bd = tol;
+      for (const p of S.world.places) { if (p.type === 'region' || p.type === 'water') continue; const d = gcAngle(ends[i], [p.lat, p.lon]) * T.RM; if (d < bd) { bd = d; best = p; } }
+      return best;
+    });
+  }
+  function snapEnds(f) {
+    const n = f.pts.length / 2;
+    for (const [k, key] of [[0, 'from'], [n - 1, 'to']]) {
+      const sc = llToScreen(f.pts[2 * k], f.pts[2 * k + 1]); if (!sc) continue;
+      let best = null, bd = 22;
+      for (const hp of placeHits) { const d = Math.hypot(hp.x - sc[0], hp.y - sc[1]); if (d < bd) { bd = d; best = hp.p; } }
+      if (best) { f[key] = best.id; const pts = f.pts.slice(); pts[2 * k] = best.lat; pts[2 * k + 1] = best.lon; f.pts = pts; }
+    }
+  }
+  function roadEdges() {
+    const out = [];
+    for (const f of S.world.features) {
+      if (f.kind !== 'road' || !f.pts || f.pts.length < 4) continue;
+      const [a, b] = roadEnds(f);
+      out.push({ f, a, b, len: geomOf(f).total, days: roadDays(f) });
+    }
+    return out;
+  }
+  const pairKey = (a, b) => [a.id, b.id].sort().join('|');
+  function roadBetween(a, b) { return roadEdges().find(e => e.a && e.b && pairKey(e.a, e.b) === pairKey(a, b)) || null; }
+  // fastest way along the road network from place a to place b: { legs: [{ e, from, to }], len, days } or null
+  function planRoute(a, b) {
+    if (a === b) return { legs: [], len: 0, days: 0 };
+    const edges = roadEdges().filter(e => e.a && e.b && e.a !== e.b), adj = new Map();
+    for (const e of edges) for (const [x, y] of [[e.a, e.b], [e.b, e.a]]) { if (!adj.has(x.id)) adj.set(x.id, []); adj.get(x.id).push([y, e]); }
+    const best = new Map([[a.id, 0]]), prev = new Map(), done = new Set(), byId = new Map(S.world.places.map(p => [p.id, p]));
+    for (;;) {
+      let u = null, ud = Infinity;
+      for (const [id, d] of best) if (!done.has(id) && d < ud) { ud = d; u = id; }
+      if (u == null || u === b.id) break;
+      done.add(u);
+      for (const [v, e] of adj.get(u) || []) { const nd = ud + e.days; if (nd < (best.get(v.id) ?? Infinity)) { best.set(v.id, nd); prev.set(v.id, [u, e]); } }
+    }
+    if (!prev.has(b.id)) return null;
+    const legs = []; let cur = b.id;
+    while (cur !== a.id) { const [u, e] = prev.get(cur); legs.unshift({ e, from: byId.get(u), to: byId.get(cur) }); cur = u; }
+    return { legs, len: legs.reduce((t, l) => t + l.e.len, 0), days: legs.reduce((t, l) => t + l.e.days, 0) };
+  }
+  // a terrain-following path between two points on a latitude/longitude grid (works off screen too)
+  function routeLL(a, b, skip) {
+    const lonB = a[1] + wrapDeg(b[1] - a[1]);
+    const la0r = Math.min(a[0], b[0]), la1r = Math.max(a[0], b[0]), lo0r = Math.min(a[1], lonB), lo1r = Math.max(a[1], lonB);
+    const cosm = Math.max(0.15, Math.cos((la0r + la1r) / 2 * D2R));
+    const span = Math.max(la1r - la0r, (lo1r - lo0r) * cosm, 0.01), pad = span * 0.3 + 0.005;
+    const la0 = Math.max(-89, la0r - pad), la1 = Math.min(89, la1r + pad), lo0 = lo0r - pad / cosm, lo1 = lo1r + pad / cosm;
+    const cellDeg = Math.sqrt((la1 - la0) * (lo1 - lo0) * cosm / 4800);
+    const GH = Math.max(3, Math.ceil((la1 - la0) / cellDeg) + 1), GW = Math.max(3, Math.ceil((lo1 - lo0) * cosm / cellDeg) + 1), N = GW * GH;
+    const dLa = (la1 - la0) / (GH - 1), dLo = (lo1 - lo0) / (GW - 1);
+    const latOf = j => la0 + j * dLa, lonOf = i => lo0 + i * dLo;
+    const elev = new Float32Array(N), wet = new Uint8Array(N), onRoad = new Uint8Array(N);
+    for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) {
+      const k = j * GW + i, sm = T.sample(latOf(j), wrapDeg(lonOf(i)));
+      elev[k] = sm.elev; if (sm.elev <= 0 || sm.lakeLevel != null || sm.biome === 20) wet[k] = 1;
+    }
+    const cellOf = (la, lo) => { const lo2 = a[1] + wrapDeg(lo - a[1]); const j = Math.round((la - la0) / dLa), i = Math.round((lo2 - lo0) / dLo); return i < 0 || j < 0 || i >= GW || j >= GH ? -1 : j * GW + i; };
+    for (const f of S.world.features) {
+      if (f.kind !== 'road' || f === skip || !f.pts) continue;
+      for (let k = 2; k < f.pts.length; k += 2) {
+        const st = 4; for (let q = 0; q <= st; q++) { const c = cellOf(f.pts[k - 2] + (f.pts[k] - f.pts[k - 2]) * q / st, f.pts[k - 1] + wrapDeg(f.pts[k + 1] - f.pts[k - 1]) * q / st); if (c >= 0) onRoad[c] = 1; }
+      }
+    }
+    const dyM = dLa * D2R * T.RM, dxM = j => dLo * D2R * T.RM * Math.max(0.05, Math.cos(latOf(j) * D2R));
+    const start = cellOf(a[0], a[1]), goal = cellOf(b[0], b[1]); if (start < 0 || goal < 0) return null;
+    const gx = goal % GW, gy = (goal / GW) | 0;
+    const gS = new Float64Array(N).fill(Infinity), from = new Int32Array(N).fill(-1), closed = new Uint8Array(N), heap = [];
+    const push = (f, k) => { heap.push([f, k]); let i = heap.length - 1; while (i > 0) { const q = (i - 1) >> 1; if (heap[q][0] <= heap[i][0]) break; [heap[q], heap[i]] = [heap[i], heap[q]]; i = q; } };
+    const pop = () => { const first = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return first; };
+    const hc = k => 0.3 * Math.hypot((k % GW - gx) * dxM((k / GW) | 0), (((k / GW) | 0) - gy) * dyM);
+    gS[start] = 0; push(hc(start), start);
+    while (heap.length) {
+      const [, k] = pop(); if (closed[k]) continue; closed[k] = 1; if (k === goal) break;
+      const x = k % GW, y = (k / GW) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
+        const k2 = ny * GW + nx; if (closed[k2]) continue;
+        const len = Math.hypot(dx * dxM(y), dy * dyM), g = Math.abs(elev[k2] - elev[k]) / len;
+        const c = len * (1 + 8 * g + 60 * g * g) * (wet[k2] ? 25 : 1) * (onRoad[k2] ? 0.3 : 1);
+        const g2 = gS[k] + c; if (g2 < gS[k2]) { gS[k2] = g2; from[k2] = k; push(g2 + hc(k2), k2); }
+      }
+    }
+    if (start !== goal && from[goal] < 0) return null;
+    const cells = []; for (let k = goal; k >= 0; k = from[k]) { cells.push(k); if (k === start) break; }
+    cells.reverse();
+    const mid = cells.slice(1, -1).filter((_, i) => i % 2 === 1).map(k => [latOf((k / GW) | 0), wrapDeg(lonOf(k % GW))]);
+    return [[a[0], a[1]], ...mid, [b[0], b[1]]];
+  }
+  function buildRoad(A, B, cls = 'road', quiet) {
+    if (A === B) return null;
+    const have = roadBetween(A, B);
+    if (have) { if (!quiet) toast(`${A.name} and ${B.name} already have a road`, 4000, { label: 'Show', fn: () => openFeature(have.f) }); return null; }
+    const pts = routeLL([A.lat, A.lon], [B.lat, B.lon]);
+    if (!pts || pts.length < 2) { if (!quiet) toast(`Could not find an overland way from ${A.name} to ${B.name}`); return null; }
+    const f = createLineFeature('road', pts.length < 3 ? [pts[0], [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2], pts[1]] : pts);
+    const P = f.pts.slice(); P[0] = A.lat; P[1] = A.lon; P[P.length - 2] = B.lat; P[P.length - 1] = B.lon; f.pts = P;
+    f.from = A.id; f.to = B.id; f.cls = cls;
+    addFeature(f); emit('data');
+    if (!quiet) toast(`Built a ${ROAD_STYLE[cls].name.toLowerCase()} from ${A.name} to ${B.name} · ${fmtDist(geomOf(f).total)}`, 6000, { label: 'Undo', fn: () => removeBatch('features', [f]) });
+    return f;
+  }
+  function reroute(f) {
+    const [A, B] = roadEnds(f);
+    if (!A || !B) { toast('Reroute needs a place at both ends of the road'); return; }
+    const pts = routeLL([A.lat, A.lon], [B.lat, B.lon], f); if (!pts) { toast('No overland way found'); return; }
+    const before = f.pts, nf = createLineFeature('road', pts.length < 3 ? [pts[0], pts[0], pts[1]] : pts);
+    const P = nf.pts.slice(); P[0] = A.lat; P[1] = A.lon; P[P.length - 2] = B.lat; P[P.length - 1] = B.lon;
+    f.pts = P; f.from = A.id; f.to = B.id;
+    afterEdit({ cap: null }); emit('data');
+    toast(`Rerouted along the terrain · ${fmtDist(geomOf(f).total)}`, 6000, { label: 'Undo', fn: () => { f.pts = before; afterEdit({ cap: null }); } });
+  }
+  // a searchable list of places; onPick(place)
+  function pickPlaceSheet(title, onPick, opts = {}) {
+    const q = h('input', { type: 'search', placeholder: 'Search places', autocomplete: 'off' }), list = h('div');
+    const from = opts.near;
+    const render = () => {
+      list.innerHTML = '';
+      const s2 = lc(q.value);
+      let items = S.world.places.filter(p => p.type !== 'region' && p.type !== 'water' && p !== from && (!s2 || lc(p.name).includes(s2)));
+      if (from) items = items.map(p => [p, gcAngle([from.lat, from.lon], [p.lat, p.lon]) * T.RM]).sort((x, y) => x[1] - y[1]).map(x => x[0]);
+      else items.sort((x, y) => x.name.localeCompare(y.name));
+      for (const p of items.slice(0, 80)) {
+        const sub = [(PTYPES[p.type] || PTYPES.other).name];
+        if (from) { sub.push(`${fmtDist(gcAngle([from.lat, from.lon], [p.lat, p.lon]) * T.RM)} ${bearingName([from.lat, from.lon], [p.lat, p.lon])}`); if (roadBetween(from, p)) sub.push('road already'); }
+        list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); onPick(p); } }, p.sym && SYMBOLS.get(p.sym) ? SYMBOLS.swatch(p.sym, 26) : icon('pin', 18),
+          h('div', { class: 'main' }, h('div', { class: 'title' }, p.name), h('div', { class: 'sub' }, sub.join(' · ')))));
+      }
+      if (!list.childNodes.length) list.append(h('div', { class: 'empty' }, 'No places match.'));
+    };
+    q.addEventListener('input', render); render();
+    const sh = openSheet({ title, body: h('div', null, q, h('div', { style: 'height:6px' }), list) });
+    setTimeout(() => q.focus(), 60);
+  }
+  function connectFrom(A, cls) {
+    pickPlaceSheet(`Build a road from ${A.name} to…`, B => { toast('Surveying the route…', 1200); setTimeout(() => buildRoad(A, B, cls || 'road'), 50); }, { near: A });
+  }
+  function clsSeg(cur, onPick) { return seg(Object.entries(ROAD_STYLE).map(([k, v]) => [k, v.name]), cur, onPick); }
+  // highlighted route on the map
+  let routeHL = null;   // { route, a, b }
+  function drawRouteHL() {
+    if (!routeHL) return;
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const l of routeHL.route.legs) {
+      const { scr } = lineScreen(l.e.f);
+      ctx.beginPath(); let on = false;
+      for (const sc of scr) { if (!sc) { on = false; continue; } on ? ctx.lineTo(sc[0], sc[1]) : ctx.moveTo(sc[0], sc[1]); on = true; }
+      ctx.strokeStyle = 'rgba(43,140,255,.5)'; ctx.lineWidth = 11; ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function showRoute(r, a, b) {
+    routeHL = { route: r, a, b }; hideChip(); renderPanel(); dirty = true; setTab('map');
+    const pts = [[a.lat, a.lon], [b.lat, b.lon], ...r.legs.flatMap(l => [[l.from.lat, l.from.lon]])];
+    let la0 = 90, la1 = -90, lo0 = 180, lo1 = -180; for (const [la, lo] of pts) { la0 = Math.min(la0, la); la1 = Math.max(la1, la); lo0 = Math.min(lo0, lo); lo1 = Math.max(lo1, lo); }
+    const w = Math.max(gcAngle([la0, lo0], [la1, lo1]) * T.RM / T.MI * 1.5, 8);
+    flyTo((la0 + la1) / 2, (lo0 + lo1) / 2, w);
+  }
+  function travelRoute(r, a, b) {
+    const days = Math.max(1, Math.ceil(r.days - 0.05));
+    const party = S.chars.filter(c => c.role === 'PC' && c.status !== 'dead');
+    for (const c of party) c.at = b.id;
+    const last = r.legs[r.legs.length - 1], pts = last ? last.e.f.pts : null;
+    let hdg; if (pts) { const n = pts.length / 2, fwd = last.e.b === b; const i1 = fwd ? n - 2 : 1, i2 = fwd ? n - 1 : 0; hdg = brgDeg([pts[2 * i1], pts[2 * i1 + 1]], [pts[2 * i2], pts[2 * i2 + 1]]); }
+    setHere([b.lat, b.lon], hdg); save(); emit('data');
+    stepDay(days); dirty = true;
+    setTimeout(() => toast(`${party.length ? 'The party arrives' : 'Arrived'} at ${b.name} after ${plural(days, 'day')}`), 400);
+  }
+  function routeSheet(a0, b0) {
+    let a = a0 || null, b = b0 || null, sh;
+    const body = h('div');
+    const pickBtn = (label, cur, set) => h('button', { class: 'btn block', style: 'justify-content:flex-start', onclick: () => pickPlaceSheet(label, p => { set(p); render(); }, { near: cur === b ? a : b }) }, icon('pin', 16), cur ? cur.name : label + '…');
+    const render = () => {
+      body.innerHTML = '';
+      body.append(field('From', pickBtn('Start', a, p => { a = p; })), field('To', pickBtn('Destination', b, p => { b = p; })),
+        field('Travelling', seg(Object.entries(TRAVEL).map(([k, v]) => [k, v[0]]), travelMode(), v => { S.ui.travel = v; save(); render(); })));
+      if (!a || !b) { body.append(h('p', { class: 'small muted' }, 'Pick two places to find the way between them along the roads.')); return; }
+      const r = planRoute(a, b);
+      if (!r) {
+        body.append(h('div', { class: 'card' }, h('div', { class: 'small' }, `No roads join ${a.name} and ${b.name} yet.`),
+          h('div', { class: 'small muted', style: 'margin:4px 0 8px' }, `Straight-line distance ${fmtDist(gcAngle([a.lat, a.lon], [b.lat, b.lon]) * T.RM)}.`),
+          h('button', { class: 'btn small primary', onclick: () => { toast('Surveying the route…', 1200); setTimeout(() => { buildRoad(a, b, 'road'); render(); }, 50); } }, icon('road', 16), 'Build a road between them')));
+        return;
+      }
+      body.append(h('div', { class: 'card' },
+        h('div', { class: 'row' }, h('b', { class: 'num', style: 'font-size:18px' }, fmtDist(r.len)), h('span', { class: 'grow' }), h('b', null, `≈ ${daysTxt(r.days)}`)),
+        h('div', { class: 'tiny muted', style: 'margin-bottom:6px' }, `${TRAVEL[travelMode()][0]}. Highways are quicker and tracks slower.`),
+        r.legs.map((l, i) => h('div', { class: 'list-row tap', onclick: () => { sh.close(); openFeature(l.e.f); } },
+          h('div', { class: 'main' }, h('div', { class: 'title' }, `${i + 1}. ${l.from.name} → ${l.to.name}`),
+            h('div', { class: 'sub' }, [l.e.f.name || ROAD_STYLE[roadCls(l.e.f)].name, fmtDist(l.e.len), `${daysTxt(l.e.days)}`].join(' · '))), icon('chev', 16)))));
+    };
+    render();
+    sh = openSheet({ title: 'Route planner', body, foot: [
+      h('button', { class: 'btn', onclick: () => { const r = a && b && planRoute(a, b); if (!r) { toast('Pick two places joined by roads'); return; } sh.close(); showRoute(r, a, b); } }, icon('map', 16), 'Show on map'),
+      h('div', { class: 'spacer' }),
+      h('button', { class: 'btn primary', onclick: () => { const r = a && b && planRoute(a, b); if (!r || !r.legs.length) { toast('Pick two places joined by roads'); return; } sh.close(); routeHL = null; renderPanel(); travelRoute(r, a, b); } }, icon('calendar', 16), 'Travel')] });
+  }
+  function cleanDuplicateRoads() {
+    const groups = new Map();
+    for (const e of roadEdges()) { if (!e.a || !e.b || e.a === e.b) continue; const k = pairKey(e.a, e.b); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e.f); }
+    const drop = [];
+    for (const fs of groups.values()) if (fs.length > 1) { const keep = fs.find(f => f.name) || fs[0]; for (const f of fs) if (f !== keep) drop.push(f); }
+    if (!drop.length) { toast('No duplicate roads found'); return; }
+    const before = S.world.features.slice();
+    S.world.features = S.world.features.filter(f => !drop.includes(f));
+    afterEdit({ cap: null }); emit('data');
+    toast(`Removed ${plural(drop.length, 'duplicate road')}`, 7000, { label: 'Undo', fn: () => { S.world.features = before; afterEdit({ cap: null }); emit('data'); } });
+  }
+  function nameRoads() {
+    const done = [];
+    for (const e of roadEdges()) {
+      if (e.f.name || !e.a || !e.b || e.a === e.b) continue;
+      const kind = { highway: 'Highway', road: 'Road', lane: 'Lane', track: 'Track' }[roadCls(e.f)];
+      e.f.name = `${e.a.name}–${e.b.name} ${kind}`; done.push(e.f);
+    }
+    if (!done.length) { toast('Every road that joins two places already has a name'); return; }
+    save(); dirty = true;
+    toast(`Named ${plural(done.length, 'road')}`, 6000, { label: 'Undo', fn: () => { for (const f of done) f.name = ''; save(); dirty = true; } });
+  }
+  function roadsSheet() {
+    let sh;
+    const q = h('input', { type: 'search', placeholder: 'Search roads and places', autocomplete: 'off' }), list = h('div');
+    const render = () => {
+      list.innerHTML = '';
+      const s2 = lc(q.value), edges = roadEdges();
+      const items = edges.filter(e => !s2 || lc(e.f.name).includes(s2) || (e.a && lc(e.a.name).includes(s2)) || (e.b && lc(e.b.name).includes(s2)))
+        .sort((x, y) => (x.f.name || 'zzz').localeCompare(y.f.name || 'zzz') || y.len - x.len);
+      for (const e of items) list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); zoomToFeature(e.f); setTimeout(() => openFeature(e.f), 450); } }, icon('road', 18),
+        h('div', { class: 'main' }, h('div', { class: 'title' }, e.f.name || `${e.a ? e.a.name : '…'} – ${e.b ? e.b.name : '…'}`),
+          h('div', { class: 'sub' }, [ROAD_STYLE[roadCls(e.f)].name, e.f.name && (e.a || e.b) ? `${e.a ? e.a.name : '…'} – ${e.b ? e.b.name : '…'}` : null, fmtDist(e.len), `${daysTxt(e.days)}`].filter(Boolean).join(' · '))), icon('chev', 16)));
+      if (!items.length) list.append(h('div', { class: 'empty' }, edges.length ? 'No roads match.' : 'No roads yet. Use Connect, Auto roads, or draw one with the Stamp tool.'));
+    };
+    q.addEventListener('input', render); render();
+    const tools = h('div', { class: 'row wrap', style: 'gap:6px;margin-bottom:8px' },
+      h('button', { class: 'btn small primary', onclick: () => { sh.close(); routeSheet(); } }, icon('map', 16), 'Route planner'),
+      h('button', { class: 'btn small', onclick: () => { sh.close(); pickPlaceSheet('Connect from…', A => connectFrom(A)); } }, icon('road', 16), 'Connect two places'),
+      h('button', { class: 'btn small', onclick: () => { sh.close(); setTab('map'); toast('Surveying roads…', 1200); setTimeout(autoRoads, 60); } }, icon('wand', 16), 'Auto roads in view'),
+      h('button', { class: 'btn small', onclick: () => { cleanDuplicateRoads(); render(); } }, icon('trash', 16), 'Remove duplicates'),
+      h('button', { class: 'btn small', onclick: () => { nameRoads(); render(); } }, icon('tag', 16), 'Name unnamed roads'));
+    sh = openSheet({ title: `Roads (${roadEdges().length})`, wide: true, body: h('div', null, tools, q, h('div', { style: 'height:6px' }), list) });
+  }
+  // the roads card on a place's page
+  function placeRoadsCard(p, close) {
+    const mine = roadEdges().filter(e => e.a === p || e.b === p);
+    return h('div', { class: 'card' }, h('h3', null, icon('road', 15), 'Roads', h('span', { class: 'grow' }),
+      h('button', { class: 'btn small', onclick: () => { close(); connectFrom(p); } }, icon('plus', 14), 'Connect'),
+      h('button', { class: 'btn small', onclick: () => { close(); routeSheet(p); } }, icon('map', 14), 'Route')),
+      mine.length ? mine.map(e => { const o = e.a === p ? e.b : e.a; return h('div', { class: 'list-row tap', onclick: () => { close(); openFeature(e.f); } },
+        h('div', { class: 'main' }, h('div', { class: 'title' }, o ? `To ${o.name}` : 'Leads out of town'), h('div', { class: 'sub' }, [e.f.name || ROAD_STYLE[roadCls(e.f)].name, fmtDist(e.len), `${daysTxt(e.days)}`, o ? bearingName([p.lat, p.lon], [o.lat, o.lon]) : null].filter(Boolean).join(' · '))), icon('chev', 16)); })
+        : h('div', { class: 'small muted' }, 'No roads here yet.'));
+  }
+
   /* ---------- reshaping lines by dragging, and moving places with their roads ---------- */
   const SHAPEABLE = new Set(['road', 'trail', 'border']);
   let shape = null;   // { f }: the line being reshaped
@@ -4073,7 +4409,16 @@ const MapView = (() => {
     let sh;
     sh = openSheet({ title: f.name || st.name, body: h('div', null,
       h('div', { class: 'row', style: 'gap:10px;margin-bottom:6px' }, icon(st.icon, 22), h('div', { class: 'small muted' }, featureSummary(f))),
-      field('Name', Names.field(name, () => f.kind), f.pts ? 'Named rivers, roads and borders are labelled along their line.' : null)),
+      field('Name', Names.field(name, () => f.kind), f.pts ? 'Named rivers, roads and borders are labelled along their line.' : null),
+      f.kind === 'road' ? (() => {
+        const [A, B] = roadEnds(f);
+        return h('div', null,
+          field('Type of road', clsSeg(roadCls(f), v => { f.cls = v; save(); dirty = true; })),
+          h('div', { class: 'row wrap', style: 'gap:6px;margin-top:4px' },
+            A && B ? h('button', { class: 'btn small', onclick: () => { sh.close(); toast('Surveying…', 1000); setTimeout(() => reroute(f), 50); } }, icon('wand', 16), 'Reroute along terrain') : null,
+            A && B ? h('button', { class: 'btn small', onclick: () => { sh.close(); routeSheet(A, B); } }, icon('map', 16), 'Route planner') : null,
+            h('button', { class: 'btn small', onclick: () => { sh.close(); roadsSheet(); } }, icon('list', 16), 'All roads')));
+      })() : null),
     foot: [
       h('button', { class: 'btn danger', onclick: async () => {
         const i = S.world.features.indexOf(f); if (i < 0) { sh.close(); return; }
@@ -4116,6 +4461,16 @@ const MapView = (() => {
   function renderPanel() {
     panel.innerHTML = '';
     let show = true;
+    if (routeHL && !shape) {
+      const { route: r, a, b } = routeHL;
+      panel.append(h('div', { class: 'row' }, icon('road', 18), h('div', { class: 'grow small' }, h('b', null, `${a.name} → ${b.name}`), h('div', { class: 'tiny muted' }, `${fmtDist(r.len)} · ≈ ${daysTxt(r.days)} ${TRAVEL[travelMode()][0].toLowerCase()} · ${plural(r.legs.length, 'leg')}`))),
+        h('div', { class: 'row', style: 'margin-top:8px' },
+          h('button', { class: 'btn small', onclick: () => routeSheet(a, b) }, icon('list', 16), 'Details'),
+          h('button', { class: 'btn small', onclick: () => { routeHL = null; renderPanel(); dirty = true; } }, 'Clear'),
+          h('div', { class: 'grow' }),
+          h('button', { class: 'btn small primary', onclick: () => { const rr = planRoute(a, b); routeHL = null; renderPanel(); if (rr) travelRoute(rr, a, b); } }, icon('calendar', 16), 'Travel')));
+      panel.classList.add('show'); return;
+    }
     if (shape) {
       const f = shape.f, st = STAMPS[f.kind] || { name: 'line' };
       panel.append(
@@ -4201,7 +4556,8 @@ const MapView = (() => {
         h('button', { class: 'btn small', onclick: () => placesSheet() }, 'List')),
         h('div', { class: 'row', style: 'margin:8px 0' },
           h('button', { class: 'btn small', style: 'flex:1', onclick: () => { toast('Founding settlements…', 1200); setTimeout(autoSettlements, 60); } }, icon('village', 16), 'Auto settlements'),
-          h('button', { class: 'btn small', style: 'flex:1', onclick: () => { toast('Surveying roads…', 1200); setTimeout(autoRoads, 60); } }, icon('road', 16), 'Auto roads')),
+          h('button', { class: 'btn small', style: 'flex:1', onclick: () => { toast('Surveying roads…', 1200); setTimeout(autoRoads, 60); } }, icon('road', 16), 'Auto roads'),
+          h('button', { class: 'btn small', style: 'flex:1', onclick: roadsSheet }, icon('list', 16), 'Roads…')),
         undoRow('Settlements and roads for the area in view'));
     } else show = false;
     panel.classList.toggle('show', show);
@@ -4457,7 +4813,7 @@ const MapView = (() => {
     requestAnimationFrame(frame);
   }
   return {
-    init, flyTo, openPlace, editPlace, placesSheet, goHere, hereSheet, worldSheet, layersSheet, legendSheet, home, zoomToFeature, openFeature, placeWidth, nearby,
+    init, flyTo, openPlace, editPlace, placesSheet, goHere, hereSheet, roadsSheet, routeSheet, worldSheet, layersSheet, legendSheet, home, zoomToFeature, openFeature, placeWidth, nearby,
     stampName: k => (STAMPS[k] || { name: k }).name,
     centerLL,
     show() { visible = true; resize(); dirty = true; },
@@ -6763,6 +7119,8 @@ function commands() {
     ['Relationship web', 'web', () => Chars.webSheet(), 'relations graph'],
     ['Places on the map', 'pin', () => { setTab('map'); MapView.placesSheet(); }, 'locations towns'],
     ['Saved map views', 'bookmark', () => { setTab('map'); MapView.placesSheet('views'); }, 'bookmark'],
+    ['Roads…', 'road', () => { setTab('map'); MapView.roadsSheet(); }, 'highway network connect duplicates'],
+    ['Route planner', 'map', () => { setTab('map'); MapView.routeSheet(); }, 'journey travel path directions road'],
     ['You are here', 'target', () => { setTab('map'); MapView.goHere(); }, 'location position heading me party'],
     ['Set your heading…', 'target', () => { setTab('map'); if (S.world.here) MapView.hereSheet(); else MapView.goHere(); }, 'compass direction facing'],
     ['Place a map symbol', 'flag', () => { setTab('map'); MapView.setTool('stamp'); MapView.debug.stamp.kind = 'symbol'; MapView.redrawPanel(); }, 'stamp icon city fortress castle'],

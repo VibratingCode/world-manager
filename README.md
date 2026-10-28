@@ -64,7 +64,7 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
   - **Sculpt**: Raise, Lower, Flatten, Smooth and Rough brushes.
   - **Paint**: biomes, including *Lake / river* for drawing your own waters. "Erase" restores the generated biome.
   - **Stamp**: geographic features (see below).
-  - **Symbols** (first button in the Stamp tool): 916 map symbols in 19 groups. They include 22 drawn defaults for cities and fortresses (walled city, metropolis, capital, castle, keep, star fort, citadel, watchtower, bunker, outpost and more) and pictograms for settlements, military, faith and magic, industry, trade, travel, coast, nature, farms, creatures, hazards, sci-fi colonies, quest markers, factions, weather and loot. Tap the map to drop one as a place. Change a place's symbol in its Edit sheet, and the legend lists the symbols in use.
+  - **Symbols** (first button in the Stamp tool): 1,010 map symbols in 20 groups. They include 22 drawn defaults for cities and fortresses (walled city, metropolis, capital, castle, keep, star fort, citadel, watchtower, bunker, outpost and more) and pictograms for settlements, military, faith and magic, industry, trade, travel, coast, nature, farms, creatures, hazards, sci-fi colonies, quest markers, factions, weather and loot. Tap the map to drop one as a place. Change a place's symbol in its Edit sheet, and the legend lists the symbols in use.
   - **Measure**: great-circle distance with travel time on foot, riding, by wagon or by boat. **Travel** advances the campaign date by the journey and can move the party to the place at the end.
 - While sculpting, painting or drawing a stamp line, one finger draws and two fingers move the map. Undo and Redo are in the tool panel.
 - **Stamps** come in two kinds. You tap to place landforms and lakes, and drag to draw the line features:
@@ -78,6 +78,17 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 - Tap a river, road, trail or border in Explore mode to name it (names are drawn along the line) or remove it.
 - The dice button next to any name field makes up a fitting name: towns, rivers, peaks, regions, people.
 - The cog button holds **World generation**: seed, planet radius, ocean %, continent size, mountains, roughness, climate, moisture, and which longitude sits in the middle of the world map. Places and edits are stored by latitude/longitude and stay where they are when you regenerate.
+- **Roads hub** (Place tool → *Roads…*, or search "Roads"):
+  - **Route planner**: the fastest way between two places along the roads, leg by leg, with distance and days. Highways are quicker and tracks slower. *Show on map* highlights the route, and *Travel* moves the date, the party and the you-are-here arrow.
+  - **Connect two places**: builds one terrain-following road between them, even off screen. It refuses if they already have a road.
+  - **Remove duplicates**: keeps one road per pair of places.
+  - **Name unnamed roads**: gives names like "Varstone–Ithstead Road".
+  - **Auto roads**: classes roads by what they join (highway, road or lane).
+  - **Road types**: Highway, Road, Lane and Track, each drawn differently.
+  - Each place's page lists its roads (where they lead, how far, how many days) with *Connect* and *Route* buttons.
+  - A road's page shows its ends and travel time, and has *Reroute along terrain*.
+  - Roads drawn with the Stamp tool snap their ends to the places they start and finish at.
+- **Ecology & land use symbols**: 22 drawn area badges (farming, herd, grazing, orchard, vineyard, rice paddies, irrigated, fallow, managed forest, logging, fishing, spawning, hunting, wetland, nature reserve, nesting, migration, mining, blight, flood, drought, foraging) plus 72 pictograms. There are 1,010 symbols in all.
 - **Roads, trails and borders**: tap one to name it, remove it (with Undo), or **Reshape** it. While reshaping, drag the highlighted line to bend it. Nearby points follow smoothly and the ends stay put unless you drag them.
 - **Moving places**: in the Place tool, drag a marker to move it. Roads that end there bend to follow, and Undo puts everything back.
 - The map keeps its colours at every zoom. To get USGS-style map sheets when zoomed in, turn on *Switch to USGS sheets when zoomed in* in Layers, or pick the Topographic style. *Lock zoom at 10 miles across* in Layers stops close-ups there.
