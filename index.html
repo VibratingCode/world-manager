@@ -391,6 +391,18 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .legend-sw i { width: 24px; height: 16px; border-radius: 4px; flex: none; display: block; border: 1px solid rgba(0,0,0,.18); }
 .legend-sw svg, .legend-sw canvas { flex: none; }
 .view-thumb { width: 72px; height: 48px; border-radius: 8px; object-fit: cover; flex: none; background: var(--card2); }
+.sym-picker input[type=search] { width: 100%; }
+.sym-cats { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 6px; scrollbar-width: thin; }
+.sym-cats button { flex: none; border: 1px solid var(--line); background: var(--card2); color: var(--muted); border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+.sym-cats button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 650; }
+.sym-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 4px; max-height: 46vh; overflow-y: auto; }
+.sym-picker.compact .sym-grid { max-height: 150px; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); }
+.sym { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 2px; border-radius: 9px; background: none; border: 1.5px solid transparent; color: var(--muted); font: inherit; font-size: 10px; cursor: pointer; }
+.sym span { line-height: 1.15; text-align: center; max-height: 2.3em; overflow: hidden; }
+.sym.on { border-color: var(--accent); color: var(--text); background: var(--card2); }
+.hdg-dial { display: flex; justify-content: center; touch-action: none; cursor: grab; }
+.hdg-btns { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin: 8px 0; }
+.hdg-btns .btn { padding: 6px 0; justify-content: center; }
 </style>
 </head>
 <body>
@@ -1989,7 +2001,7 @@ function defaultState() {
       negHp: false, outsideWindow: 5, theme: 'auto', created: Date.now(),
       earth: { on: true, y: 1997, m: 2, d: 13 },   // Earth (Gregorian) date of day 0 CS; m is 0-based
       holidays: [], moons: [] },
-    world: { seed: 'colony', radiusMi: 3959, oceanPct: 64, continentScale: 1, mountains: 1, roughness: 1, temp: 0, moist: 0, cm: 0, places: [], sculpt: [], paint: [], features: [], views: [] },
+    world: { seed: 'colony', radiusMi: 3959, oceanPct: 64, continentScale: 1, mountains: 1, roughness: 1, temp: 0, moist: 0, cm: 0, places: [], sculpt: [], paint: [], features: [], views: [], here: null },
     species: [{ id: uid(), name: 'Human', gestation: 280, cycle: 28, fertileStart: 10, fertileLen: 6, baseChance: 20, twinChance: 1.5 }],
     chars: [],
     events: [],
@@ -2271,6 +2283,124 @@ function llVec(ll) { const la = ll[0] * D2R, lo = ll[1] * D2R, c = Math.cos(la);
 function vecLL(v) { const n = Math.hypot(v[0], v[1], v[2]) || 1; return [Math.asin(clamp(v[2] / n, -1, 1)) * R2D, Math.atan2(v[1], v[0]) * R2D]; }
 function wrapRad(x) { return ((((x + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI; }
 
+/* ---------- map symbols: drawn defaults for cities and fortresses, plus a large pictogram library ---------- */
+const SYMBOLS = (() => {
+  // [key, name, place type, drawn glyph]
+  const DRAWN = [
+    ['v:walled', 'Walled city', 'city'], ['v:metro', 'Metropolis', 'city'], ['v:capital', 'Capital city', 'capital'], ['v:town', 'Market town', 'town'],
+    ['v:hamlet', 'Hamlet', 'village'], ['v:dome', 'Colony dome', 'town'], ['v:harbor', 'Harbour city', 'port'],
+    ['v:castle', 'Castle', 'fort'], ['v:keep', 'Keep', 'fort'], ['v:starfort', 'Star fort', 'fort'], ['v:citadel', 'Citadel', 'fort'],
+    ['v:tower', 'Watchtower', 'fort'], ['v:bunker', 'Bunker', 'fort'], ['v:outpost', 'Outpost', 'fort'], ['v:palisade', 'Palisade fort', 'fort'],
+    ['v:gate', 'Gatehouse', 'fort'], ['v:barracks', 'Barracks', 'fort'], ['v:firebase', 'Firebase', 'fort'], ['v:siege', 'Siege camp', 'camp'],
+    ['v:hillfort', 'Hill fort', 'fort'], ['v:seafort', 'Sea fort', 'fort'], ['v:ruinfort', 'Ruined fortress', 'ruin'],
+  ];
+  const CATS = [
+    ['defaults', 'Cities & forts', 'town', null],
+    ['settle', 'Settlements', 'town', '🏠 House;🏡 Homestead;🏘️ Houses;🏚️ Abandoned house;🏢 Office block;🏬 Market hall;🏣 Post office;🏤 Courier office;🏥 Hospital;🏦 Bank;🏨 Inn;🏪 Shop;🏫 School;🏛️ Hall of state;🏗️ Construction site;🏯 Pagoda castle;🏰 Castle;🗼 Tower;🗽 Statue;⛲ Fountain;🏙️ City;🌆 City at dusk;🌃 City at night;🌉 Bridge;🏟️ Arena;🎪 Circus;🎡 Fair;🏠 Cottage;🛖 Hut;🏕️ Campsite;🏞️ Park;🏤 Guild house;🏛️ Senate;🏬 Bazaar;🪧 Notice board;🧱 Brickworks;🏛️ Museum;📚 Library;🎭 Theatre;🎨 Gallery;🏩 Pleasure house;🏢 Tenement;🏟️ Colosseum;🗿 Monument;🛝 Playground;🧺 Laundry;💈 Barber;🪦 Graveyard;⚰️ Tomb;🏺 Pottery'],
+    ['military', 'Military', 'fort', '⚔️ Battlefield;🛡️ Defence;🗡️ Ambush;🏹 Archery range;🪖 Garrison;🎖️ Command post;🔫 Armoury;💣 Minefield;🧨 Demolition site;💥 Explosion;🚩 Rally point;🏴 Enemy territory;🏳️ Truce;🎯 Target;🪓 Axe camp;🔪 Raider camp;🛡️ Bulwark;🧰 Supply depot;📯 Signal horn;🥁 War drums;🐎 Cavalry;🚀 Missile site;🛩️ Airfield;✈️ Air base;🚁 Helipad;🚢 Naval base;⛴️ Troop ferry;🚓 Patrol;🚨 Alarm;🔭 Lookout;📡 Radar;🧱 Wall;⛓️ Prison;🔒 Locked gate;🗝️ Postern;🪤 Trap;🏯 Bastion;☠️ Massacre site;🦺 Engineers;🎗️ Memorial;🪦 War grave;🥾 March route;🗺️ War room;📜 Treaty;🔥 Burned village;🐲 War beast pen;🛰️ Orbital strike;🪝 Grapple point;⚙️ Siege works'],
+    ['faith', 'Faith & magic', 'landmark', '⛪ Church;🕌 Mosque;🛕 Temple;🕍 Synagogue;⛩️ Shrine;🕋 Holy stone;🛐 Altar;✝️ Cross;☪️ Crescent;🕉️ Om;☸️ Wheel;✡️ Star;☯️ Yin yang;🔯 Hexagram;🪯 Khanda;☦️ Orthodox cross;🙏 Pilgrimage;📿 Prayer beads;🕯️ Candle shrine;🔮 Oracle;🪄 Wizard tower;✨ Ley node;💫 Rift;🌀 Portal;🧿 Ward;🪬 Hamsa;⚗️ Alchemist;🧪 Laboratory;🧙 Mage;🧝 Elf grove;🧚 Fairy ring;🧞 Djinn lamp;🧛 Vampire lair;🧟 Undead;👻 Haunting;💀 Necropolis;🦴 Bone field;🪦 Barrow;⚱️ Urn;🗝️ Sealed vault;📖 Grimoire;🌟 Holy site;☄️ Fallen star;🌙 Moon shrine;☀️ Sun temple;⭐ Star shrine;🔆 Blessing;♾️ Eternal flame;🪷 Lotus garden;🌌 Astral gate'],
+    ['industry', 'Industry & resources', 'other', '🏭 Factory;⛏️ Mine;🪨 Quarry;🛢️ Oil well;⛽ Fuel depot;🔋 Power store;⚡ Power plant;☢️ Reactor;☣️ Biohazard;🧲 Ore field;💎 Gem mine;🪙 Gold;🥇 Gold mine;🥈 Silver mine;🥉 Copper mine;🔩 Ironworks;⚒️ Smithy;🔨 Workshop;🪚 Sawmill;🪵 Logging;🧱 Kiln;🏗️ Crane;🚧 Roadworks;🛠️ Repair yard;⚙️ Machine works;🪛 Assembly;🧪 Refinery;🫙 Cannery;🧵 Textile mill;🪡 Tailor;🧶 Wool mill;🛞 Wheelwright;🪣 Well;💧 Spring;🚰 Water works;🔥 Forge;🌋 Geothermal;💨 Wind farm;🌬️ Windmill;☀️ Solar farm;🏚️ Old mill;📦 Warehouse;🗑️ Dump;♻️ Recycling;🧯 Fire station;🧂 Salt works;🫗 Distillery;🍺 Brewery;🍷 Winery'],
+    ['trade', 'Trade & services', 'other', '🏪 Store;🛒 Market;💰 Treasury;💵 Exchange;💳 Bank branch;🪙 Mint;⚖️ Courthouse;🏛️ Guildhall;🍻 Tavern;🍺 Alehouse;🛏️ Inn;🏨 Hostel;☕ Coffee house;🍵 Tea house;🍞 Bakery;🥩 Butcher;🐟 Fishmonger;🧀 Cheesemaker;🍯 Apiary;🥖 Baker;🎰 Gambling den;🃏 Card room;🎲 Dice hall;🎻 Music hall;💐 Florist;📮 Post box;📨 Message drop;📰 Printer;🖋️ Scribe;📜 Records office;🏥 Clinic;💊 Apothecary;🩺 Doctor;🦷 Dentist;👓 Optician;👗 Dressmaker;👞 Cobbler;💍 Jeweller;🧴 Perfumer;🪞 Glassworks;🛁 Bathhouse;💆 Spa;✂️ Barber shop;🧾 Customs;🏷️ Pawnshop;🤝 Trading post;📈 Stock exchange;🎁 Gift shop;🛍️ Arcade'],
+    ['travel', 'Travel & transport', 'other', '🛣️ Highway;🛤️ Railway;🚉 Station;🚏 Coach stop;🚂 Locomotive;🚃 Tram;🚋 Tramline;🚇 Metro;🚝 Monorail;🚞 Mountain railway;🚡 Cable car;🚠 Gondola;🚟 Suspension rail;🚌 Bus depot;🚚 Haulage;🚜 Tractor shed;🛻 Garage;🚗 Car park;🏍️ Bike path;🚲 Cycle route;🛴 Scooter;🛺 Rickshaw;🐫 Caravan;🐪 Camel route;🐴 Stables;🐎 Horse post;🛶 Canoe landing;⛵ Marina;🚤 Speedboat;🛥️ Motorboat;🚢 Shipyard;⛴️ Ferry;🛳️ Liner berth;⚓ Anchorage;🛫 Departures;🛬 Arrivals;🛩️ Airstrip;🪂 Drop zone;🎈 Balloon port;🛸 Landing pad;🚀 Launch site;🧭 Crossroads;🪧 Signpost;🗺️ Map stone;🌉 Toll bridge;🚦 Checkpoint;⛽ Fuel stop;🛞 Waystation;🏁 Finish line;🚧 Roadblock'],
+    ['water', 'Water & coast', 'port', '⚓ Harbour;🌊 Rough sea;🏝️ Island;🏖️ Beach;🌅 Bay;🐚 Shell beach;🦀 Crab flats;🦞 Lobster pots;🐟 Fishery;🐠 Reef;🐡 Pufferfish shoals;🦈 Shark waters;🐋 Whale grounds;🐬 Dolphin cove;🦭 Seal colony;🐙 Kraken deep;🦑 Squid grounds;🪸 Coral;⛵ Sailing club;🛟 Lifeguard;💦 Waterfall;🏞️ Lake;💧 Spring;🚣 Rowing;🤿 Diving site;🏄 Surf break;🧜 Merfolk;🔱 Sea temple;🌀 Whirlpool;🗿 Sea stack;🪨 Rocks;🧊 Ice floe;🏊 Lido;🎣 Fishing spot;🛶 River landing;🐸 Marsh;🦆 Duck pond;🦢 Swan lake;🦩 Flamingo flats;🐊 Crocodile river;🦦 Otter run;🌫️ Fog bank;🏮 Lighthouse;🗼 Beacon;🦪 Oyster beds;🐢 Turtle beach;🧂 Salt pan;🐳 Spout;🫧 Hot spring;🌧️ Floodplain'],
+    ['nature', 'Nature & terrain', 'landmark', '⛰️ Mountain;🏔️ Snowy peak;🗻 Sacred mountain;🌋 Volcano;🏜️ Desert;🏕️ Wild camp;🌲 Forest;🌳 Woodland;🌴 Oasis;🌵 Cactus flats;🍂 Autumn wood;🍁 Maple grove;🌿 Herb meadow;☘️ Clover field;🍀 Lucky glade;🌾 Grassland;🌱 Sapling grove;🪴 Garden;🌸 Blossom grove;🌺 Jungle flowers;🌻 Sunflower field;🌼 Wildflowers;🌷 Tulip field;🥀 Withered land;🍄 Fungus forest;🪵 Deadfall;🪨 Boulder;🗿 Standing stones;🕳️ Sinkhole;⛱️ Shade;🌄 Ridge;🌅 Vista;🏞️ Valley;🌁 Misty pass;❄️ Glacier;🧊 Ice field;🌬️ Windy pass;☁️ Cloud peak;🌈 Rainbow falls;🌪️ Tornado alley;🔥 Wildfire;🪺 Nesting cliffs;🦅 Eagle crag;🌫️ Mistwood;🌙 Moonlit glade;🌑 Dark wood;🌿 Fernbrake;🎋 Bamboo;🎍 Pine grove;🍃 Windswept moor;🌊 Tidal flats'],
+    ['farm', 'Farms & food', 'village', '🌾 Farm;🚜 Farmstead;🐄 Dairy;🐖 Pig farm;🐑 Sheep run;🐐 Goat pasture;🐓 Poultry;🦃 Turkey farm;🐇 Warren;🐝 Bee yard;🍎 Orchard;🍐 Pear orchard;🍊 Citrus grove;🍋 Lemon grove;🍇 Vineyard;🍓 Berry farm;🫐 Blueberry bog;🍒 Cherry orchard;🍑 Peach orchard;🥭 Mango grove;🍍 Plantation;🥥 Coconut grove;🥝 Kiwi vines;🍅 Tomato fields;🫒 Olive grove;🥑 Avocado grove;🌽 Corn fields;🥕 Root crops;🥔 Potato fields;🧅 Onion beds;🧄 Garlic beds;🥬 Greens;🥦 Vegetable plots;🌶️ Pepper farm;🫘 Bean fields;🌰 Chestnut wood;🥜 Peanut fields;🍚 Rice paddies;🍠 Yam fields;🍄 Mushroom farm;🌻 Seed farm;🍯 Honey house;🥛 Creamery;🧀 Cheese cellar;🥚 Egg farm;🍞 Granary;🌿 Herb garden;🐎 Stud farm;🐂 Ox pasture;🐃 Buffalo range'],
+    ['creatures', 'Creatures', 'other', '🐉 Dragon lair;🐲 Wyrm;🦄 Unicorn glade;🦁 Lion pride;🐯 Tiger territory;🐻 Bear den;🐺 Wolf pack;🦊 Fox earth;🦝 Raccoon den;🐗 Boar wood;🦌 Deer park;🦬 Bison range;🐘 Elephant ground;🦏 Rhino plains;🦛 Hippo pool;🦒 Giraffe plains;🦓 Zebra herd;🐆 Leopard rocks;🦍 Gorilla forest;🐒 Monkey trees;🦇 Bat cave;🦉 Owl wood;🦅 Raptor eyrie;🦜 Parrot jungle;🦚 Peacock garden;🐍 Snake pit;🦎 Lizard rocks;🦂 Scorpion sands;🕷️ Spider nest;🕸️ Webwood;🐜 Ant hill;🪲 Beetle swarm;🦗 Locusts;🐛 Caterpillar;🦋 Butterfly meadow;🐌 Snail marsh;🦖 Tyrant beast;🦕 Long-neck herd;🐊 Swamp beast;🦈 Sea predator;🐙 Tentacle beast;👾 Alien life;👹 Ogre;👺 Goblin camp;🧌 Troll bridge;🐾 Tracks;🦴 Kill site;🪹 Empty nest;🐲 Wyvern roost;🦣 Mammoth steppe'],
+    ['danger', 'Danger & hazards', 'other', '⚠️ Danger;☠️ Death zone;💀 Skull;☢️ Radiation;☣️ Plague;🔥 Fire;🌋 Eruption;🌪️ Storm;🌊 Flood;❄️ Frostbite;⚡ Lightning;💥 Blast zone;🧨 Explosives;💣 Bomb;🕳️ Pit;🪤 Snare;🚫 Forbidden;⛔ No entry;🚷 No trespassing;🛑 Stop;🚱 Bad water;🤢 Poison;🦠 Contagion;🩸 Bloodshed;⚔️ Skirmish;🏴‍☠️ Pirates;🥷 Assassins;🦹 Bandits;🧟 Horde;👁️ Watched;👀 Spies;🫥 Vanished;🌑 Darkness;🌫️ Choking fog;🧪 Toxic spill;🛢️ Oil slick;⛓️ Slavers;🔒 Sealed;🪦 Doom;🧯 Burned out;🚨 Emergency;📛 Hazard sign;🔺 Warning;❗ Alert;❓ Unknown;🫨 Earthquake;🌡️ Heatwave;🧊 Thin ice;🌀 Vortex'],
+    ['scifi', 'Colony & sci-fi', 'other', '🛸 UFO;👽 Alien;🤖 Robot works;🦾 Cybernetics;🛰️ Satellite;📡 Comms array;🚀 Spaceport;🌌 Deep space;🪐 Planet view;🌍 Earth link;🌎 Homeworld;🌏 Survey globe;🔭 Observatory;🧬 Gene lab;🧫 Bio lab;🔬 Research station;💻 Data centre;🖥️ Terminal;⌨️ Control room;🖲️ Console;💾 Archive;💿 Data cache;📀 Golden record;🔋 Battery bank;🔌 Power grid;💡 Light tower;🧲 Mag rail;⚛️ Fusion plant;☢️ Fission plant;🌡️ Climate station;🧑‍🚀 Astronaut;👨‍🔬 Scientist;👩‍🚀 Pilot;🛡️ Shield generator;🔫 Turret;🎛️ Control panel;📟 Beacon;📶 Signal;🕹️ Drone port;🚁 Dropship pad;🛩️ Shuttle strip;🧭 Nav marker;🗜️ Compressor;⚗️ Atmosphere plant;🫧 Habitat dome;🏗️ Prefab site;🧑‍🔧 Maintenance;🧯 Fire suppression;🚥 Traffic control;🛗 Space elevator'],
+    ['markers', 'Markers & quests', 'other', '📍 Pin;📌 Pushpin;🚩 Red flag;🏁 Goal;🎯 Objective;⭐ Star;🌟 Highlight;✳️ Point;✴️ Spark;❇️ Sparkle;🔴 Red;🟠 Orange;🟡 Yellow;🟢 Green;🔵 Blue;🟣 Purple;🟤 Brown;⚫ Black;⚪ White;🔶 Diamond;🔷 Blue diamond;🔺 Red triangle;🔻 Down triangle;🟥 Red square;🟦 Blue square;🟩 Green square;🟨 Yellow square;❌ X marks;⭕ Circle;✅ Done;❎ Cancelled;❔ Mystery;❕ Note;💬 Rumour;💭 Idea;🗨️ Talk;📝 Note;📋 Job board;🔖 Bookmark;🏷️ Label;🗺️ Treasure map;🧭 Waypoint;🔍 Clue;🕵️ Investigation;📦 Delivery;📨 Letter drop;🔑 Key;🎁 Reward;🏆 Trophy;🥇 First place'],
+    ['people', 'People & factions', 'other', '👑 Royalty;🤴 Prince;👸 Princess;🧔 Elder;👴 Old man;👵 Old woman;🧒 Child;👶 Nursery;👪 Family;🧑‍🌾 Farmer;🧑‍🍳 Cook;🧑‍🏭 Worker;🧑‍💼 Clerk;🧑‍⚖️ Judge;🧑‍🏫 Teacher;🧑‍⚕️ Healer;🧑‍🎨 Artist;🧑‍✈️ Captain;🧑‍🚒 Firefighter;👮 Guard;💂 Sentry;🕵️ Spy;👷 Builder;🤠 Ranger;🥷 Ninja;🧙 Sorcerer;🧝 Elf;🧛 Vampire;🧜 Merfolk;🧚 Fairy;🧞 Genie;🧟 Zombie;🤺 Duellist;🏇 Rider;🧗 Climber;🧘 Monk;🙇 Petitioner;🗣️ Speaker;👥 Crowd;🫂 Refuge;🤝 Alliance;✊ Rebellion;🫡 Salute;🤴 Heir;🧑‍🤝‍🧑 Twin towns;💃 Dancer;🕺 Reveller;🎅 Gift giver;🤡 Jester;🧑‍🦯 Blind seer'],
+    ['sky', 'Sky & weather', 'landmark', '☀️ Sunny;🌤️ Fair;⛅ Partly cloudy;🌥️ Overcast;☁️ Cloudy;🌦️ Showers;🌧️ Rain;⛈️ Thunderstorm;🌩️ Lightning;🌨️ Snow;❄️ Snowflake;☃️ Snowfield;⛄ Snowman;🌬️ Wind;💨 Gale;🌪️ Tornado;🌫️ Fog;🌈 Rainbow;☔ Monsoon;⚡ Charged air;🌑 New moon;🌒 Waxing crescent;🌓 First quarter;🌔 Waxing gibbous;🌕 Full moon;🌖 Waning gibbous;🌗 Last quarter;🌘 Waning crescent;🌙 Crescent;🌚 Dark moon;🌛 Moon face;🌜 Moon rise;🌝 Moon watch;🌞 Sun face;⭐ Star;🌟 Bright star;💫 Comet;☄️ Meteor;🌠 Shooting star;🌌 Milky way;🪐 Ringed world;🌅 Sunrise;🌄 Dawn;🌇 Sunset;🌆 Dusk;🌃 Night;🌡️ Hot;🥶 Bitter cold;🔆 Bright;🔅 Dim'],
+    ['treasure', 'Loot & items', 'other', '💎 Gem;💰 Gold hoard;🪙 Coins;👑 Crown;💍 Ring;📿 Amulet;🗝️ Old key;🔑 Key;🗡️ Dagger;⚔️ Swords;🏹 Bow;🛡️ Shield;🪓 Axe;🔱 Trident;🪃 Boomerang;🔨 Hammer;⛏️ Pickaxe;🧰 Toolbox;🪝 Hook;🧪 Potion;⚗️ Elixir;🧴 Ointment;📜 Scroll;📖 Tome;📕 Red book;📘 Blue book;🗿 Idol;🏺 Amphora;⚱️ Reliquary;🪔 Lamp;🕯️ Candle;🔮 Crystal ball;🪄 Wand;🧿 Talisman;🎭 Mask;🎺 Horn;🪕 Banjo;🎻 Fiddle;🥁 Drum;🪘 Hand drum;🧭 Compass;⌛ Hourglass;⏳ Sand timer;🔭 Spyglass;🪞 Mirror;🧸 Doll;🪆 Nesting doll;🎲 Die;♟️ Pawn;🃏 Joker'],
+    ['leisure', 'Leisure & culture', 'other', '🎭 Playhouse;🎨 Studio;🎬 Cinema;🎤 Concert;🎧 Music shop;🎼 Conservatory;🎹 Piano hall;🎷 Jazz club;🎸 Rock venue;🎪 Fairground;🎠 Carousel;🎢 Coaster;🎡 Wheel;🎳 Bowling;🎯 Darts;🎱 Billiards;🏓 Table tennis;🏸 Badminton;🥊 Boxing ring;🥋 Dojo;🤼 Wrestling pit;🏋️ Gym;🤸 Acrobats;⛹️ Court;🏀 Basketball;⚽ Football;🏈 Gridiron;⚾ Ball park;🎾 Tennis;🏐 Volleyball;🏉 Rugby;🏏 Cricket;🏑 Hockey;⛳ Golf;🏒 Ice rink;⛸️ Skating;🎿 Ski slope;🏂 Snowboard;🛷 Sled run;🏆 Champions;🎻 Orchestra;📯 Hunt;🎣 Angling;🏹 Archery;🪁 Kite hill;🎆 Fireworks;🎇 Sparklers;🧨 Festival;🎉 Celebration;🎊 Parade'],
+    ['things', 'Objects & misc', 'other', '🏮 Lantern;🪔 Oil lamp;💡 Bulb;🔦 Torch;🧯 Extinguisher;🪣 Bucket;🧹 Broom;🧺 Basket;🪑 Chair;🛋️ Lounge;🛏️ Bed;🚪 Door;🪟 Window;🪜 Ladder;🧳 Luggage;🎒 Pack;👜 Bag;🪖 Helmet;🎩 Top hat;🧢 Cap;👒 Sun hat;🥾 Boots;🧤 Gloves;🧣 Scarf;🧥 Coat;🪢 Rope;🧵 Thread;🧷 Pin;📎 Clip;✂️ Scissors;📏 Ruler;📐 Set square;✏️ Pencil;🖊️ Pen;🖌️ Brush;🖍️ Crayon;📷 Camera;📹 Video;📺 Screen;📻 Radio;☎️ Telephone;📱 Phone;⏰ Clock;🕰️ Mantel clock;⌚ Watch;🔔 Bell;📢 Loudspeaker;📣 Megaphone;🧩 Puzzle;🪅 Piñata;🎀 Ribbon'],
+  ];
+  const list = [], byKey = {};
+  for (const [k, name, type] of DRAWN) { const s = { key: k, name, type, cat: 'defaults', drawn: true }; list.push(s); byKey[k] = s; }
+  for (const [cat, , type, src] of CATS) if (src) for (const part of src.split(';')) {
+    const i = part.indexOf(' '), e = part.slice(0, i), name = part.slice(i + 1).trim();
+    const key = 'e:' + e + ':' + name;
+    if (byKey[key]) continue;
+    const s = { key, e, name, type, cat }; list.push(s); byKey[key] = s;
+  }
+  // a drawn glyph in a box of radius r around (x, y); light on dark maps, dark on paper maps
+  function drawGlyph(g, k, x, y, r, topo) {
+    const ink = topo ? '#1a1a1a' : '#fff', back = topo ? '#fffaf0' : '#1d232c';
+    g.save(); g.translate(x, y); g.lineJoin = 'round'; g.lineCap = 'round';
+    g.fillStyle = back; g.strokeStyle = ink; g.lineWidth = Math.max(1.2, r * 0.12);
+    const u = r / 10;
+    const P = pts => { g.beginPath(); pts.forEach(([a, b], i) => i ? g.lineTo(a * u, b * u) : g.moveTo(a * u, b * u)); g.closePath(); };
+    const box = (a, b, w, hh) => { g.beginPath(); g.rect(a * u, b * u, w * u, hh * u); };
+    const fs = () => { g.fill(); g.stroke(); };
+    const crenel = (a, b, w, n) => { const s = w / (2 * n - 1); for (let q = 0; q < n; q++) { box(a + q * 2 * s, b - s, s, s); fs(); } };
+    switch (k) {
+      case 'v:walled': g.beginPath(); g.arc(0, 0, 9 * u, 0, Math.PI * 2); fs(); g.beginPath(); g.arc(0, 0, 5.5 * u, 0, Math.PI * 2); g.stroke();
+        for (let q = 0; q < 6; q++) { const a = q * Math.PI / 3; g.beginPath(); g.arc(Math.cos(a) * 9 * u, Math.sin(a) * 9 * u, 2 * u, 0, Math.PI * 2); fs(); } g.fillStyle = ink; g.beginPath(); g.arc(0, 0, 2.2 * u, 0, Math.PI * 2); g.fill(); break;
+      case 'v:metro': box(-9, -2, 5, 11); fs(); box(-4, -9, 6, 18); fs(); box(2, -5, 7, 14); fs(); g.fillStyle = ink; for (const [a, b] of [[-2.5, -6], [-2.5, -2], [-2.5, 2], [4, -2], [4, 2], [-7.5, 1], [-7.5, 5]]) { g.fillRect(a * u, b * u, 1.6 * u, 1.6 * u); } break;
+      case 'v:capital': g.beginPath(); g.arc(0, 0, 9 * u, 0, Math.PI * 2); fs(); g.beginPath(); for (let q = 0; q < 10; q++) { const a = -Math.PI / 2 + q * Math.PI / 5, rr = q % 2 ? 2.6 : 6.4; g.lineTo(Math.cos(a) * rr * u, Math.sin(a) * rr * u); } g.closePath(); g.fillStyle = ink; g.fill(); break;
+      case 'v:town': P([[-9, 9], [-9, -1], [-4, -6], [1, -1], [1, 9]]); fs(); P([[1, 9], [1, 1], [5, -3], [9, 1], [9, 9]]); fs(); g.fillStyle = ink; g.fillRect(-5.5 * u, 3 * u, 3 * u, 6 * u); break;
+      case 'v:hamlet': P([[-7, 7], [-7, -1], [0, -7], [7, -1], [7, 7]]); fs(); g.fillStyle = ink; g.fillRect(-1.5 * u, 2 * u, 3 * u, 5 * u); break;
+      case 'v:dome': g.beginPath(); g.arc(0, 5 * u, 9 * u, Math.PI, 0); g.closePath(); fs(); g.beginPath(); g.arc(0, 5 * u, 5 * u, Math.PI, 0); g.stroke(); g.beginPath(); g.moveTo(0, -4 * u); g.lineTo(0, 5 * u); g.moveTo(-8 * u, 1 * u); g.lineTo(8 * u, 1 * u); g.stroke(); break;
+      case 'v:harbor': g.beginPath(); g.arc(0, 0, 9 * u, 0, Math.PI * 2); fs(); g.beginPath(); g.moveTo(0, -6 * u); g.lineTo(0, 6 * u); g.moveTo(-4 * u, -3 * u); g.lineTo(4 * u, -3 * u); g.moveTo(-6 * u, 2 * u); g.quadraticCurveTo(-5 * u, 7 * u, 0, 6 * u); g.quadraticCurveTo(5 * u, 7 * u, 6 * u, 2 * u); g.stroke(); g.beginPath(); g.arc(0, -7 * u, 1.6 * u, 0, Math.PI * 2); g.stroke(); break;
+      case 'v:castle': box(-9, -3, 18, 12); fs(); box(-9, -9, 5, 18); fs(); box(4, -9, 5, 18); fs(); crenel(-9, -9, 5, 2); crenel(4, -9, 5, 2); g.fillStyle = ink; g.beginPath(); g.arc(0, 5 * u, 2.4 * u, Math.PI, 0); g.lineTo(2.4 * u, 9 * u); g.lineTo(-2.4 * u, 9 * u); g.closePath(); g.fill(); break;
+      case 'v:keep': box(-6, -6, 12, 15); fs(); crenel(-6, -6, 12, 4); g.fillStyle = ink; g.fillRect(-1 * u, -2 * u, 2 * u, 3.5 * u); g.fillRect(-2 * u, 5 * u, 4 * u, 4 * u); break;
+      case 'v:starfort': g.beginPath(); for (let q = 0; q < 10; q++) { const a = -Math.PI / 2 + q * Math.PI / 5, rr = q % 2 ? 5.6 : 9.6; g.lineTo(Math.cos(a) * rr * u, Math.sin(a) * rr * u); } g.closePath(); fs(); box(-2.5, -2.5, 5, 5); g.fillStyle = ink; g.fill(); break;
+      case 'v:citadel': P([[-9, 9], [-9, 0], [-6, -3], [-3, 0], [-3, -5], [0, -9], [3, -5], [3, 0], [6, -3], [9, 0], [9, 9]]); fs(); g.fillStyle = ink; g.fillRect(-1.5 * u, 4 * u, 3 * u, 5 * u); break;
+      case 'v:tower': P([[-4, 9], [-3, -5], [3, -5], [4, 9]]); fs(); crenel(-4, -5, 8, 3); g.fillStyle = ink; g.fillRect(-0.9 * u, -2 * u, 1.8 * u, 3 * u); break;
+      case 'v:bunker': g.beginPath(); g.moveTo(-9 * u, 6 * u); g.lineTo(-7 * u, -1 * u); g.quadraticCurveTo(0, -8 * u, 7 * u, -1 * u); g.lineTo(9 * u, 6 * u); g.closePath(); fs(); g.fillStyle = ink; g.fillRect(-4 * u, -1 * u, 8 * u, 1.8 * u); break;
+      case 'v:outpost': P([[-8, 8], [0, -9], [8, 8]]); fs(); g.beginPath(); g.moveTo(0, -9 * u); g.lineTo(0, -4 * u); g.stroke(); g.fillStyle = ink; g.beginPath(); g.arc(0, 3 * u, 2.4 * u, 0, Math.PI * 2); g.fill(); break;
+      case 'v:palisade': box(-9, -4, 18, 13); fs(); g.beginPath(); for (let q = -9; q <= 9; q += 3) { g.moveTo(q * u, -4 * u); g.lineTo((q + 1.5) * u, -8 * u); g.lineTo((q + 3) * u, -4 * u); } g.stroke(); g.fillStyle = ink; g.fillRect(-2 * u, 3 * u, 4 * u, 6 * u); break;
+      case 'v:gate': box(-9, -6, 6, 15); fs(); box(3, -6, 6, 15); fs(); box(-3, -3, 6, 4); fs(); crenel(-9, -6, 6, 2); crenel(3, -6, 6, 2); g.beginPath(); g.moveTo(-3 * u, 9 * u); g.lineTo(-3 * u, 3 * u); g.arc(0, 3 * u, 3 * u, Math.PI, 0); g.lineTo(3 * u, 9 * u); g.stroke(); break;
+      case 'v:barracks': box(-9, -3, 18, 11); fs(); P([[-10, -3], [0, -9], [10, -3]]); fs(); g.fillStyle = ink; for (const a of [-7, -3, 1, 5]) g.fillRect(a * u, 1 * u, 2 * u, 3 * u); break;
+      case 'v:firebase': g.beginPath(); for (let q = 0; q < 6; q++) { const a = q * Math.PI / 3; g.lineTo(Math.cos(a) * 9 * u, Math.sin(a) * 9 * u); } g.closePath(); fs(); g.beginPath(); g.arc(0, 0, 3.6 * u, 0, Math.PI * 2); g.moveTo(-6.5 * u, 0); g.lineTo(6.5 * u, 0); g.moveTo(0, -6.5 * u); g.lineTo(0, 6.5 * u); g.stroke(); break;
+      case 'v:siege': P([[-9, 8], [-4, -4], [1, 8]]); fs(); P([[-1, 8], [4, -2], [9, 8]]); fs(); g.beginPath(); g.moveTo(-4 * u, -4 * u); g.lineTo(-4 * u, -9 * u); g.lineTo(0, -7.5 * u); g.lineTo(-4 * u, -6 * u); g.stroke(); break;
+      case 'v:hillfort': g.beginPath(); g.ellipse(0, 3 * u, 9.5 * u, 6 * u, 0, 0, Math.PI * 2); fs(); g.beginPath(); g.ellipse(0, 3 * u, 6 * u, 3.6 * u, 0, 0, Math.PI * 2); g.stroke(); box(-2.5, -8, 5, 9); fs(); crenel(-2.5, -8, 5, 2); break;
+      case 'v:seafort': g.beginPath(); g.arc(0, 0, 9 * u, 0, Math.PI * 2); fs(); g.beginPath(); g.moveTo(-8 * u, 5 * u); g.quadraticCurveTo(-4 * u, 2.5 * u, 0, 5 * u); g.quadraticCurveTo(4 * u, 7.5 * u, 8 * u, 5 * u); g.stroke(); box(-3.5, -6, 7, 8); fs(); crenel(-3.5, -6, 7, 3); break;
+      case 'v:ruinfort': P([[-9, 9], [-9, -4], [-7, -6], [-5, -2], [-5, 9]]); fs(); P([[-1, 9], [-1, 0], [2, -3], [3, 9]]); fs(); P([[5, 9], [5, -7], [9, -8], [9, 9]]); fs(); break;
+    }
+    g.restore();
+  }
+  // any symbol in a box of radius r: emoji sit on a small disc so they stay readable on every map style
+  function draw(g, key, x, y, r, topo) {
+    const s = byKey[key]; if (!s) return false;
+    if (s.drawn) { drawGlyph(g, key, x, y, r, topo); return true; }
+    g.save();
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2);
+    g.fillStyle = topo ? 'rgba(255,252,244,.94)' : 'rgba(18,22,30,.82)'; g.fill();
+    g.lineWidth = 1.3; g.strokeStyle = topo ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.7)'; g.stroke();
+    g.font = `${Math.round(r * 1.35)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(s.e, x, y + r * 0.08);
+    g.restore();
+    return true;
+  }
+  function swatch(key, px = 34, topo = false) {
+    const c = document.createElement('canvas'), k = Math.min(3, window.devicePixelRatio || 2);
+    c.width = c.height = px * k; c.style.width = c.style.height = px + 'px';
+    const g = c.getContext('2d'); g.scale(k, k); draw(g, key, px / 2, px / 2, px / 2 - 2, topo);
+    return c;
+  }
+  const cats = CATS.map(([k, name]) => [k, name]);
+  const search = (q, cat) => { q = lc(q); return list.filter(s => (q ? lc(s.name).includes(q) || lc(s.cat).includes(q) : s.cat === cat)); };
+  // a browsable grid: category chips, a search box and the symbols; onPick(symbol)
+  function picker(cur, onPick, opts = {}) {
+    let cat = (cur && byKey[cur] && byKey[cur].cat) || opts.cat || 'defaults';
+    const q = h('input', { type: 'search', placeholder: `Search ${list.length} symbols`, autocomplete: 'off' });
+    const chips = h('div', { class: 'sym-cats' }), grid = h('div', { class: 'sym-grid' });
+    const render = () => {
+      chips.innerHTML = ''; grid.innerHTML = '';
+      for (const [k, name] of cats) chips.append(h('button', { type: 'button', class: 'chip' + (k === cat && !q.value ? ' on' : ''), onclick: () => { cat = k; q.value = ''; render(); } }, name));
+      const items = search(q.value, cat);
+      for (const s of items) grid.append(h('button', { type: 'button', class: 'sym' + (s.key === cur ? ' on' : ''), title: s.name, onclick: () => { cur = s.key; onPick(s); render(); } }, swatch(s.key, 32), h('span', null, s.name)));
+      if (!items.length) grid.append(h('div', { class: 'small muted', style: 'padding:10px' }, 'No symbols match.'));
+      const on = chips.querySelector('.on'); if (on) requestAnimationFrame(() => on.scrollIntoView({ block: 'nearest', inline: 'center' }));
+    };
+    q.addEventListener('input', render);
+    render();
+    return h('div', { class: 'sym-picker' + (opts.compact ? ' compact' : '') }, q, chips, grid);
+  }
+  return { list, byKey, cats, draw, swatch, picker, get: k => byKey[k] };
+})();
+
 const MapView = (() => {
   const T = Terrain;
   const view = $('#view-map'), cv = $('#map-canvas');
@@ -2292,6 +2422,7 @@ const MapView = (() => {
   let measure = [];
   let placeHits = [], featureHits = [];
   const STAMPS = {
+    symbol: { name: 'Symbols', icon: 'flag' },
     river: { name: 'River', icon: 'river', line: true, amount: 'Width' },
     canyon: { name: 'Canyon', icon: 'canyon', line: true, amount: 'Depth' },
     lake: { name: 'Lake', icon: 'lake', amount: 'Depth' },
@@ -2305,7 +2436,7 @@ const MapView = (() => {
     trail: { name: 'Trail', icon: 'trail', line: true },
     border: { name: 'Border', icon: 'border', line: true },
   };
-  const stamp = { kind: 'river', size: 60, amount: 50 };
+  const stamp = { kind: 'river', size: 60, amount: 50, sym: 'v:castle' };
 
   /* ---------- workers ---------- */
   const Pool = (() => {
@@ -2622,6 +2753,7 @@ const MapView = (() => {
     if (lay.places) drawPlaces(st.topo, labelBoxes);
     if (lay.features) drawFeatureLabels(st.topo, labelBoxes);
     if (st.topo) drawTileLabels(fresh, Sz, st, labelBoxes);
+    drawHere();
     if (ex) { lastStyle = st; return missing; }
     drawMeasure();
     drawSelection();
@@ -2765,6 +2897,10 @@ const MapView = (() => {
     ctx.stroke(); ctx.fill();
     if (ty.glyph === 'anchor') { ctx.strokeStyle = fill === '#fff' ? '#111' : '#fff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, y - r * 0.5); ctx.lineTo(x, y + r * 0.5); ctx.moveTo(x - r * 0.45, y + r * 0.15); ctx.lineTo(x + r * 0.45, y + r * 0.15); ctx.stroke(); }
   }
+  const symR = p => (p.type === 'capital' || p.type === 'city' ? 11 : p.type === 'village' || p.type === 'camp' ? 8 : 9.5);
+  function mark(p, x, y, topo) {
+    if (p.sym && SYMBOLS.get(p.sym)) SYMBOLS.draw(ctx, p.sym, x, y, symR(p), topo); else glyph(p.type, x, y, topo);
+  }
   function drawPlaces(topo, boxes) {
     placeHits = [];
     const widthMi = W * mpp() / T.MI, cll = centerLL();
@@ -2781,10 +2917,11 @@ const MapView = (() => {
       const font = (p.type === 'water' ? 'italic 600 ' : p.type === 'region' ? '700 ' : '650 ') + fontSize + 'px ' + (p.type === 'water' || p.type === 'region' ? 'Georgia, "Times New Roman", serif' : '-apple-system, system-ui, sans-serif');
       const text = p.type === 'region' ? p.name.toUpperCase() : p.name;
       ctx.font = font; const tw = ctx.measureText(text).width;
-      const lx = isLabel ? s[0] : s[0] + ty.size + 5, align = isLabel ? 'center' : 'left';
-      const bx = isLabel ? [s[0] - tw / 2, s[1] - 9, s[0] + tw / 2, s[1] + 9] : [s[0] - ty.size - 2, s[1] - 9, lx + tw + 2, s[1] + 9];
-      if (!boxFree(boxes, bx) && !p.always) { if (!isLabel) { glyph(p.type, s[0], s[1], topo); placeHits.push({ x: s[0], y: s[1], p }); } continue; }
-      if (!isLabel) glyph(p.type, s[0], s[1], topo);
+      const gs = p.sym && SYMBOLS.get(p.sym) ? symR(p) : ty.size;
+      const lx = isLabel ? s[0] : s[0] + gs + 5, align = isLabel ? 'center' : 'left';
+      const bx = isLabel ? [s[0] - tw / 2, s[1] - 9, s[0] + tw / 2, s[1] + 9] : [s[0] - gs - 2, s[1] - Math.max(9, gs), lx + tw + 2, s[1] + Math.max(9, gs)];
+      if (!boxFree(boxes, bx) && !p.always) { if (!isLabel) { mark(p, s[0], s[1], topo); placeHits.push({ x: s[0], y: s[1], p }); } continue; }
+      if (!isLabel) mark(p, s[0], s[1], topo);
       const fill = p.type === 'water' ? (topo ? '#1f5f9c' : '#cfe6ff') : topo ? '#111' : '#fff';
       const halo = topo ? 'rgba(255,255,255,.9)' : 'rgba(10,14,20,.75)';
       if (p.type === 'region') ctx.letterSpacing = '2px';
@@ -2965,6 +3102,10 @@ const MapView = (() => {
         }
         return;
       }
+      if (stamp.kind === 'symbol') {
+        if (hover) { ctx.save(); ctx.globalAlpha = 0.75; SYMBOLS.draw(ctx, stamp.sym, hover[0], hover[1], 11, !!(lastStyle && lastStyle.topo)); ctx.restore(); }
+        return;
+      }
       const at = hover || [W / 2, H / 2];
       ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(at[0], at[1], stamp.size + 1, 0, Math.PI * 2); ctx.stroke();
       ctx.strokeStyle = 'rgba(255,209,102,.95)'; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.arc(at[0], at[1], stamp.size, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
@@ -3072,11 +3213,20 @@ const MapView = (() => {
     if (tool === 'pan' && lastTap && now - lastTap.t < 320 && Math.hypot(x - lastTap.x, y - lastTap.y) < 30) { lastTap = null; hideChip(); animateZoom(x, y, 2); return; }
     lastTap = { t: now, x, y };
     if (tool === 'share') return;
+    if (aim) {
+      const ll = screenToLL(x, y); if (!ll) return;
+      const hr = S.world.here;
+      if (aim === 'move' || !hr) { setHere(ll); toast('You are here: moved'); }
+      else { setHere([hr.lat, hr.lon], brgDeg([hr.lat, hr.lon], ll)); toast(`Heading ${S.world.here.hdg}° ${hdgName(S.world.here.hdg)}`); }
+      aim = null; return;
+    }
     if (tool === 'stamp') {
       const ll = screenToLL(x, y); if (!ll) return;
-      if (STAMPS[stamp.kind].line) toast(`Drag across the map to draw a ${STAMPS[stamp.kind].name.toLowerCase()}`); else placeStamp(ll);
+      if (stamp.kind === 'symbol') placeSymbol(ll);
+      else if (STAMPS[stamp.kind].line) toast(`Drag across the map to draw a ${STAMPS[stamp.kind].name.toLowerCase()}`); else placeStamp(ll);
       return;
     }
+    if (tool === 'pan' && hereHit && Math.hypot(hereHit[0] - x, hereHit[1] - y) < 22) { hereSheet(); return; }
     if (tool !== 'measure') {
       let best = null, bd = 24;
       for (const hpl of placeHits) { const d = Math.hypot(hpl.x - x, hpl.y - y); if (d < bd) { bd = d; best = hpl.p; } }
@@ -3125,16 +3275,102 @@ const MapView = (() => {
       (() => { const n = nearby(ll, 1)[0]; return n ? h('div', { class: 'small', style: 'margin-top:3px' }, `${fmtDist(n.d)} ${bearingName([n.p.lat, n.p.lon], ll)} of `, h('a', { class: 'wl', role: 'button', onclick: () => openPlace(n.p) }, n.p.name), ` · ≈ ${footDays(n.d)} on foot`) : null; })(),
       h('div', { class: 'row', style: 'margin-top:8px' },
         h('button', { class: 'btn small primary', onclick: () => { editPlace(null, ll); } }, icon('pin', 16), 'Add place here'),
-        h('button', { class: 'btn small', onclick: () => { measure = [ll]; setTool('measure'); hideChip(); } }, icon('ruler', 16), 'Measure from here'))].filter(Boolean));
+        h('button', { class: 'btn small', onclick: () => { measure = [ll]; setTool('measure'); hideChip(); } }, icon('ruler', 16), 'Measure'),
+        h('button', { class: 'btn small', onclick: () => { setHere(ll); hideChip(); toast('Marked: you are here', 3500, { label: 'Heading', fn: hereSheet }); } }, icon('target', 16), "I'm here"))].filter(Boolean));
     chip.classList.add('show');
   }
 
   /* ---------- places ---------- */
   const placeWidth = p => (p.type === 'region' ? 900 : p.type === 'capital' || p.type === 'city' ? 40 : 6);
-  function bearingName(a, b) {   // compass direction from a to b
+  function brgDeg(a, b) {   // initial great-circle bearing from a to b, degrees clockwise from north
     const p1 = a[0] * D2R, p2 = b[0] * D2R, dl = (b[1] - a[1]) * D2R;
-    const brg = (Math.atan2(Math.sin(dl) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)) * R2D + 360) % 360;
-    return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(brg / 45) % 8];
+    return (Math.atan2(Math.sin(dl) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)) * R2D + 360) % 360;
+  }
+  function bearingName(a, b) {   // compass direction from a to b
+    return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(brgDeg(a, b) / 45) % 8];
+  }
+  function destLL(ll, brg, ang) {   // the point ang radians away along bearing brg
+    const p1 = ll[0] * D2R, l1 = ll[1] * D2R, t = brg * D2R;
+    const p2 = Math.asin(clamp(Math.sin(p1) * Math.cos(ang) + Math.cos(p1) * Math.sin(ang) * Math.cos(t), -1, 1));
+    const l2 = l1 + Math.atan2(Math.sin(t) * Math.sin(ang) * Math.cos(p1), Math.cos(ang) - Math.sin(p1) * Math.sin(p2));
+    return [p2 * R2D, ((l2 * R2D + 540) % 360) - 180];
+  }
+  const COMPASS16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const hdgName = d => COMPASS16[Math.round((((d % 360) + 360) % 360) / 22.5) % 16];
+
+  /* ---------- you are here: a marker with a heading arrow ---------- */
+  let hereHit = null, aim = null;   // aim: the next map tap moves the marker ('move') or points it ('heading')
+  function setHere(ll, hdg) {
+    const o = S.world.here, v = hdg ?? (o ? o.hdg : 0);
+    S.world.here = { lat: +ll[0].toFixed(6), lon: +ll[1].toFixed(6), hdg: Math.round(((v % 360) + 360) % 360) % 360 };
+    save(); dirty = true;
+  }
+  function drawHere() {
+    hereHit = null;
+    const y = S.world.here; if (!y) return;
+    if (cam.mode === 'world' && Math.abs(wrapRad((y.lon - cm()) * D2R)) > Math.PI - 1e-9) return;
+    if (cam.mode === 'local' && gcAngle(centerLL(), [y.lat, y.lon]) > 0.6) return;
+    const s = llToScreen(y.lat, y.lon);
+    if (!s || !isFinite(s[0]) || s[0] < -40 || s[0] > W + 40 || s[1] < -40 || s[1] > H + 40) return;
+    // which way the heading points on screen: step a few pixels along it and see where that lands
+    const t = llToScreen(...destLL([y.lat, y.lon], y.hdg || 0, Math.max(1e-7, 6 * mpp() / T.RM)));
+    let a = Math.atan2(t[1] - s[1], t[0] - s[0]);
+    if (!isFinite(a) || !(Math.hypot(t[0] - s[0], t[1] - s[1]) < 60)) a = (y.hdg || 0) * D2R - Math.PI / 2 - cam.rot;
+    const [x, yy] = s;
+    ctx.save();
+    const cone = ctx.createRadialGradient(x, yy, 4, x, yy, 50);
+    cone.addColorStop(0, 'rgba(43,140,255,.6)'); cone.addColorStop(1, 'rgba(43,140,255,0)');
+    ctx.fillStyle = cone; ctx.beginPath(); ctx.moveTo(x, yy); ctx.arc(x, yy, 50, a - 0.45, a + 0.45); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(43,140,255,.2)'; ctx.beginPath(); ctx.arc(x, yy, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.translate(x, yy); ctx.rotate(a);
+    ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-8, -9); ctx.lineTo(-3.5, 0); ctx.lineTo(-8, 9); ctx.closePath();
+    ctx.lineJoin = 'round'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.6; ctx.stroke(); ctx.fillStyle = '#2b8cff'; ctx.fill();
+    ctx.restore();
+    haloText(`You are here · ${hdgName(y.hdg || 0)}`, x, yy + 25, '#fff', 'rgba(16,56,112,.92)', '700 11px -apple-system, system-ui, sans-serif', 'center');
+    hereHit = [x, yy];
+  }
+  function goHere() {
+    const y = S.world.here;
+    if (!y) { toast("Tap a spot on the map and choose \u201cI'm here\u201d first"); return; }
+    flyTo(y.lat, y.lon, Math.min(W * mpp() / T.MI, 60));
+  }
+  function hereSheet() {
+    const y = S.world.here; if (!y) return;
+    let sh;
+    const out = h('b', { class: 'num', style: 'font-size:20px' });
+    const rng = h('input', { type: 'range', min: 0, max: 359, step: 1, style: 'width:100%' });
+    const dial = h('div', { class: 'hdg-dial' });
+    const drawDial = () => {
+      const d = y.hdg || 0;
+      let ticks = '';
+      for (let k = 0; k < 72; k++) { const a = k * 5 * D2R, r1 = k % 18 === 0 ? 40 : k % 9 === 0 ? 44 : 48; ticks += `<line x1="${(Math.sin(a) * r1).toFixed(1)}" y1="${(-Math.cos(a) * r1).toFixed(1)}" x2="${(Math.sin(a) * 52).toFixed(1)}" y2="${(-Math.cos(a) * 52).toFixed(1)}" stroke="currentColor" stroke-opacity="${k % 9 === 0 ? 0.8 : 0.35}" stroke-width="${k % 18 === 0 ? 2 : 1}"/>`; }
+      const lt = (t, a) => `<text x="${(Math.sin(a * D2R) * 31).toFixed(1)}" y="${(-Math.cos(a * D2R) * 31 + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="${t === 'N' ? '#e5484d' : 'currentColor'}">${t}</text>`;
+      dial.innerHTML = `<svg viewBox="-58 -58 116 116" width="170" height="170" style="color:var(--text)"><circle r="55" fill="var(--card2)" stroke="var(--line)" stroke-width="2"/>${ticks}${lt('N', 0)}${lt('E', 90)}${lt('S', 180)}${lt('W', 270)}
+        <g transform="rotate(${d})"><path d="M0 -50 L9 -6 L0 -12 L-9 -6 Z" fill="#2b8cff" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle r="5" fill="#2b8cff" stroke="#fff" stroke-width="2"/></g></svg>`;
+    };
+    const set = v => { v = ((Math.round(+v || 0) % 360) + 360) % 360; y.hdg = v; rng.value = v; out.textContent = `${v}° ${hdgName(v)}`; drawDial(); save(); dirty = true; };
+    const fromPtr = e => { const r = dial.firstChild.getBoundingClientRect(); set(Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * R2D); };
+    let dragging = false;
+    dial.addEventListener('pointerdown', e => { dragging = true; try { dial.setPointerCapture(e.pointerId); } catch (_) {} fromPtr(e); e.preventDefault(); });
+    dial.addEventListener('pointermove', e => { if (dragging) fromPtr(e); });
+    dial.addEventListener('pointerup', () => { dragging = false; });
+    dial.addEventListener('pointercancel', () => { dragging = false; });
+    rng.addEventListener('input', () => set(rng.value));
+    const near = nearby([y.lat, y.lon], 1)[0];
+    const btns = h('div', { class: 'hdg-btns' }, ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'].map((t, i) => h('button', { class: 'btn small', type: 'button', onclick: () => set(i * 45) }, t)));
+    set(y.hdg || 0);
+    sh = openSheet({ title: 'You are here', body: h('div', null,
+      h('div', { class: 'small muted', style: 'margin-bottom:6px' }, fmtLL([y.lat, y.lon]), near ? ` · ${fmtDist(near.d)} ${bearingName([near.p.lat, near.p.lon], [y.lat, y.lon])} of ${near.p.name}` : ''),
+      h('div', { style: 'text-align:center' }, out), dial,
+      h('div', { class: 'tiny muted', style: 'text-align:center' }, 'Drag the dial to set the heading'),
+      rng, btns,
+      h('div', { class: 'row', style: 'margin-top:4px' },
+        h('button', { class: 'btn small', style: 'flex:1', onclick: () => { aim = 'heading'; sh.close(); setTab('map'); toast('Tap where you are heading'); } }, icon('target', 16), 'Point at a spot'),
+        h('button', { class: 'btn small', style: 'flex:1', onclick: () => { aim = 'move'; sh.close(); setTab('map'); toast('Tap the map where you are'); } }, icon('pin', 16), 'Move'))),
+    foot: [
+      h('button', { class: 'btn danger', onclick: () => { const u = undoable(['world.here']); S.world.here = null; save(); dirty = true; sh.close(); u('Removed the you-are-here marker'); } }, icon('trash', 16), 'Remove'),
+      h('div', { class: 'spacer' }),
+      h('button', { class: 'btn primary', onclick: () => { sh.close(); setTab('map'); goHere(); } }, icon('target', 16), 'Centre')] });
   }
   function nearby(ll, n = 5, skip) {
     return S.world.places.filter(p => p !== skip && p.type !== 'region' && p.type !== 'water').map(p => ({ p, d: gcAngle(ll, [p.lat, p.lon]) * T.RM })).sort((a, b) => a.d - b.d).slice(0, n);
@@ -3154,7 +3390,7 @@ const MapView = (() => {
       p.notes ? h('div', { class: 'card' }, md(p.notes, { onToggle: (i, on) => { p.notes = mdToggle(p.notes, i, on); save(); } })) : null,
       twin ? h('button', { class: 'btn small', style: 'margin:2px 0 6px', onclick: () => { sh.close(); Codex.open(twin.id); } }, icon('book', 14), 'Codex: ' + twin.title) : null,
       h('div', { class: 'card' }, h('h3', null, icon('users', 15), 'Characters', h('span', { class: 'grow' }),
-        party.length ? h('button', { class: 'btn small', onclick: () => { for (const c of party) c.at = p.id; save(); emit('data'); sh.close(); openPlace(p); toast(`The party is now at ${p.name}`); } }, 'Party is here') : null),
+        party.length ? h('button', { class: 'btn small', onclick: () => { for (const c of party) c.at = p.id; const hr = S.world.here; setHere([p.lat, p.lon], hr ? brgDeg([hr.lat, hr.lon], [p.lat, p.lon]) : 0); save(); emit('data'); sh.close(); openPlace(p); toast(`The party is now at ${p.name}`); } }, 'Party is here') : null),
         chars.length ? chars.map(c => h('div', { class: 'list-row tap', onclick: () => { sh.close(); Chars.open(c.id); } }, avatar(c, 30),
           h('div', { class: 'main' }, h('div', { class: 'title' }, c.name), h('div', { class: 'sub' }, [c.at === p.id ? 'Currently here' : null, c.home === p.id ? 'Home' : null].filter(Boolean).join(' · '))))) : h('div', { class: 'small muted' }, 'Nobody is here or lives here.')),
       evs.length ? h('div', { class: 'card' }, h('h3', null, icon('timeline', 15), 'Events here'), evs.map(e => h('div', { class: 'list-row tap', onclick: () => { sh.close(); Timeline.focusEvent(e.id); } },
@@ -3177,18 +3413,30 @@ const MapView = (() => {
     const always = h('input', { type: 'checkbox', checked: d.always });
     let notesV = d.notes || '';
     const notes = mdEditor(notesV, v => { notesV = v; }, { minHeight: '110px', placeholder: 'Notes, history, who lives here… [[links]] work here too' });
+    let symV = d.sym && SYMBOLS.get(d.sym) ? d.sym : null;
+    const symBox = h('div', { class: 'row' });
+    const drawSymBox = () => {
+      const sy = symV && SYMBOLS.get(symV);
+      symBox.innerHTML = '';
+      symBox.append(...[sy ? SYMBOLS.swatch(sy.key, 30) : null, h('span', { class: 'grow small' + (sy ? '' : ' muted') }, sy ? sy.name : 'The standard marker for its type'),
+        h('button', { class: 'btn small', type: 'button', onclick: () => { let ps; ps = openSheet({ title: 'Map symbol', wide: true, body: SYMBOLS.picker(symV, s2 => { symV = s2.key; drawSymBox(); ps.close(); }) }); } }, sy ? 'Change' : 'Choose…'),
+        sy ? h('button', { class: 'btn small', type: 'button', onclick: () => { symV = null; drawSymBox(); } }, 'None') : null].filter(Boolean));
+    };
+    drawSymBox();
     let sh;
     const doSave = () => {
       const old = p && p.name;
       d.name = name.value.trim() || 'Unnamed place'; d.type = type.value; d.always = always.checked; d.notes = notesV;
       const pv = Math.round(numOr(pop.value, NaN)); d.pop = isFinite(pv) && pv >= 0 ? pv : null;
-      if (isNew) S.world.places.push(d); else Object.assign(p, d);
+      if (symV) d.sym = symV; else delete d.sym;
+      if (isNew) S.world.places.push(d); else { Object.assign(p, d); if (!symV) delete p.sym; }
       if (old) renameLinks(old, d.name);
       save(); dirty = true; sh.close(); hideChip(); toast(isNew ? 'Place added' : 'Place saved'); emit('data');
     };
     sh = openSheet({ title: isNew ? 'New place' : 'Edit place', body: h('div', null,
       field('Name', Names.field(name, () => type.value)),
       h('div', { class: 'cols2' }, field('Type', type), field('Population', pop)),
+      field('Map symbol', symBox),
       h('label', { class: 'check' }, always, 'Always show this label (at every zoom level)'),
       field('Notes', notes),
       h('div', { class: 'tiny muted num' }, fmtLL([d.lat, d.lon]))),
@@ -3403,6 +3651,8 @@ const MapView = (() => {
     foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => {
       const nd = Math.max(0, Math.round(numOr(dIn.value, days))), pl = S.world.places.find(x => x.id === sel.value);
       if (pl) { for (const c of party) c.at = pl.id; save(); emit('data'); }
+      const end2 = pl ? [pl.lat, pl.lon] : end, prev = measure.length > 1 ? measure[measure.length - 2] : null;
+      setHere(end2, prev ? brgDeg(prev, end) : undefined);
       sh.close(); if (nd) stepDay(nd); dirty = true;
       if (pl) setTimeout(() => toast(`The party arrives at ${pl.name}`), 400);
     } }, 'Travel')] });
@@ -3438,6 +3688,7 @@ const MapView = (() => {
         line('<path d="M1 7h32" stroke="rgba(255,255,255,.6)" stroke-width="4.6" stroke-dasharray="12 5 3 5"/><path d="M1 7h32" stroke="#8e44ad" stroke-width="2.2" stroke-dasharray="12 5 3 5"/>', 'Border')),
       h('div', { class: 'lbl' }, 'PLACES'),
       h('div', { class: 'legend-sw', style: 'margin:6px 0 6px' }, Object.entries(PTYPES).filter(([, v]) => v.glyph !== 'none').map(([k, v]) => h('div', null, glyphCanvas(k), v.name))),
+      ...(() => { const used = [...new Set(S.world.places.map(p => p.sym).filter(k => k && SYMBOLS.get(k)))]; return used.length ? [h('div', { class: 'lbl', style: 'margin-top:10px' }, 'SYMBOLS ON THIS MAP'), h('div', { class: 'legend-sw', style: 'margin:6px 0 6px' }, used.map(k => h('div', null, SYMBOLS.swatch(k, 22), SYMBOLS.get(k).name)))] : []; })(),
       h('p', { class: 'tiny muted' }, 'An orange number beside a place name counts the characters there. Map sheets give the contour interval at the bottom left.'));
     openSheet({ title: 'Map legend', body, wide: true });
   }
@@ -3594,6 +3845,19 @@ const MapView = (() => {
     const cap = featureCap(f);
     history.push({ kind: 'features', rec: f, cap }); redo.length = 0;
     afterEdit({ cap });
+  }
+  function placeSymbol(ll) {
+    const s = SYMBOLS.get(stamp.sym) || SYMBOLS.list[0];
+    const used = new Set(S.world.places.map(p => lc(p.name)));
+    let name = s.name;
+    if (s.drawn && s.type !== 'camp') {
+      const nk = s.type === 'capital' ? 'city' : s.type;
+      name = Names.make(nk); for (let k = 0; k < 15 && used.has(lc(name)); k++) name = Names.make(nk);
+    } else if (used.has(lc(name))) { let n = 2; while (used.has(lc(`${s.name} ${n}`))) n++; name = `${s.name} ${n}`; }
+    const u = undoable(['world.places']);
+    const p = { id: uid(), name, type: s.type, sym: s.key, lat: +ll[0].toFixed(6), lon: +ll[1].toFixed(6), notes: '', always: false, pop: null };
+    S.world.places.push(p); save(); dirty = true; emit('data');
+    u(`Added ${name} · tap it to edit`);
   }
   function placeStamp(ll) {
     const r = groundR(stamp.size), rM = r * T.RM;
@@ -3754,6 +4018,14 @@ const MapView = (() => {
       const st = STAMPS[stamp.kind];
       let amountOut = null;
       panel.append(grid);
+      if (stamp.kind === 'symbol') {
+        const s0 = SYMBOLS.get(stamp.sym);
+        panel.append(SYMBOLS.picker(stamp.sym, s => { stamp.sym = s.key; hint.textContent = `Tap the map to place: ${s.name}`; }, { compact: true }));
+        const hint = h('div', { class: 'tiny muted', style: 'margin:4px 0 6px' }, `Tap the map to place: ${s0 ? s0.name : ''}`);
+        panel.append(hint, h('div', { class: 'row' }, h('div', { class: 'grow tiny muted' }, `${SYMBOLS.list.length} symbols · an Undo button appears after each one`), h('button', { class: 'btn small', onclick: () => placesSheet() }, icon('list', 16), 'Places')));
+        requestAnimationFrame(() => { const on = grid.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' }); });
+        panel.classList.add('show'); return;
+      }
       if (!st.line) panel.append(slider('Size', 10, 160, stamp.size, v => { stamp.size = v; dirty = true; if (amountOut) amountOut.textContent = stampAmountLabel(stamp.amount); }, v => fmtDist(v * 2 * mpp()) + ' wide'));
       if (st.amount) { const row = slider(st.amount, 1, 100, stamp.amount, v => { stamp.amount = v; }, v => stampAmountLabel(v)); amountOut = row.lastChild; panel.append(row); }
       if (stamp.kind === 'river') panel.append(h('button', { class: 'btn small block', style: 'margin:4px 0 2px', onclick: () => { toast('Tracing rivers…', 1500); setTimeout(autoRivers, 60); } }, icon('wand', 16), 'Auto rivers: trace downhill from the high ground in view'));
@@ -4049,12 +4321,13 @@ const MapView = (() => {
     requestAnimationFrame(frame);
   }
   return {
-    init, flyTo, openPlace, editPlace, placesSheet, worldSheet, layersSheet, legendSheet, home, zoomToFeature, openFeature, placeWidth, nearby,
+    init, flyTo, openPlace, editPlace, placesSheet, goHere, hereSheet, worldSheet, layersSheet, legendSheet, home, zoomToFeature, openFeature, placeWidth, nearby,
     stampName: k => (STAMPS[k] || { name: k }).name,
     centerLL,
     show() { visible = true; resize(); dirty = true; },
     hide() { visible = false; },
     redraw() { dirty = true; },
+    redrawPanel() { renderPanel(); },
     get cam() { return cam; }, get tool() { return tool; }, setTool,
     featuresSheet,
     debug: { cache, Pool, zoomAt, panBy, mpp, styleFor, levelFor, screenToLL, llToScreen, centerLL, draw() { dirty = false; draw(); }, stamp, placeStamp, createLineFeature, addFeature, get featureHits() { return featureHits; },
@@ -6354,6 +6627,9 @@ function commands() {
     ['Relationship web', 'web', () => Chars.webSheet(), 'relations graph'],
     ['Places on the map', 'pin', () => { setTab('map'); MapView.placesSheet(); }, 'locations towns'],
     ['Saved map views', 'bookmark', () => { setTab('map'); MapView.placesSheet('views'); }, 'bookmark'],
+    ['You are here', 'target', () => { setTab('map'); MapView.goHere(); }, 'location position heading me party'],
+    ['Set your heading…', 'target', () => { setTab('map'); if (S.world.here) MapView.hereSheet(); else MapView.goHere(); }, 'compass direction facing'],
+    ['Place a map symbol', 'flag', () => { setTab('map'); MapView.setTool('stamp'); MapView.debug.stamp.kind = 'symbol'; MapView.redrawPanel(); }, 'stamp icon city fortress castle'],
     ['Map legend', 'info', () => { setTab('map'); MapView.legendSheet(); }, 'key symbols'],
     ['Map layers', 'layers', () => { setTab('map'); MapView.layersSheet(); }, 'contours grid'],
     ['Eras', 'flag', erasSheet, 'ages history'],

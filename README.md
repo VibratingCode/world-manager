@@ -55,6 +55,7 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 
 **Map**
 - Pinch or scroll to zoom. The whole planet is shown in the **Robinson** projection. Below about 1,200 miles across it switches to a local **Transverse Mercator** view (60 zones of 6°, like UTM). Below about 40 miles across it becomes a **USGS-style topographic sheet**: brown contours with labelled index contours, spot heights on summits, shaded relief, green woodland tint, blue water with depth contours, marsh and sand symbols, a lat/long graticule, a scale bar and contour-interval note, and a survey grid of 1-mile **sections** in 6-mile **townships** (a 1 km grid in metric).
+- **You are here**: tap a spot and choose *I'm here* to drop a blue arrow marker. Tap the arrow to set its heading with a compass dial (drag it, use N/NE/E… buttons, or *Point at a spot*), move it, or centre on it. Moving the party to a place or travelling with Measure moves the marker and points it along the way you went. Search "You are here" to jump to it.
 - Tap anywhere for coordinates, elevation, biome, climate, the grid reference (zone, easting/northing, section-township-range) and the nearest place.
 - A place's page shows its population, notes (with links), who is there, events there, the **nearest places** with distance, direction and days on foot, and every codex entry that mentions it. **Party is here** moves the PCs there.
 - The bottom tools are, in order:
@@ -63,6 +64,7 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
   - **Sculpt**: Raise, Lower, Flatten, Smooth and Rough brushes.
   - **Paint**: biomes, including *Lake / river* for drawing your own waters. "Erase" restores the generated biome.
   - **Stamp**: geographic features (see below).
+  - **Symbols** (first button in the Stamp tool): 916 map symbols in 19 groups. They include 22 drawn defaults for cities and fortresses (walled city, metropolis, capital, castle, keep, star fort, citadel, watchtower, bunker, outpost and more) and pictograms for settlements, military, faith and magic, industry, trade, travel, coast, nature, farms, creatures, hazards, sci-fi colonies, quest markers, factions, weather and loot. Tap the map to drop one as a place. Change a place's symbol in its Edit sheet, and the legend lists the symbols in use.
   - **Measure**: great-circle distance with travel time on foot, riding, by wagon or by boat. **Travel** advances the campaign date by the journey and can move the party to the place at the end.
 - While sculpting, painting or drawing a stamp line, one finger draws and two fingers move the map. Undo and Redo are in the tool panel.
 - **Stamps** come in two kinds. You tap to place landforms and lakes, and drag to draw the line features:
