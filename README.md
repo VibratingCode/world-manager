@@ -82,6 +82,11 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 - **Place page**: opens with the name and symbol, then tiles for Population, Faction (from painted territory, or set on the place), Type and Terrain. Tap a tile to edit it. Tapping the map or hovering a place also says whose territory it is.
 - **Factions & war** (flag tool):
   - **Land**: paint a faction's territory with a brush. Claiming land takes it from whoever held it, *Unclaim* shrinks it, and Undo works. Territories are tinted and outlined, with the faction's name written across them.
+  - Territory is drawn into the map itself:
+    - It is measured on the globe, so it sits in the same place at every zoom level.
+    - It stops at coasts and lakes.
+    - Its borders are smooth, anti-aliased lines.
+    - Each stroke shows a preview straight away and stays visible until the map has redrawn.
   - **Contest**: paint a disputed zone between two sides, or slide *Frontier* to stripe a band along their whole shared border.
   - **Units**: NATO-style markers in 16 types (infantry, armour, cavalry, artillery, siege, air, naval, HQ, supply, engineers, medical, special forces, militia, mages, war beasts…) and 11 sizes from team to army. Drag them to move them, tap to edit name, side and strength.
   - **Arrows**: advance, attack, retreat or supply movements. **Front**: front lines with teeth toward the enemy. **Battle**: crossed-swords markers named after the nearest place and dated today, with an outcome.

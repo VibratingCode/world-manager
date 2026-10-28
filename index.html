@@ -821,6 +821,77 @@ const Terrain = (function () {
       }
     }
   }
+  // ---------- territory: claim (k 0, v = faction), unclaim (1), contested (2, v = pair), clear contested (3) ----------
+  // each dab joins the next one in its stroke as a capsule, so stroke edges are smooth rather than scalloped
+  let TE_N = 0, TE_CON = false, TX, TY, TZ, TC2, TQ2, TRr, TCR, TN, TK, TV, TPAIRS = [], TFRONTS = [];
+  function setTerritory(t) {
+    t = t || {}; const strokes = t.strokes || [];
+    let n = 0; for (const s of strokes) n += s.pts.length >> 1;
+    TE_N = n; TX = new Float64Array(n); TY = new Float64Array(n); TZ = new Float64Array(n); TC2 = new Float64Array(n); TQ2 = new Float64Array(n); TRr = new Float64Array(n); TCR = new Float64Array(n);
+    TN = new Int32Array(n); TK = new Uint8Array(n); TV = new Int16Array(n);
+    let k = 0; TE_CON = false;
+    for (const s of strokes) {
+      const sh = Math.sin(s.r / 2), c2 = 4 * sh * sh; if (s.k >= 2) TE_CON = true;
+      for (let i = 0; i + 1 < s.pts.length; i += 2) {
+        const la = s.pts[i] * D2R, lo = s.pts[i + 1] * D2R, cl = Math.cos(la);
+        TX[k] = cl * Math.cos(lo); TY[k] = cl * Math.sin(lo); TZ[k] = Math.sin(la); TC2[k] = c2; TRr[k] = s.r; TK[k] = s.k; TV[k] = s.v;
+        TN[k] = i + 3 < s.pts.length ? k + 1 : -1; k++;
+      }
+    }
+    for (let q = 0; q < n; q++) {
+      const nk = TN[q], L = nk < 0 ? 0 : Math.hypot(TX[nk] - TX[q], TY[nk] - TY[q], TZ[nk] - TZ[q]), c = Math.sqrt(TC2[q]) + L;
+      TQ2[q] = c * c; TCR[q] = TRr[q] + L * 1.02;
+    }
+    TPAIRS = t.pairs || []; TFRONTS = t.fronts || [];
+  }
+  let sCX = 0, sCY = 0, sCZ = 0;
+  function segD2(k, px, py, pz) {   // squared chord distance to dab k's capsule; the nearest point goes in sC*
+    const ax = TX[k], ay = TY[k], az = TZ[k], nk = TN[k];
+    let t = 0, bx = 0, by = 0, bz = 0;
+    if (nk >= 0) { bx = TX[nk] - ax; by = TY[nk] - ay; bz = TZ[nk] - az; const L2 = bx * bx + by * by + bz * bz; if (L2 > 0) { t = ((px - ax) * bx + (py - ay) * by + (pz - az) * bz) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t; } }
+    sCX = ax + bx * t; sCY = ay + by * t; sCZ = az + bz * t;
+    const dx = px - sCX, dy = py - sCY, dz = pz - sCZ; return dx * dx + dy * dy + dz * dz;
+  }
+  // owner (-1 none), contested pair (-1 none), and the dab that decided the owner with how deep inside it the point is
+  let oTO = -1, oTC = -1, oTK = -1, oTD = 0, oTX = 0, oTY = 0, oTZ = 0;
+  function terrAt(px, py, pz, list, n) {
+    let own = -3, con = TE_CON ? -3 : -1, dk = -1, dd = 0;
+    for (let q = n - 1; q >= 0; q--) {
+      const k = list[q], dx = px - TX[k], dy = py - TY[k], dz = pz - TZ[k];
+      if (dx * dx + dy * dy + dz * dz >= TQ2[k]) continue;
+      const d2 = segD2(k, px, py, pz);
+      if (d2 >= TC2[k]) continue;
+      const kind = TK[k];
+      if (kind <= 1) { if (own === -3) { own = kind === 0 ? TV[k] : -1; dk = k; dd = TRr[k] - Math.sqrt(d2); oTX = sCX; oTY = sCY; oTZ = sCZ; } if (kind === 1 && con === -3) con = -1; }
+      else if (con === -3) con = kind === 2 ? TV[k] : -1;
+      if (own !== -3 && con !== -3) break;
+    }
+    oTO = own === -3 ? -1 : own; oTC = con === -3 ? -1 : con; oTK = dk; oTD = dd;
+  }
+  function ownerAt(px, py, pz, list, n) {
+    for (let q = n - 1; q >= 0; q--) {
+      const k = list[q]; if (TK[k] > 1) continue;
+      const dx = px - TX[k], dy = py - TY[k], dz = pz - TZ[k];
+      if (dx * dx + dy * dy + dz * dz >= TQ2[k]) continue;
+      if (segD2(k, px, py, pz) < TC2[k]) return TK[k] === 0 ? TV[k] : -1;
+    }
+    return -1;
+  }
+  // a frontier band: does the other side hold land within w (radians) of this point? probes two rings of 8
+  function ringHits(px, py, pz, w, other, list, n) {
+    let ex = py, ey = -px, ez = 0, en = Math.hypot(ex, ey);
+    if (en < 1e-6) { ex = 1; ey = 0; ez = 0; en = 1; }
+    ex /= en; ey /= en;
+    const fx = py * ez - pz * ey, fy = pz * ex - px * ez, fz = px * ey - py * ex;
+    for (const a of [w, w * 0.5]) {
+      const ca = Math.cos(a), sa = Math.sin(a);
+      for (let d = 0; d < 8; d++) {
+        const th = d * 0.78539816, ct = Math.cos(th) * sa, stt = Math.sin(th) * sa;
+        if (ownerAt(px * ca + ex * ct + fx * stt, py * ca + ey * ct + fy * stt, pz * ca + ez * ct + fz * stt, list, n) === other) return true;
+      }
+    }
+    return false;
+  }
   // ---------- features: stamped landforms, carved rivers and canyons ----------
   const FKIND = { mountain: 1, volcano: 2, crater: 3, mesa: 4, hill: 5, lake: 6, island: 7 };
   let FP_N = 0, FPX, FPY, FPZ, FPU, FPV, FPR, FPE, FPK, FPH, FPL, FPS;
@@ -1188,6 +1259,23 @@ const Terrain = (function () {
     const tFP = cap && FP_N ? cull(FPX, FPY, FPZ, FPR, seq(FP_N), cap[0], cap[1], cap[2], cap[3], 1) : [];
     const tFS = cap && FS_N ? cull(FSCX, FSCY, FSCZ, FSR, seq(FS_N), cap[0], cap[1], cap[2], cap[3], 1) : [];
     const blkSc = new Array(NB * NB), blkPa = new Array(NB * NB), blkFP = new Array(NB * NB), blkFS = new Array(NB * NB);
+    // territory: per-block lists, plus wider ones for probing past an edge or across a frontier band
+    const TER = st.ter && TE_N && cap ? st.ter : null;
+    let blkTe = null, blkTw = null, blkTm = null, TPX = null, TPY = null, TPZ = null, TS = null;
+    if (TER) {
+      let wMax = 0; for (const fr of TFRONTS) if (fr[2] > wMax) wMax = fr[2];
+      const ext = wMax + 8 * p;
+      const tTe = cull(TX, TY, TZ, TCR, seq(TE_N), cap[0], cap[1], cap[2], cap[3] + ext, 1);
+      blkTe = new Array(NB * NB); blkTw = new Array(NB * NB); blkTm = new Int32Array(NB * NB);
+      if (tTe.length) for (let k = 0; k < NB * NB; k++) {
+        const o = k * 4; if (blockCap[o] !== blockCap[o]) continue;
+        const l = cull(TX, TY, TZ, TCR, tTe, blockCap[o], blockCap[o + 1], blockCap[o + 2], blockCap[o + 3], 1); if (l.length) blkTe[k] = Int32Array.from(l);
+        const w = cull(TX, TY, TZ, TCR, tTe, blockCap[o], blockCap[o + 1], blockCap[o + 2], blockCap[o + 3] + ext, 1);
+        if (w.length) { blkTw[k] = Int32Array.from(w); let m = 0; for (const d of w) if (TK[d] === 0) m |= 1 << Math.min(30, TV[d]); blkTm[k] = m; }
+      }
+      if (local) { TPX = new Float32Array(nG); TPY = new Float32Array(nG); TPZ = new Float32Array(nG); }
+      TS = new Float64Array(TER.c.length * 3);
+    }
     for (let k = 0; k < NB * NB; k++) {
       const o = k * 4; if (blockCap[o] !== blockCap[o]) continue;
       if (tSc.length) { const l = cull(SX, SY, SZ, SR, tSc, blockCap[o], blockCap[o + 1], blockCap[o + 2], blockCap[o + 3], 1.02); if (l.length) blkSc[k] = Int32Array.from(l); }
@@ -1253,6 +1341,7 @@ const Terrain = (function () {
         if (e > 0) { const pl = blkPa[bk]; if (pl) { const pb = paintAt(px, py, pz, j, pl, pl.length); if (pb >= 0) bio = pb; } }
         if (lakeHere) bio = 20;
         E[idx] = e; BI[idx] = bio;
+        if (TPX) { TPX[idx] = px; TPY[idx] = py; TPZ[idx] = pz; }
       }
     }
 
@@ -1311,6 +1400,44 @@ const Terrain = (function () {
               const onBlade = cym >= Math.round(3 * s1) && cym < base && (cxm === Math.round(2 * s1) || cxm === Math.round(4 * s1) || cxm === Math.round(6 * s1));
               if (onBase || onBlade) { r = 70; g = 140; bl = 200; }
             }
+          }
+        }
+        // territory: tint the land a faction holds, stripe contested ground, and draw a crisp border just inside
+        // the edge of the dab that decided the owner, where the land beyond belongs to someone else
+        if (TER && !water) {
+          const bk = (v >> 4) * NB + (u >> 4), tl = blkTe[bk];
+          if (tl) {
+            const tx = TPX ? TPX[idx] : PXa[idx], ty = TPX ? TPY[idx] : PYa[idx], tz = TPX ? TPZ[idx] : PZa[idx];
+            terrAt(tx, ty, tz, tl, tl.length);
+            const own = oTO; let con = oTC;
+            const wl = blkTw[bk] || EMPTY;
+            if (own >= 0 && con < 0 && TFRONTS.length) {
+              for (const fr of TFRONTS) {
+                const other = fr[0] === own ? fr[1] : fr[1] === own ? fr[0] : -1;
+                if (other < 0 || !((blkTm[bk] >> Math.min(30, other)) & 1)) continue;
+                if (ringHits(tx, ty, tz, fr[2], other, wl, wl.length)) { con = fr[3]; break; }
+              }
+            }
+            const A = TER.a;
+            if (con >= 0 && TPAIRS[con]) {
+              const pr = TPAIRS[con], cc = TER.c[((((gx0 + ou) + (gy0 + ov)) / Math.max(3, Math.round(5 * lw))) | 0) & 1 ? pr[1] : pr[0]];
+              if (cc) { const aa = Math.min(0.85, A + 0.3); r += (cc[0] - r) * aa; g += (cc[1] - g) * aa; bl += (cc[2] - bl) * aa; }
+            } else if (own >= 0 && TER.c[own]) { const cc = TER.c[own]; r += (cc[0] - r) * A; g += (cc[1] - g) * A; bl += (cc[2] - bl) * A; }
+            if (oTK >= 0) {
+              const bwR = 2.3 * lw * dxm / RM;
+              if (oTD < bwR) {
+                let ox = tx - oTX, oy = ty - oTY, oz = tz - oTZ;
+                const dt = ox * tx + oy * ty + oz * tz; ox -= dt * tx; oy -= dt * ty; oz -= dt * tz;
+                const on = Math.hypot(ox, oy, oz) || 1, step = oTD + bwR * 0.6;
+                let qx = tx + ox / on * step, qy = ty + oy / on * step, qz = tz + oz / on * step; const qn = Math.hypot(qx, qy, qz); qx /= qn; qy /= qn; qz /= qn;
+                const o2 = ownerAt(qx, qy, qz, wl, wl.length);
+                if (o2 !== own) {
+                  const cc = TER.c[own >= 0 ? own : o2];
+                  if (cc) { const ea = (1 - smoothstep(bwR * 0.5, bwR, oTD)) * 0.95; r += (cc[0] * 0.5 - r) * ea; g += (cc[1] * 0.5 - g) * ea; bl += (cc[2] * 0.5 - bl) * ea; }
+                }
+              }
+            }
+            if (own >= 0) { TS[own * 3] += 1; TS[own * 3 + 1] += ou; TS[own * 3 + 2] += ov; }
           }
         }
         // contours, drawn from the generalised surface
@@ -1393,11 +1520,11 @@ const Terrain = (function () {
       for (const c of cands) { if (spots.length >= 3) break; if (spots.every(s => (s.x - c.x) ** 2 + (s.y - c.y) ** 2 > (60 * lw) ** 2)) spots.push(c); }
     }
     curFP = null; curFS = null; MEANDER_MIN = 5;   // single-point queries see every feature again
-    return { img, w: O, h: O, cap, labels, spots };
+    return { img, w: O, h: O, cap, labels, spots, terr: TS ? Array.from(TS) : null };
   }
 
   return {
-    configure, setEdits, sample, renderTile, lineGeom, linePath, riverHalfWidth,
+    configure, setEdits, setTerritory, sample, renderTile, lineGeom, linePath, riverHalfWidth,
     robFwd, robInv, robLatFromY, tmFwd, tmInv, tmScale, zoneCM, zoneOf, normLon,
     BIOMES, PAINTABLE, MI, RK_X, RK_Y,
     get RM() { return RM; }, get params() { return PRM; }, get sculptCount() { return SC_N; }, get paintCount() { return PA_N; },
@@ -1412,12 +1539,13 @@ self.onmessage = function (e) {
     if (m.full) Terrain.configure(m.params, m.sculpt, m.paint, m.features); else Terrain.setEdits(m.sculpt, m.paint, m.features);
     return;
   }
+  if (m.type === 'terr') { Terrain.setTerritory(m.terr); return; }
   if (m.type !== 'tile') return;
   const t0 = Date.now();
   let r;
   try { r = Terrain.renderTile(m); }
   catch (err) { self.postMessage({ rid: m.rid, error: String((err && err.stack) || err) }); return; }
-  const out = { rid: m.rid, cap: r.cap, labels: r.labels, spots: r.spots, w: r.w, h: r.h, ms: Date.now() - t0 };
+  const out = { rid: m.rid, cap: r.cap, labels: r.labels, spots: r.spots, terr: r.terr, w: r.w, h: r.h, ms: Date.now() - t0 };
   const sendBuf = () => { out.buf = r.img.buffer; self.postMessage(out, [out.buf]); };
   if (typeof createImageBitmap === 'function' && typeof ImageData === 'function') {
     let id;
@@ -2618,7 +2746,7 @@ const MapView = (() => {
         mainBusy = true;
         setTimeout(() => {
           mainBusy = false; const req = queue.shift();
-          if (req) { try { const r = T.renderTile(req); onTile(req, { buf: r.img.buffer, w: r.w, h: r.h, cap: r.cap, labels: r.labels, spots: r.spots }); } catch (e) { console.error(e); markFailed(req); } }
+          if (req) { try { const r = T.renderTile(req); onTile(req, { buf: r.img.buffer, w: r.w, h: r.h, cap: r.cap, labels: r.labels, spots: r.spots, terr: r.terr }); } catch (e) { console.error(e); markFailed(req); } }
           pump();
         }, 0);
       }
@@ -2813,9 +2941,10 @@ const MapView = (() => {
     const series = imperial ? [5, 10, 20, 40, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10000] : [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
     const target = mppC * 0.8 * (lay.density || 1) / unitM;
     let Iu = series[series.length - 1]; for (const v of series) if (v >= target) { Iu = v; break; }
-    return { topo, contours: !!lay.contours && topo, hill: !!lay.hill, I: Iu * unitM, Iu, ve: clamp(Math.sqrt(mppR / 15), 1, 20), spots: !!lay.spots, rs: RS, minPx: 2.5 };
+    return { topo, contours: !!lay.contours && topo, hill: !!lay.hill, I: Iu * unitM, Iu, ve: clamp(Math.sqrt(mppR / 15), 1, 20), spots: !!lay.spots, rs: RS, minPx: 2.5,
+      ter: !lay.noTerr && S.world.factions.length && (S.world.terr.length || S.world.fronts.length) ? { c: S.world.factions.map(f => hexRgb(safeColor(f.color))), a: +lay.terrA || 0.2, v: terrStyleVer } : null };
   }
-  const styleKey = st => [st.topo ? 1 : 0, st.contours ? 1 : 0, st.hill ? 1 : 0, st.Iu, st.spots ? 1 : 0, st.rs].join(',');
+  const styleKey = st => [st.topo ? 1 : 0, st.contours ? 1 : 0, st.hill ? 1 : 0, st.Iu, st.spots ? 1 : 0, st.rs, st.ter ? st.ter.v + ':' + st.ter.a : 'x'].join(',');
   const baseKey = (L, i, j) => (cam.mode === 'world' ? 'w' + cm() : 'z' + cam.zone) + '|' + L + '|' + i + '|' + j;
   function onTile(req, m) {
     if (m.error) { console.error('Tile failed', m.error); markFailed(req); return; }
@@ -2827,7 +2956,7 @@ const MapView = (() => {
     const old = cache.get(req.key);
     if (old && old.skey === req.skey && old.ver > req.ver) { if (img.close) img.close(); return; }
     if (old && old.img.close) old.img.close();
-    cache.set(req.key, { img, ver: req.ver, skey: req.skey, st: req.style, cap: m.cap, labels: m.labels || [], spots: m.spots || [], used: useTick });
+    cache.set(req.key, { img, ver: req.ver, skey: req.skey, st: req.style, cap: m.cap, labels: m.labels || [], spots: m.spots || [], terr: m.terr || null, used: useTick });
     if (cache.size > MAXT) {
       const arr = [...cache.entries()].sort((a, b) => a[1].used - b[1].used);
       for (let k = 0; k < arr.length - MAXT; k++) { const [key, t] = arr[k]; if (t.used >= useTick) break; if (t.img.close) t.img.close(); cache.delete(key); }
@@ -2914,7 +3043,7 @@ const MapView = (() => {
       if (lay.survey && st.topo) drawSurvey();
       if (lay.grid) drawGraticuleLocal(st.topo);
     }
-    drawTerritory(st.topo);
+    drawTerritory(st.topo, fresh, Sz);
     if (lay.features) drawFeatures(st.topo); else featureHits = [];
     if (!ex) { drawRouteHL(); drawShape(); }
     if (lay.places) drawPlaces(st.topo, labelBoxes);
@@ -2929,6 +3058,7 @@ const MapView = (() => {
     if (tool === 'share') drawFrameMask(); else drawScale(st);
     updateReadout(st);
     lastStyle = st;
+    if (!missing && pendingTerr.length) { pendingTerr.length = 0; dirty = true; }
     return missing;
   }
   let lastStyle = null;
@@ -4148,6 +4278,7 @@ const MapView = (() => {
   // history entries carry the area they changed (null for overlay-only features such as roads)
   function afterEdit(a) {
     terrVer++;
+    if (a.kind === 'terr') { terrPost(a.cap || null); save(); renderPanel(); return; }
     if (a.cap) applyWorld(false, a.cap);
     else { T.setEdits(S.world.sculpt, S.world.paint, S.world.features); dirty = true; }
     save(); renderPanel();
@@ -4630,96 +4761,62 @@ const MapView = (() => {
     const used = S.world.factions.map(f => f.color);
     const f = { id: uid(), name: `${['Kingdom of', 'Republic of', 'Empire of', 'Free Cities of', 'Dominion of', 'Commonwealth of'][Math.floor(Math.random() * 6)]} ${Names.make('town')}`,
       color: color || FAC_COLORS.find(c => !used.includes(c)) || FAC_COLORS[S.world.factions.length % FAC_COLORS.length] };
-    S.world.factions.push(f); save(); terrVer++; dirty = true;
+    S.world.factions.push(f); save(); terrSync();
     return f;
   }
-  // territory is rasterised for the current view: one coverage mask per faction (later strokes win), read back,
-  // then filled, outlined where owners change, and striped where zones are contested
-  function rasterTerr(sc) {
-    const w = Math.max(2, Math.ceil(W / sc)), hh = Math.max(2, Math.ceil(H / sc)), N = w * hh;
-    const facs = S.world.factions, idx = new Map(facs.map((f, i) => [f.id, i]));
-    const mk = () => { const c = document.createElement('canvas'); c.width = w; c.height = hh; const g = c.getContext('2d', { willReadFrequently: true }); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#000'; return g; };
-    const fm = facs.map(mk), pairs = new Map(), cll = centerLL(), m = mpp();
-    const proj = st => {
-      const runs = []; let cur = null;
-      for (let k = 0; k < st.pts.length; k += 2) {
-        const la = st.pts[k], lo = st.pts[k + 1];
-        if (cam.mode === 'local' && gcAngle(cll, [la, lo]) > 1) { cur = null; continue; }
-        const q = llToScreen(la, lo); if (!q || !isFinite(q[0])) { cur = null; continue; }
-        const x = q[0] / sc, y = q[1] / sc;
-        if (cur && cam.mode === 'world' && Math.abs(x - cur[cur.length - 2]) > w * 0.5) cur = null;
-        if (!cur) { cur = []; runs.push(cur); }
-        cur.push(x, y);
-      }
-      return runs;
-    };
-    const paint = (g, runs, lw, op) => {
-      g.globalCompositeOperation = op; g.lineWidth = lw; g.beginPath();
-      for (const r of runs) { g.moveTo(r[0], r[1]); if (r.length === 2) g.lineTo(r[0] + 0.01, r[1]); for (let i = 2; i < r.length; i += 2) g.lineTo(r[i], r[i + 1]); }
-      g.stroke();
-    };
+  // territory is drawn into the map tiles by the terrain workers (true distances on the globe, clipped to land);
+  // here: keep them in step, and label each faction at the middle of its visible land
+  let terrStyleVer = 0, terrSigLast = null;
+  function terrPayload() {
+    const idx = new Map(S.world.factions.map((f, i) => [f.id, i])), pairs = [];
+    const pairIdx = (a, b) => { const k = Math.min(a, b) + '|' + Math.max(a, b); let i = pairs.findIndex(x => x.k === k); if (i < 0) { pairs.push({ k, a, b }); i = pairs.length - 1; } return i; };
+    const strokes = [];
     for (const st of S.world.terr) {
       if (!st.pts || !st.pts.length) continue;
-      const runs = proj(st); if (!runs.length) continue;
-      const lw = Math.max(1.2, 2 * st.r * T.RM / m / sc);
       if (st.c) {
-        if (st.erase) { for (const g of pairs.values()) paint(g, runs, lw, 'destination-out'); continue; }
-        const key = st.c.join('|'); if (!idx.has(st.c[0]) || !idx.has(st.c[1])) continue;
-        if (!pairs.has(key)) pairs.set(key, mk());
-        paint(pairs.get(key), runs, lw, 'source-over'); continue;
+        if (st.erase) { strokes.push({ k: 3, v: 0, r: st.r, pts: st.pts }); continue; }
+        const a = idx.get(st.c[0]), b = idx.get(st.c[1]); if (a === undefined || b === undefined) continue;
+        strokes.push({ k: 2, v: pairIdx(a, b), r: st.r, pts: st.pts }); continue;
       }
-      const fi = st.f == null ? -1 : idx.get(st.f); if (fi === undefined) continue;
-      fm.forEach((g, i) => paint(g, runs, lw, i === fi ? 'source-over' : 'destination-out'));
-      if (fi < 0) for (const g of pairs.values()) paint(g, runs, lw, 'destination-out');
+      if (st.f == null) { strokes.push({ k: 1, v: 0, r: st.r, pts: st.pts }); continue; }
+      const fi = idx.get(st.f); if (fi !== undefined) strokes.push({ k: 0, v: fi, r: st.r, pts: st.pts });
     }
-    const cls = new Int16Array(N).fill(-1), best = new Uint8Array(N), con = new Int16Array(N).fill(-1), pairList = [];
-    fm.forEach((g, i) => { const d = g.getImageData(0, 0, w, hh).data; for (let q = 0; q < N; q++) { const a = d[q * 4 + 3]; if (a > 110 && a > best[q]) { best[q] = a; cls[q] = i; } } });
-    const pairIdx = (ia, ib) => { const k = Math.min(ia, ib) + '|' + Math.max(ia, ib); let i = pairList.findIndex(x => x.k === k); if (i < 0) { pairList.push({ k, a: ia, b: ib }); i = pairList.length - 1; } return i; };
-    for (const [key, g] of pairs) { const [a, b] = key.split('|').map(id => idx.get(id)); const pi = pairIdx(a, b), d = g.getImageData(0, 0, w, hh).data; for (let q = 0; q < N; q++) if (d[q * 4 + 3] > 110) con[q] = pi; }
-    // frontier bands: land of one side within the band width of the other side's land
-    const dt = target => {
-      const D = new Float32Array(N); for (let q = 0; q < N; q++) D[q] = cls[q] === target ? 0 : 1e9;
-      for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) { const q = y * w + x; let v = D[q]; if (x) v = Math.min(v, D[q - 1] + 1); if (y) { v = Math.min(v, D[q - w] + 1); if (x) v = Math.min(v, D[q - w - 1] + 1.414); if (x < w - 1) v = Math.min(v, D[q - w + 1] + 1.414); } D[q] = v; }
-      for (let y = hh - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) { const q = y * w + x; let v = D[q]; if (x < w - 1) v = Math.min(v, D[q + 1] + 1); if (y < hh - 1) { v = Math.min(v, D[q + w] + 1); if (x < w - 1) v = Math.min(v, D[q + w + 1] + 1.414); if (x) v = Math.min(v, D[q + w - 1] + 1.414); } D[q] = v; }
-      return D;
-    };
-    for (const fr of S.world.fronts) {
-      const ia = idx.get(fr.a), ib = idx.get(fr.b); if (ia === undefined || ib === undefined || !(fr.w > 0)) continue;
-      const wpx = fr.w * T.MI / (m * sc); if (wpx < 0.5) continue;
-      const Da = dt(ia), Db = dt(ib), pi = pairIdx(ia, ib);
-      for (let q = 0; q < N; q++) if ((cls[q] === ia && Db[q] <= wpx) || (cls[q] === ib && Da[q] <= wpx)) con[q] = pi;
-    }
-    const img = new ImageData(w, hh), o = img.data, fillA = Math.round(255 * (+S.ui.layers.terrA || 0.2));
-    const cols = facs.map(f => hexRgb(safeColor(f.color))), sx = new Float64Array(facs.length), sy = new Float64Array(facs.length), cnt = new Float64Array(facs.length);
-    const stripe = Math.max(2, Math.round(7 / sc));
-    for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) {
-      const q = y * w + x, c = cls[q], k = con[q];
-      if (c < 0 && k < 0) continue;
-      let col, a;
-      const edge = c >= 0 && ((x > 0 && cls[q - 1] !== c) || (x < w - 1 && cls[q + 1] !== c) || (y > 0 && cls[q - w] !== c) || (y < hh - 1 && cls[q + w] !== c));
-      if (edge) { col = cols[c].map(v => v * 0.6); a = 240; }
-      else if (k >= 0) { const pr = pairList[k]; col = cols[Math.floor((x + y) / stripe) % 2 ? pr.b : pr.a]; a = Math.min(255, fillA + 110); }
-      else { col = cols[c]; a = fillA; }
-      o[q * 4] = col[0]; o[q * 4 + 1] = col[1]; o[q * 4 + 2] = col[2]; o[q * 4 + 3] = a;
-      if (c >= 0) { sx[c] += x; sy[c] += y; cnt[c]++; }
-    }
-    const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = hh; canvas.getContext('2d').putImageData(img, 0, 0);
-    const labels = facs.map((f, i) => (cnt[i] > 600 / sc ? { f, x: sx[i] / cnt[i] * sc, y: sy[i] / cnt[i] * sc, n: cnt[i] } : null)).filter(Boolean);
-    return { canvas, labels };
+    const fronts = [];
+    for (const fr of S.world.fronts) { const a = idx.get(fr.a), b = idx.get(fr.b); if (a !== undefined && b !== undefined && fr.w > 0) fronts.push([a, b, fr.w * T.MI / T.RM, pairIdx(a, b)]); }
+    return { strokes, pairs: pairs.map(x => [x.a, x.b]), fronts };
   }
-  function drawTerritory(topo) {
+  const terrSig = () => { const L = S.world.terr, last = L[L.length - 1]; return [L.length, last && last.pts ? last.pts[0] + ',' + last.pts[1] : '', S.world.factions.map(f => f.id + f.color).join(','), JSON.stringify(S.world.fronts)].join('|'); };
+  function terrPost(cap) {
+    const t = terrPayload(); T.setTerritory(t); Pool.post({ type: 'terr', terr: t });
+    terrSigLast = terrSig();
+    if (cap) { worldVer++; changes.push({ ver: worldVer, cap }); if (changes.length > 400) changes.splice(0, changes.length - 400); }
+    else terrStyleVer++;
+    dirty = true;
+  }
+  function terrSync() { if (terrSig() !== terrSigLast) terrPost(null); else dirty = true; }
+  const terrSyncSoon = debounce(terrSync, 250);
+  function drawTerritory(topo, fresh, Sz) {
     const lay = S.ui.layers;
-    if (lay.noTerr || !S.world.factions.length || (!S.world.terr.length && !S.world.fronts.length)) return;
-    const sc = W * H > 1200000 ? 3 : 2;
-    const key = [cam.x, cam.y, cam.s, cam.mode, cam.zone, cam.rot, W, H, sc, terrVer].join(',');
-    if (!terrCache || terrCache.key !== key) terrCache = { key, ...rasterTerr(sc) };
-    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.drawImage(terrCache.canvas, 0, 0, terrCache.canvas.width * sc, terrCache.canvas.height * sc); ctx.restore();
-    if (!lay.noTerrNames) for (const l of terrCache.labels) {
-      const z = lsc() * clamp(Math.sqrt(l.n * sc * sc) / 160, 0.9, 1.7);
-      ctx.letterSpacing = '3px';
-      haloText(l.f.name.toUpperCase(), l.x, l.y, mixWhite(safeColor(l.f.color), topo ? 0 : 0.15), topo ? 'rgba(255,255,255,.8)' : 'rgba(10,14,20,.55)', `800 ${(13 * z).toFixed(1)}px Georgia, "Times New Roman", serif`, 'center');
-      ctx.letterSpacing = '0px';
+    if (lay.noTerr || lay.noTerrNames || !S.world.factions.length || !fresh) return;
+    const nF = S.world.factions.length, n = new Float64Array(nF), sx = new Float64Array(nF), sy = new Float64Array(nF);
+    const pp = Sz / TILE;
+    for (const [t, i, j] of fresh) {
+      if (!t.terr) continue;
+      for (let f = 0; f < nF && f * 3 < t.terr.length; f++) {
+        const c = t.terr[f * 3]; if (!c) continue;
+        const q = planeToScreen(i * Sz + t.terr[f * 3 + 1] / c * pp, (j + 1) * Sz - t.terr[f * 3 + 2] / c * pp);
+        if (!q || !isFinite(q[0]) || q[0] < -W || q[0] > 2 * W || q[1] < -H || q[1] > 2 * H) continue;
+        n[f] += c; sx[f] += q[0] * c; sy[f] += q[1] * c;
+      }
     }
+    const k2 = RS * RS;
+    S.world.factions.forEach((fac, f) => {
+      const area = n[f] / k2; if (area < 2500) return;
+      const x = clamp(sx[f] / n[f], 40, W - 40), y = clamp(sy[f] / n[f], 30, H - 30), z = lsc() * clamp(Math.sqrt(area) / 170, 0.9, 1.8);
+      ctx.letterSpacing = '3px';
+      haloText(fac.name.toUpperCase(), x, y, mixWhite(safeColor(fac.color), topo ? 0 : 0.15), topo ? 'rgba(255,255,255,.8)' : 'rgba(10,14,20,.55)', `800 ${(13 * z).toFixed(1)}px Georgia, "Times New Roman", serif`, 'center');
+      ctx.letterSpacing = '0px';
+    });
   }
   // NATO-style unit frame with a type glyph and the echelon above it
   function milGlyph(g, kind, x, y, sz, col, ech) {
@@ -4851,13 +4948,9 @@ const MapView = (() => {
     return b;
   }
   function drawWarBrush() {
-    const col = war.mode === 'cont' ? '#ffd166' : war.op === 'erase' && war.mode === 'terr' ? '#ffffff' : facColor(war.fac);
-    if (stroke && stroke.kind === 'terr' && stroke.pts.length) {
-      ctx.save(); ctx.fillStyle = col; ctx.globalAlpha = 0.35; ctx.beginPath();
-      const rpx = stroke.r * T.RM / mpp();
-      for (let k = 0; k < stroke.pts.length; k += 2) { const q = llToScreen(stroke.pts[k], stroke.pts[k + 1]); ctx.moveTo(q[0] + rpx, q[1]); ctx.arc(q[0], q[1], rpx, 0, Math.PI * 2); }
-      ctx.fill(); ctx.restore();
-    }
+    const col = brushColor();
+    for (const pt of pendingTerr) strokePreview(pt.pts, pt.r, pt.col, 0.3);
+    if (stroke && stroke.kind === 'terr' && stroke.pts.length) strokePreview(stroke.pts, stroke.r, col, 0.42);
     if (stroke && stroke.kind === 'wline' && stroke.raw.length > 1) {
       ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
       stroke.raw.forEach((ll, i) => { const q = llToScreen(ll[0], ll[1]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); });
@@ -4867,6 +4960,14 @@ const MapView = (() => {
       ctx.save(); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(hover[0], hover[1], war.size + 1, 0, Math.PI * 2); ctx.stroke();
       ctx.strokeStyle = col; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.arc(hover[0], hover[1], war.size, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
     }
+  }
+  const pendingTerr = [];
+  const brushColor = () => (war.mode === 'cont' ? '#ffd166' : war.op === 'erase' && war.mode === 'terr' ? '#ffffff' : facColor(war.fac));
+  function strokePreview(pts, r, col, a) {
+    const rpx = Math.max(1, r * T.RM / mpp());
+    ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = rpx * 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+    for (let k = 0; k < pts.length; k += 2) { const q = llToScreen(pts[k], pts[k + 1]); if (!q) continue; k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); if (pts.length === 2) ctx.lineTo(q[0] + 0.01, q[1]); }
+    ctx.stroke(); ctx.restore();
   }
   function commitWar(s) {
     if (s.kind === 'terr') {
@@ -4880,7 +4981,10 @@ const MapView = (() => {
         rec = { f: war.op === 'erase' ? null : war.fac };
       }
       rec.r = +s.r.toPrecision(5); rec.pts = s.pts;
-      S.world.terr.push(rec); history.push({ kind: 'terr', rec, cap: null }); redo.length = 0; afterEdit({ cap: null }); return;
+      const cap = capOf(rec.pts, rec.r);
+      S.world.terr.push(rec); history.push({ kind: 'terr', rec, cap }); redo.length = 0;
+      pendingTerr.push({ pts: rec.pts, r: rec.r, col: brushColor() });
+      afterEdit({ kind: 'terr', cap }); return;
     }
     if (s.raw.length < 3) { toast(war.mode === 'arrow' ? 'Drag across the map to draw an arrow' : 'Drag across the map to draw a front line'); dirty = true; return; }
     const rec = { id: uid(), t: war.mode, fac: war.fac, pts: createLineFeature('trail', s.raw).pts };
@@ -4963,7 +5067,7 @@ const MapView = (() => {
       list.innerHTML = '';
       for (const f of S.world.factions) {
         const nm = h('input', { value: f.name, autocomplete: 'off' });
-        nm.addEventListener('change', () => { f.name = nm.value.trim() || f.name; save(); terrVer++; dirty = true; });
+        nm.addEventListener('change', () => { f.name = nm.value.trim() || f.name; save(); dirty = true; });
         const twin = S.codex.find(e => lc(e.title) === lc(f.name));
         const units = S.world.mil.filter(m => m.fac === f.id && m.t === 'unit').length, strokes = S.world.terr.filter(t => t.f === f.id).length;
         list.append(h('div', { class: 'card' },
@@ -4975,9 +5079,9 @@ const MapView = (() => {
               S.world.terr = S.world.terr.filter(t => t.f !== f.id && !(t.c && t.c.includes(f.id)));
               S.world.fronts = S.world.fronts.filter(fr => fr.a !== f.id && fr.b !== f.id);
               for (const m of S.world.mil) if (m.fac === f.id) m.fac = null;
-              save(); terrVer++; dirty = true; render(); u(`Deleted ${f.name}`, render);
+              save(); terrSync(); render(); u(`Deleted ${f.name}`, () => { terrSync(); render(); });
             } }, icon('trash', 18))),
-          colorSwatches(f.color, c => { f.color = c; save(); terrVer++; dirty = true; render(); }, FAC_COLORS),
+          colorSwatches(f.color, c => { f.color = c; save(); terrSync(); render(); }, FAC_COLORS),
           h('div', { class: 'row wrap', style: 'gap:6px;margin-top:8px' },
             h('span', { class: 'small muted grow' }, `${plural(strokes, 'territory stroke')} · ${plural(units, 'unit')}`),
             h('button', { class: 'btn small', onclick: () => { sh.close(); war.mode = 'terr'; war.fac = f.id; war.op = 'paint'; setTab('map'); setTool('war'); } }, icon('brush', 14), 'Paint land'),
@@ -4995,7 +5099,7 @@ const MapView = (() => {
   function setFront(a, b, w) {
     const i = S.world.fronts.findIndex(x => (x.a === a && x.b === b) || (x.a === b && x.b === a));
     if (!w) { if (i >= 0) S.world.fronts.splice(i, 1); } else if (i >= 0) S.world.fronts[i].w = w; else S.world.fronts.push({ a, b, w });
-    save(); terrVer++; dirty = true;
+    save(); terrSyncSoon();
   }
   function facChips(cur, onPick) {
     return h('div', { class: 'tog-chips', style: 'margin:6px 0' }, S.world.factions.map(f => { const c = safeColor(f.color), on = f.id === cur;
@@ -5586,7 +5690,8 @@ const MapView = (() => {
     if (c && isFinite(c.x) && isFinite(c.y) && isFinite(c.s) && c.s > 0) { Object.assign(cam, c); if (cam.mode === 'local') updateRot(); else clampWorld(); }
     else home();
     renderPanel(); applyTint();
-    on('data', () => { dirty = true; terrVer++; });
+    terrPost(null);
+    on('data', () => { dirty = true; terrVer++; terrSync(); });
     requestAnimationFrame(frame);
   }
   return {
