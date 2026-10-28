@@ -2593,7 +2593,8 @@ const MapView = (() => {
       if (z !== cam.zone) { const m = mpp(); snapshot(); enterLocal(ll, m); }
     }
   }
-  const maxS = () => T.RM / 0.35;   // closest zoom: about 0.35 m per CSS pixel
+  // closest zoom: about 0.35 m per CSS pixel, or a view 10 miles across when the zoom lock is on
+  const maxS = () => S.ui.layers.zoomLock ? Math.min(T.RM / 0.35, T.RM * W / (10 * T.MI)) : T.RM / 0.35;
   function postCam() {
     if (cam.mode === 'world') clampWorld(); else { cam.s = Math.min(cam.s, maxS()); checkZone(); updateRot(); }
     checkMode(); dirty = true; saveCam();
@@ -2643,7 +2644,7 @@ const MapView = (() => {
   const levelFor = () => Math.max(0, Math.round(Math.log2(S0 * cam.s * RS / TILE)));
   function styleFor(L) {
     const Sz = S0 / 2 ** L, mppR = Sz / TILE * T.RM, mppC = mppR * RS, lay = S.ui.layers;
-    const topo = lay.style === 'topo' ? true : lay.style === 'atlas' ? false : (cam.mode === 'local' && mppC < 160);
+    const topo = lay.style === 'topo' ? true : lay.style === 'atlas' ? false : (!!lay.usgsClose && cam.mode === 'local' && mppC < 160);
     const imperial = S.meta.units !== 'metric', unitM = imperial ? 0.3048 : 1;
     const series = imperial ? [5, 10, 20, 40, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10000] : [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
     const target = mppC * 0.8 * (lay.density || 1) / unitM;
@@ -4233,7 +4234,9 @@ const MapView = (() => {
     const lay = S.ui.layers;
     const tog = (key, label, sub) => { const c = h('input', { type: 'checkbox', checked: !!lay[key] }); c.addEventListener('change', () => { lay[key] = c.checked; save(); dirty = true; }); return h('label', { class: 'check' }, c, h('div', null, label, sub ? h('div', { class: 'tiny muted' }, sub) : null)); };
     const body = h('div', null,
-      field('Map style', seg([['auto', 'Auto'], ['atlas', 'Atlas'], ['topo', 'Topographic']], lay.style, v => { lay.style = v; save(); dirty = true; }), 'Auto shows the coloured atlas when zoomed out and USGS-style sheets below about 40 miles across.'),
+      field('Map style', seg([['auto', 'Auto'], ['atlas', 'Atlas'], ['topo', 'Topographic']], lay.style, v => { lay.style = v; save(); dirty = true; }), 'Auto keeps the coloured atlas at every zoom unless you turn on USGS sheets below.'),
+      tog('usgsClose', 'Switch to USGS sheets when zoomed in', 'Auto style only: map sheets with contours below about 40 miles across'),
+      (() => { const c = h('input', { type: 'checkbox', checked: !!lay.zoomLock }); c.addEventListener('change', () => { lay.zoomLock = c.checked; save(); if (cam.mode === 'local') postCam(); dirty = true; toast(c.checked ? 'Zoom stops at 10 miles across' : 'Zoom lock off'); }); return h('label', { class: 'check' }, c, h('div', null, 'Lock zoom at 10 miles across', h('div', { class: 'tiny muted' }, 'Stops close-ups from zooming in any further'))); })(),
       tog('hill', 'Shaded relief'), tog('contours', 'Contour lines', 'Topographic style only, labelled every fifth line'),
       tog('spots', 'Spot heights on summits'), tog('grid', 'Latitude / longitude'), tog('survey', 'Survey grid', 'Sections and townships (1-mile squares), or a 1 km grid in metric'),
       tog('places', 'Place names'), tog('features', 'Rivers, roads, trails & borders'),

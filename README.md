@@ -78,6 +78,7 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 - Tap a river, road, trail or border in Explore mode to name it (names are drawn along the line) or remove it.
 - The dice button next to any name field makes up a fitting name: towns, rivers, peaks, regions, people.
 - The cog button holds **World generation**: seed, planet radius, ocean %, continent size, mountains, roughness, climate, moisture, and which longitude sits in the middle of the world map. Places and edits are stored by latitude/longitude and stay where they are when you regenerate.
+- The map keeps its colours at every zoom. To get USGS-style map sheets when zoomed in, turn on *Switch to USGS sheets when zoomed in* in Layers, or pick the Topographic style. *Lock zoom at 10 miles across* in Layers stops close-ups there.
 - The layers button switches styles and overlays (*Sharp* render quality looks best on Retina screens) and opens the **Legend** and **Saved views**. A saved view bookmarks a spot and zoom level, with a thumbnail.
 - **Share or print an area** (the arrow-out-of-box button):
   1. Pick a format: square, 4:5, story, wide or screen.
