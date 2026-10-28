@@ -2751,6 +2751,7 @@ const MapView = (() => {
       if (lay.grid) drawGraticuleLocal(st.topo);
     }
     if (lay.features) drawFeatures(st.topo); else featureHits = [];
+    if (!ex) drawShape();
     if (lay.places) drawPlaces(st.topo, labelBoxes);
     if (lay.features) drawFeatureLabels(st.topo, labelBoxes);
     if (st.topo) drawTileLabels(fresh, Sz, st, labelBoxes);
@@ -3163,9 +3164,12 @@ const MapView = (() => {
     try { cv.setPointerCapture(e.pointerId); } catch (_) {}
     const [x, y] = pos(e); ptrs.set(e.pointerId, { x, y });
     if (ptrs.size === 1) {
+      const g = grabAt(x, y);
+      if (g) { gest = g; return; }
       gest = { type: editing() ? 'stroke' : 'pan', x0: x, y0: y, lx: x, ly: y, t0: performance.now(), moved: false };
       if (gest.type === 'stroke') { hover = [x, y]; beginStroke(x, y); }
     } else if (ptrs.size === 2) {
+      if (gest && (gest.type === 'shape' || gest.type === 'place')) endGrab(gest, false);
       if (gest && gest.type === 'stroke') { if (stroke && stroke.n <= 2 && performance.now() - gest.t0 < 350) { stroke = null; dirty = true; } else commitStroke(); }
       const [a, b] = [...ptrs.values()];
       gest = { type: 'pinch', d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
@@ -3181,6 +3185,10 @@ const MapView = (() => {
       if (!gest.moved && Math.hypot(x - gest.x0, y - gest.y0) > 6) gest.moved = true;
       if (gest.moved) panBy(dx, dy);
     } else if (gest.type === 'stroke') { hover = [x, y]; moveStroke(x, y); dirty = true; }
+    else if (gest.type === 'shape' || gest.type === 'place') {
+      if (!gest.moved && Math.hypot(x - gest.x0, y - gest.y0) > 5) gest.moved = true;
+      if (gest.moved) dragGrab(gest, x, y);
+    }
     else if (gest.type === 'pinch' && ptrs.size >= 2) {
       const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
       panBy(mx - gest.mx, my - gest.my);
@@ -3192,6 +3200,7 @@ const MapView = (() => {
     if (!ptrs.has(e.pointerId)) return;
     ptrs.delete(e.pointerId);
     if (!gest) return;
+    if (gest.type === 'shape' || gest.type === 'place') { endGrab(gest, cancel); gest = null; return; }
     if (gest.type === 'stroke') { if (cancel) { stroke = null; dirty = true; } else commitStroke(); gest = null; if (e.pointerType !== 'mouse') hover = null; }
     else if (gest.type === 'pan') { if (!cancel && !gest.moved && performance.now() - gest.t0 < 500) onTap(gest.x0, gest.y0); gest = null; }
     else if (gest.type === 'pinch') {
@@ -3239,7 +3248,7 @@ const MapView = (() => {
         const t = clamp(((x - ax) * dx + (y - ay) * dy) / L2, 0, 1), d = Math.hypot(ax + dx * t - x, ay + dy * t - y);
         if (d < bdf) { bdf = d; bf = fh.f; }
       }
-      if (bf && tool === 'pan') { openFeature(bf); return; }
+      if (bf && (tool === 'pan' || tool === 'place')) { openFeature(bf); return; }
     }
     const ll = screenToLL(x, y);
     if (!ll) { hideChip(); return; }
@@ -3722,7 +3731,7 @@ const MapView = (() => {
 
   /* ---------- tools: sculpt, paint, stamps, measure ---------- */
   function setTool(t) {
-    tool = t;
+    tool = t; shape = null;
     for (const b of $$('#map-tools button')) b.classList.toggle('on', b.dataset.tool === t);
     if (t !== 'measure' && t !== 'pan') hideChip();
     if (t === 'sculpt' || t === 'paint' || t === 'stamp') hover = null;
@@ -3972,6 +3981,92 @@ const MapView = (() => {
       flyTo(ll[0], ll[1], Math.max(1, g.total / T.MI * 0.9));
     } else flyTo(f.lat, f.lon, Math.max(0.5, f.r * T.RM / T.MI * 5));
   }
+  /* ---------- reshaping lines by dragging, and moving places with their roads ---------- */
+  const SHAPEABLE = new Set(['road', 'trail', 'border']);
+  let shape = null;   // { f }: the line being reshaped
+  function lineScreen(f) {
+    const scr = [], cum = [0];
+    for (let k = 0; k < f.pts.length; k += 2) { const sc = llToScreen(f.pts[k], f.pts[k + 1]); scr.push(sc && isFinite(sc[0]) ? sc : null); }
+    for (let i = 1; i < scr.length; i++) cum.push(cum[i - 1] + (scr[i] && scr[i - 1] ? Math.hypot(scr[i][0] - scr[i - 1][0], scr[i][1] - scr[i - 1][1]) : 0));
+    return { scr, cum };
+  }
+  // a pull on point i of a line: nearby points follow with a smooth falloff along the line; the far ends stay put
+  function lineGrab(f, i, R) {
+    const { scr, cum } = lineScreen(f);
+    return { f, i, scr, cum, R: R || clamp(cum[cum.length - 1] * 0.3, 45, 260), before: f.pts };
+  }
+  function pullLine(L, dx, dy) {
+    const n = L.scr.length, out = L.before.slice(), ci = L.cum[L.i];
+    for (let k = 0; k < n; k++) {
+      const sc = L.scr[k]; if (!sc) continue;
+      if ((k === 0 || k === n - 1) && k !== L.i) continue;
+      const d = Math.abs(L.cum[k] - ci); if (d >= L.R) continue;
+      const w = 0.5 * (1 + Math.cos(Math.PI * d / L.R)), ll = screenToLL(sc[0] + dx * w, sc[1] + dy * w);
+      if (ll) { out[2 * k] = +ll[0].toFixed(6); out[2 * k + 1] = +ll[1].toFixed(6); }
+    }
+    L.f.pts = out;
+  }
+  function grabAt(x, y) {
+    if (shape && S.world.features.includes(shape.f)) {
+      const { scr } = lineScreen(shape.f);
+      let bi = -1, bd = 22; scr.forEach((sc, k) => { if (sc) { const d = Math.hypot(sc[0] - x, sc[1] - y); if (d < bd) { bd = d; bi = k; } } });
+      if (bi >= 0) return { type: 'shape', x0: x, y0: y, moved: false, lines: [lineGrab(shape.f, bi)] };
+    }
+    if (tool === 'place') {
+      let best = null, bd = 20;
+      for (const hp of placeHits) { const d = Math.hypot(hp.x - x, hp.y - y); if (d < bd) { bd = d; best = hp; } }
+      if (best) {
+        const p = best.p, lines = [];
+        for (const f of S.world.features) {
+          if (!SHAPEABLE.has(f.kind) || !f.pts || f.pts.length < 4) continue;
+          const n = f.pts.length / 2, ends = [[0, f.from], [n - 1, f.to]];
+          for (const [k, id] of ends) {
+            const sc = llToScreen(f.pts[2 * k], f.pts[2 * k + 1]);
+            if (id === p.id || (!id && sc && Math.hypot(sc[0] - best.x, sc[1] - best.y) < 14)) { lines.push(lineGrab(f, k)); break; }
+          }
+        }
+        return { type: 'place', x0: x, y0: y, moved: false, p, before: [p.lat, p.lon], px: best.x - x, py: best.y - y, lines };
+      }
+    }
+    return null;
+  }
+  function dragGrab(g, x, y) {
+    const dx = x - g.x0, dy = y - g.y0;
+    if (g.type === 'place') { const ll = screenToLL(x + g.px, y + g.py); if (ll) { g.p.lat = +ll[0].toFixed(6); g.p.lon = +ll[1].toFixed(6); } }
+    for (const L of g.lines) pullLine(L, dx, dy);
+    dirty = true;
+  }
+  function endGrab(g, cancel) {
+    if (!g.moved) { if (!cancel) onTap(g.x0, g.y0); return; }
+    const restore = () => {
+      for (const L of g.lines) L.f.pts = L.before;
+      if (g.type === 'place') { g.p.lat = g.before[0]; g.p.lon = g.before[1]; }
+      afterEdit({ cap: null }); emit('data');
+    };
+    if (cancel) { restore(); return; }
+    afterEdit({ cap: null }); emit('data');
+    const what = g.type === 'place' ? `Moved ${g.p.name}${g.lines.length ? ` and ${plural(g.lines.length, 'road')}` : ''}` : `Reshaped ${g.lines[0].f.name || 'the ' + (STAMPS[g.lines[0].f.kind] || { name: 'line' }).name.toLowerCase()}`;
+    toast(what, 5000, { label: 'Undo', fn: restore });
+  }
+  function startShape(f) {
+    if (!SHAPEABLE.has(f.kind)) return;
+    if (tool !== 'pan' && tool !== 'place') setTool('pan');
+    shape = { f }; hideChip();
+    renderPanel(); dirty = true;
+  }
+  function endShape() { shape = null; renderPanel(); dirty = true; }
+  function drawShape() {
+    if (!shape) return;
+    if (!S.world.features.includes(shape.f)) { shape = null; renderPanel(); return; }
+    const { scr } = lineScreen(shape.f);
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); let on = false;
+    for (const sc of scr) { if (!sc) { on = false; continue; } on ? ctx.lineTo(sc[0], sc[1]) : ctx.moveTo(sc[0], sc[1]); on = true; }
+    ctx.strokeStyle = 'rgba(255,209,102,.45)'; ctx.lineWidth = 12; ctx.stroke();
+    ctx.setLineDash([5, 5]); ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+    for (const sc of [scr[0], scr[scr.length - 1]]) if (sc) { ctx.beginPath(); ctx.arc(sc[0], sc[1], 6, 0, Math.PI * 2); ctx.fillStyle = '#ffd166'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#1e1404'; ctx.stroke(); }
+    ctx.restore();
+  }
   function openFeature(f) {
     const st = STAMPS[f.kind] || { name: f.kind };
     const name = h('input', { value: f.name || '', placeholder: `Name this ${st.name.toLowerCase()} (optional)`, autocomplete: 'off' });
@@ -3981,13 +4076,15 @@ const MapView = (() => {
       field('Name', Names.field(name, () => f.kind), f.pts ? 'Named rivers, roads and borders are labelled along their line.' : null)),
     foot: [
       h('button', { class: 'btn danger', onclick: async () => {
-        if (!await confirmDlg(`Remove this ${st.name.toLowerCase()}?`, { ok: 'Remove' })) return;
-        const i = S.world.features.indexOf(f); if (i >= 0) S.world.features.splice(i, 1);
+        const i = S.world.features.indexOf(f); if (i < 0) { sh.close(); return; }
+        S.world.features.splice(i, 1);
         sh.close(); afterEdit({ cap: featureCap(f) });
+        toast(`Removed ${f.name || 'the ' + st.name.toLowerCase()}`, 6000, { label: 'Undo', fn: () => { S.world.features.splice(Math.min(i, S.world.features.length), 0, f); afterEdit({ cap: featureCap(f) }); } });
       } }, icon('trash', 16), 'Remove'),
       h('button', { class: 'btn', onclick: () => { sh.close(); zoomToFeature(f); } }, icon('target', 16), 'Zoom to'),
+      SHAPEABLE.has(f.kind) ? h('button', { class: 'btn', onclick: () => { f.name = name.value.trim(); save(); sh.close(); startShape(f); } }, icon('edit', 16), 'Reshape') : null,
       h('div', { class: 'spacer' }),
-      h('button', { class: 'btn primary', onclick: () => { f.name = name.value.trim(); save(); dirty = true; sh.close(); } }, 'Save')] });
+      h('button', { class: 'btn primary', onclick: () => { f.name = name.value.trim(); save(); dirty = true; sh.close(); } }, 'Save')].filter(Boolean) });
   }
   function featuresSheet() {
     const list = h('div');
@@ -4019,6 +4116,16 @@ const MapView = (() => {
   function renderPanel() {
     panel.innerHTML = '';
     let show = true;
+    if (shape) {
+      const f = shape.f, st = STAMPS[f.kind] || { name: 'line' };
+      panel.append(
+        h('div', { class: 'row' }, icon('edit', 18), h('div', { class: 'grow small' }, h('b', null, f.name || 'Unnamed ' + st.name.toLowerCase()), h('div', { class: 'tiny muted' }, 'Drag the highlighted line to bend it. The ends stay put unless you drag them.'))),
+        h('div', { class: 'row', style: 'margin-top:8px' },
+          h('button', { class: 'btn small', onclick: () => openFeature(f) }, icon('edit', 16), 'Name / delete'),
+          h('div', { class: 'grow' }),
+          h('button', { class: 'btn small primary', onclick: endShape }, 'Done')));
+      panel.classList.add('show'); return;
+    }
     if (tool === 'sculpt') {
       const heightTxt = v => ['raise', 'lower'].includes(brush.op) ? '≈' + fmtElev(maxHeight() * v / 100) : v + '%';
       panel.append(
@@ -4090,7 +4197,7 @@ const MapView = (() => {
           h('div', { class: 'grow' }),
           measure.length > 1 ? h('button', { class: 'btn small primary', onclick: () => journey(whole) }, icon('calendar', 16), `Travel ${plural(whole, 'day')}`) : null));
     } else if (tool === 'place') {
-      panel.append(h('div', { class: 'row' }, icon('pin', 18), h('div', { class: 'grow small' }, 'Tap the map to add a place. Tap a marker to open it.'),
+      panel.append(h('div', { class: 'row' }, icon('pin', 18), h('div', { class: 'grow small' }, 'Tap the map to add a place. Tap a marker to open it, or drag it to move it (its roads follow).'),
         h('button', { class: 'btn small', onclick: () => placesSheet() }, 'List')),
         h('div', { class: 'row', style: 'margin:8px 0' },
           h('button', { class: 'btn small', style: 'flex:1', onclick: () => { toast('Founding settlements…', 1200); setTimeout(autoSettlements, 60); } }, icon('village', 16), 'Auto settlements'),
