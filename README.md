@@ -95,6 +95,7 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 - **Layers**:
   - **Tint**: Natural, Parchment, Antique, Vivid, Mono or Night, also applied to shared images.
   - **Label size**, show or hide place groups (settlements, forts, each symbol group…), and an option to hide names beside land-use symbols.
+- **Labels that make room**: when names would overlap, they slide around their marker (right, left, above, below) and then tilt up or down before anything is hidden. Unit and battle names do the same. Turn it off in Layers. To pin one place's name, use Edit → *Name on the map* to choose a side and a tilt (up to 75°). This also tilts region and sea labels.
 - **Places**: the list filters by group, sorts A–Z, nearest (to you), largest or by type, and shows each place's symbol. *Show these* fits them all on screen. A place's page has Route, I'm here and Measure buttons and shows how far it is from you. The open place is ringed on the map. Each place can have its own symbol size and can hide its name.
 - **Measure**:
   - Taps snap to places, and each leg is labelled with its length.

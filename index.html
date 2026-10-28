@@ -3049,7 +3049,7 @@ const MapView = (() => {
     if (lay.places) drawPlaces(st.topo, labelBoxes);
     if (lay.features) drawFeatureLabels(st.topo, labelBoxes);
     if (st.topo) drawTileLabels(fresh, Sz, st, labelBoxes);
-    drawMil(st.topo);
+    drawMil(st.topo, labelBoxes);
     drawHere();
     if (ex) { lastStyle = st; return missing; }
     drawMeasure();
@@ -3222,39 +3222,79 @@ const MapView = (() => {
   function mark(p, x, y, topo) {
     if (p.sym && SYMBOLS.get(p.sym)) SYMBOLS.draw(ctx, p.sym, x, y, symR(p), topo); else glyph(p.type, x, y, topo);
   }
+  // label placement: a candidate is [dx, dy, angle in degrees, align] from the marker. Straight spots come first,
+  // then tilted ones, so names slide and tilt out of each other's way instead of vanishing
+  function labelSpots(gs, hh, tilt) {
+    const o = gs + 5, out = [[o, 0, 0, 'left'], [-o, 0, 0, 'right'], [0, -(gs + hh * 0.7), 0, 'center'], [0, gs + hh * 0.7, 0, 'center']];
+    if (tilt) for (const a of [-28, 28, -50, 50]) { const r = a * D2R; out.push([Math.cos(r) * o, Math.sin(r) * o, a, 'left'], [-Math.cos(r) * o, -Math.sin(r) * o, a, 'right']); }
+    return out;
+  }
+  function manualSpot(pos, ang, gs, hh) {
+    const o = gs + 5, r = ang * D2R;
+    if (pos === 'left') return [-Math.cos(r) * o, -Math.sin(r) * o, ang, 'right'];
+    if (pos === 'above') return [0, -(gs + hh * 0.7), ang, 'center'];
+    if (pos === 'below') return [0, gs + hh * 0.7, ang, 'center'];
+    return [Math.cos(r) * o, Math.sin(r) * o, ang, 'left'];
+  }
+  // boxes a placed label covers: one box when straight, a row of small ones along a tilted label
+  function spotBoxes(x, y, c, tw, hh) {
+    const [dx, dy, ang, align] = c, ax = x + dx, ay = y + dy;
+    if (!ang) { const x0 = align === 'left' ? ax : align === 'right' ? ax - tw : ax - tw / 2; return [[x0 - 2, ay - hh / 2, x0 + tw + 2, ay + hh / 2]]; }
+    const r = ang * D2R, ux = Math.cos(r), uy = Math.sin(r), s0 = align === 'left' ? 0 : align === 'right' ? -tw : -tw / 2, out = [], st = hh * 0.8;
+    for (let t = s0; t < s0 + tw; t += st) { const m = Math.min(t + st / 2, s0 + tw), px = ax + ux * m, py = ay + uy * m; out.push([px - hh * 0.46, py - hh * 0.46, px + hh * 0.46, py + hh * 0.46]); }
+    return out;
+  }
+  const spotFree = (boxes, bs) => bs.every(q => { for (const o of boxes) if (q[0] < o[2] && q[2] > o[0] && q[1] < o[3] && q[3] > o[1]) return false; return true; });
+  function placeLabel(boxes, x, y, cands, tw, hh, forced) {
+    for (const c of cands) { const bs = spotBoxes(x, y, c, tw, hh); if (spotFree(boxes, bs)) { boxes.push(...bs); return c; } }
+    if (!forced) return null;
+    boxes.push(...spotBoxes(x, y, cands[0], tw, hh)); return cands[0];
+  }
+  function drawSpot(c, x, y, text, fill, halo, font) {
+    ctx.save(); ctx.translate(x + c[0], y + c[1]); if (c[2]) ctx.rotate(c[2] * D2R);
+    haloText(text, 0, 0, fill, halo, font, c[3]); ctx.restore();
+  }
   function drawPlaces(topo, boxes) {
     placeHits = [];
-    const widthMi = W * mpp() / T.MI, cll = centerLL();
+    const widthMi = W * mpp() / T.MI, cll = centerLL(), tilt = !S.ui.layers.noTilt;
     const order = ['capital', 'region', 'city', 'water', 'town', 'fort', 'port', 'peak', 'landmark', 'ruin', 'village', 'dungeon', 'camp', 'other'];
     const list = S.world.places.filter(p => placeVisible(p, widthMi, cll)).sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
     const here = {}; for (const c of S.chars) if (c.at) here[c.at] = (here[c.at] || 0) + 1;
+    // markers first (and reserved), so every name steers around every marker
+    const items = [];
     for (const p of list) {
       const s = llToScreen(p.lat, p.lon); if (!s || s[0] < -60 || s[0] > W + 60 || s[1] < -30 || s[1] > H + 30) continue;
       if (cam.mode === 'world' && Math.abs(wrapRad((p.lon - cm()) * D2R)) > Math.PI - 1e-9) continue;
-      const ty = PTYPES[p.type] || PTYPES.other;
-      const isLabel = ty.glyph === 'none';
+      const ty = PTYPES[p.type] || PTYPES.other, isLabel = ty.glyph === 'none', gs = p.sym && SYMBOLS.get(p.sym) ? symR(p) : ty.size;
+      items.push({ p, s, isLabel, gs });
+      if (!isLabel) {
+        boxes.push([s[0] - gs - 1, s[1] - gs - 1, s[0] + gs + 1, s[1] + gs + 1]);
+        mark(p, s[0], s[1], topo);
+        if (here[p.id]) {
+          const bx = s[0] + gs + 2, by = s[1] - gs - 2;
+          ctx.fillStyle = '#e9a23b'; ctx.beginPath(); ctx.arc(bx, by, 7.5, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#1e1404'; ctx.font = '700 10px -apple-system, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(here[p.id]), bx, by + 0.5);
+        }
+      }
+      placeHits.push({ x: s[0], y: s[1], p });
+    }
+    const fillOf = p => (p.type === 'water' ? (topo ? '#1f5f9c' : '#cfe6ff') : topo ? '#111' : '#fff'), halo = topo ? 'rgba(255,255,255,.9)' : 'rgba(10,14,20,.75)';
+    for (const { p, s, isLabel, gs } of items) {
+      if (!isLabel && (p.noLabel || (S.ui.layers.symNoLabels && p.sym && SYMBOLS.get(p.sym) && SYMBOLS.get(p.sym).cat !== 'defaults'))) continue;
       const big = p.type === 'capital' || p.type === 'city' || p.type === 'region';
       const fontSize = (p.type === 'region' ? 15 : big ? 13.5 : p.type === 'water' ? 13 : 12) * lsc();
       const font = (p.type === 'water' ? 'italic 600 ' : p.type === 'region' ? '700 ' : '650 ') + fontSize + 'px ' + (p.type === 'water' || p.type === 'region' ? 'Georgia, "Times New Roman", serif' : '-apple-system, system-ui, sans-serif');
       const text = p.type === 'region' ? p.name.toUpperCase() : p.name;
-      ctx.font = font; const tw = ctx.measureText(text).width;
-      const gs = p.sym && SYMBOLS.get(p.sym) ? symR(p) : ty.size;
-      if (!isLabel && (p.noLabel || (S.ui.layers.symNoLabels && p.sym && SYMBOLS.get(p.sym) && SYMBOLS.get(p.sym).cat !== 'defaults'))) { mark(p, s[0], s[1], topo); placeHits.push({ x: s[0], y: s[1], p }); continue; }
-      const lx = isLabel ? s[0] : s[0] + gs + 5, align = isLabel ? 'center' : 'left';
-      const bx = isLabel ? [s[0] - tw / 2, s[1] - 9, s[0] + tw / 2, s[1] + 9] : [s[0] - gs - 2, s[1] - Math.max(9, gs), lx + tw + 2, s[1] + Math.max(9, gs)];
-      if (!boxFree(boxes, bx) && !p.always) { if (!isLabel) { mark(p, s[0], s[1], topo); placeHits.push({ x: s[0], y: s[1], p }); } continue; }
-      if (!isLabel) mark(p, s[0], s[1], topo);
-      const fill = p.type === 'water' ? (topo ? '#1f5f9c' : '#cfe6ff') : topo ? '#111' : '#fff';
-      const halo = topo ? 'rgba(255,255,255,.9)' : 'rgba(10,14,20,.75)';
       if (p.type === 'region') ctx.letterSpacing = '2px';
-      haloText(text, lx, s[1], fill, halo, font, align);
+      ctx.font = font; const tw = ctx.measureText(text).width, hh = fontSize + 5;
+      const manual = p.lblPos && p.lblPos !== 'auto', ang = +p.lblAngle || 0;
+      let cands;
+      if (isLabel) cands = manual || ang ? [[0, 0, ang, 'center']] : tilt ? [[0, 0, 0, 'center'], [0, 0, -14, 'center'], [0, 0, 14, 'center'], [0, -hh, 0, 'center'], [0, hh, 0, 'center']] : [[0, 0, 0, 'center']];
+      else if (manual || ang) cands = [manualSpot(manual ? p.lblPos : 'right', ang, gs, hh)];
+      else cands = labelSpots(gs, hh, tilt);
+      const c = placeLabel(boxes, s[0], s[1], cands, tw, hh, p.always || manual || !!ang);
+      if (c) drawSpot(c, s[0], s[1], text, fillOf(p), halo, font);
       if (p.type === 'region') ctx.letterSpacing = '0px';
-      if (here[p.id]) {
-        const bx2 = (isLabel ? s[0] + tw / 2 : lx + tw) + 6;
-        ctx.fillStyle = '#e9a23b'; ctx.beginPath(); ctx.arc(bx2 + 7, s[1], 8, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#1e1404'; ctx.font = '700 10px -apple-system, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(here[p.id]), bx2 + 7, s[1] + 0.5);
-      }
-      placeHits.push({ x: s[0], y: s[1], p });
     }
   }
   function drawTileLabels(fresh, Sz, st, boxes) {
@@ -3904,6 +3944,9 @@ const MapView = (() => {
     let symSizeV = +d.symSize || 1;
     const symSize = seg([[0.75, 'Small'], [1, 'Normal'], [1.4, 'Large'], [1.9, 'Huge']], symSizeV, v => { symSizeV = v; });
     const noLabel = h('input', { type: 'checkbox', checked: !!d.noLabel });
+    let lblPosV = d.lblPos || 'auto', lblAngV = +d.lblAngle || 0;
+    const lblPos = seg([['auto', 'Auto'], ['right', 'Right'], ['left', 'Left'], ['above', 'Above'], ['below', 'Below']], lblPosV, v => { lblPosV = v; });
+    const lblAng = slider('Tilt', -75, 75, lblAngV, v => { lblAngV = v; }, v => (v ? (v > 0 ? '↘ ' : '↗ ') + Math.abs(v) + '°' : 'Level'));
     const facSel = h('select', null, h('option', { value: '' }, 'Automatic (from painted territory)'), h('option', { value: 'none' }, 'None'), S.world.factions.map(f => h('option', { value: f.id }, f.name)));
     facSel.value = d.fac && (d.fac === 'none' || facOf(d.fac)) ? d.fac : '';
     let sh;
@@ -3911,7 +3954,8 @@ const MapView = (() => {
       const old = p && p.name;
       d.name = name.value.trim() || 'Unnamed place'; d.type = type.value; d.always = always.checked; d.notes = notesV;
       const pv = Math.round(numOr(pop.value, NaN)); d.pop = isFinite(pv) && pv >= 0 ? pv : null;
-      d.symSize = symSizeV === 1 ? undefined : symSizeV; d.noLabel = noLabel.checked || undefined; d.fac = facSel.value || undefined;
+      d.symSize = symSizeV === 1 ? undefined : symSizeV; d.noLabel = noLabel.checked || undefined;
+      d.lblPos = lblPosV === 'auto' ? undefined : lblPosV; d.lblAngle = lblAngV ? Math.round(lblAngV) : undefined; d.fac = facSel.value || undefined;
       if (symV) d.sym = symV; else delete d.sym;
       if (isNew) S.world.places.push(d); else { Object.assign(p, d); if (!symV) delete p.sym; }
       if (old) renameLinks(old, d.name);
@@ -3924,6 +3968,7 @@ const MapView = (() => {
       field('Map symbol', symBox),
       field('Symbol size', symSize),
       h('label', { class: 'check' }, noLabel, 'Hide the name on the map (the marker still shows)'),
+      field('Name on the map', h('div', null, lblPos, h('div', { style: 'height:6px' }), lblAng), 'Auto slides and tilts the name out of other names\' way. Pick a side or a tilt to pin it there.'),
       h('label', { class: 'check' }, always, 'Always show this label (at every zoom level)'),
       field('Notes', notes),
       h('div', { class: 'tiny muted num' }, fmtLL([d.lat, d.lon]))),
@@ -4899,7 +4944,7 @@ const MapView = (() => {
     ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.stroke(); ctx.fillStyle = style === 'retreat' ? mixWhite(col, 0.35) : col; ctx.fill();
     ctx.restore();
   }
-  function drawMil(topo) {
+  function drawMil(topo, boxes = []) {
     milHits = []; milLines = [];
     if (S.ui.layers.noMil || !S.world.mil.length) return;
     const cll = centerLL(), z = lsc();
@@ -4914,7 +4959,14 @@ const MapView = (() => {
       if (cam.mode === 'world' && Math.abs(wrapRad((m.lon - cm()) * D2R)) > Math.PI - 1e-9) continue;
       const q = llToScreen(m.lat, m.lon); if (!q || q[0] < -40 || q[0] > W + 40 || q[1] < -40 || q[1] > H + 40) continue;
       if (m.t === 'battle') drawBattle(ctx, q[0], q[1], 11 * z); else milGlyph(ctx, m.kind, q[0], q[1], 16 * z, facColor(m.fac), m.ech);
-      if (m.name && (m.t === 'battle' || !S.ui.layers.noMilNames)) haloText(m.name, q[0], q[1] + 19 * z, topo ? '#111' : '#fff', topo ? 'rgba(255,255,255,.9)' : 'rgba(10,14,20,.78)', `650 ${(10.5 * z).toFixed(1)}px -apple-system, system-ui, sans-serif`, 'center');
+      if (m.name && (m.t === 'battle' || !S.ui.layers.noMilNames)) {
+        const font = `650 ${(10.5 * z).toFixed(1)}px -apple-system, system-ui, sans-serif`; ctx.font = font;
+        const tw = ctx.measureText(m.name).width, hh = 10.5 * z + 4, gs = m.t === 'battle' ? 11 * z : 12 * z;
+        const cands = [[0, 19 * z, 0, 'center'], [gs + 4, 0, 0, 'left'], [-gs - 4, 0, 0, 'right'], [0, -22 * z, 0, 'center']];
+        if (!S.ui.layers.noTilt) cands.push([gs + 2, 8 * z, 28, 'left'], [-gs - 2, 8 * z, -28, 'right']);
+        const c = placeLabel(boxes, q[0], q[1], cands, tw, hh, m.t === 'battle');
+        if (c) drawSpot(c, q[0], q[1], m.name, topo ? '#111' : '#fff', topo ? 'rgba(255,255,255,.9)' : 'rgba(10,14,20,.78)', font);
+      }
       milHits.push({ x: q[0], y: q[1], m });
     }
   }
@@ -5596,6 +5648,7 @@ const MapView = (() => {
     const body = h('div', null,
       field('Map style', seg([['auto', 'Auto'], ['atlas', 'Atlas'], ['topo', 'Topographic']], lay.style, v => { lay.style = v; save(); dirty = true; }), 'Auto keeps the coloured atlas at every zoom unless you turn on USGS sheets below.'),
       field('Tint', seg(Object.entries(TINTS).map(([k, v]) => [k, v[0]]), lay.tint || 'natural', v => { lay.tint = v; save(); applyTint(); dirty = true; }), 'A colour grade over the whole map. Shared images use it too.'),
+      inv('noTilt', 'Slide and tilt names to make room', 'When names would overlap they move around their marker and tilt, instead of being hidden'),
       field('Label size', seg([[0.85, 'Small'], [1, 'Normal'], [1.2, 'Large'], [1.45, 'Huge']], +lay.labelScale || 1, v => { lay.labelScale = v; save(); dirty = true; })),
       field('Show on the map', (() => {
         const box = h('div', { class: 'tog-chips' }), counts = groupCounts(), keys = sortGroups(Object.keys(counts));
