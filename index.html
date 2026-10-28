@@ -3573,23 +3573,47 @@ const MapView = (() => {
     const cellM = cell * m, n = towns.length;
     const node = s => clamp(Math.round((s[1] - top) / cell), 0, GH - 1) * GW + clamp(Math.round(s[0] / cell), 0, GW - 1);
     const dist = (a, b) => Math.hypot(a.s[0] - b.s[0], a.s[1] - b.s[1]);
-    const pairs = [], seen = new Set(), inTree = [0];
-    const addPair = (a, b) => { const key = Math.min(a, b) + '-' + Math.max(a, b); if (!seen.has(key)) { seen.add(key); pairs.push([a, b]); } };
-    while (inTree.length < n) {
-      let best = null, bd = Infinity;
-      for (const a of inTree) for (let b = 0; b < n; b++) if (!inTree.includes(b)) { const d = dist(towns[a], towns[b]); if (d < bd) { bd = d; best = [a, b]; } }
-      inTree.push(best[1]); addPair(best[0], best[1]);
+    const pk = (a, b) => Math.min(a, b) + '-' + Math.max(a, b);
+    // roads already on the map: which settlements they join, and the grid cells they cover (new roads reuse them)
+    const onRoad = new Uint8Array(N), idx = new Map(towns.map((o, i) => [o.p.id, i]));
+    const markCells = scr => { for (let i = 1; i < scr.length; i++) { const [x0, y0] = scr[i - 1], [x1, y1] = scr[i], st = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (cell / 2))); for (let q = 0; q <= st; q++) { const x = x0 + (x1 - x0) * q / st, y = y0 + (y1 - y0) * q / st; if (x >= 0 && x <= W && y >= top && y <= bot) onRoad[node([x, y])] = 1; } } };
+    const nearTown = sc => { let bi = -1, bd = Math.max(cell * 1.6, 14); towns.forEach((o, i) => { const d = Math.hypot(o.s[0] - sc[0], o.s[1] - sc[1]); if (d < bd) { bd = d; bi = i; } }); return bi; };
+    const have = new Set(), haveEdges = [];
+    for (const f of S.world.features) {
+      if (f.kind !== 'road' || !f.pts || f.pts.length < 4) continue;
+      const scr = []; for (let k = 0; k < f.pts.length; k += 2) { const sc = llToScreen(f.pts[k], f.pts[k + 1]); if (sc && isFinite(sc[0])) scr.push(sc); }
+      if (scr.length < 2) continue;
+      markCells(scr);
+      const a = f.from && idx.has(f.from) ? idx.get(f.from) : nearTown(scr[0]), b = f.to && idx.has(f.to) ? idx.get(f.to) : nearTown(scr[scr.length - 1]);
+      if (a >= 0 && b >= 0 && a !== b && !have.has(pk(a, b))) { have.add(pk(a, b)); haveEdges.push([a, b]); }
     }
-    // shortcuts: link close neighbours that the tree only joins by a long way round
+    // spanning tree (Kruskal), starting from what the existing roads already connect
+    const par = towns.map((_, i) => i), find = i => { while (par[i] !== i) i = par[i] = par[par[i]]; return i; };
+    for (const [a, b] of haveEdges) par[find(a)] = find(b);
+    const pairs = [], seen = new Set(have);
+    const addPair = (a, b) => { const key = pk(a, b); if (!seen.has(key)) { seen.add(key); pairs.push([a, b]); } };
+    const all = []; for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) all.push([dist(towns[a], towns[b]), a, b]);
+    all.sort((x, y) => x[0] - y[0]);
+    for (const [, a, b] of all) if (find(a) !== find(b)) { par[find(a)] = find(b); addPair(a, b); }
+    // shortcuts: link close neighbours that the network only joins by a long way round
     const adj = towns.map(() => []);
-    for (const [a, b] of pairs) { const d = dist(towns[a], towns[b]); adj[a].push([b, d]); adj[b].push([a, d]); }
-    const treeDist = (a, b) => { const best = new Array(n).fill(Infinity), st = [a]; best[a] = 0; while (st.length) { const u = st.pop(); for (const [v, d] of adj[u]) if (best[v] === Infinity) { best[v] = best[u] + d; st.push(v); } } return best[b]; };
+    for (const [a, b] of haveEdges.concat(pairs)) { const d = dist(towns[a], towns[b]); adj[a].push([b, d]); adj[b].push([a, d]); }
+    const treeDist = (a, b) => {   // shortest way along the network (Dijkstra; it has loops once roads exist)
+      const best = new Array(n).fill(Infinity), done = new Array(n).fill(false); best[a] = 0;
+      for (;;) { let u = -1; for (let i = 0; i < n; i++) if (!done[i] && best[i] < Infinity && (u < 0 || best[i] < best[u])) u = i; if (u < 0 || u === b) break; done[u] = true; for (const [v, d] of adj[u]) if (best[u] + d < best[v]) best[v] = best[u] + d; }
+      return best[b];
+    };
     const extra = [];
-    for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) { const d = dist(towns[a], towns[b]), td = treeDist(a, b); if (td > d * 1.9) extra.push([td / d, a, b]); }
+    for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) { if (seen.has(pk(a, b))) continue; const d = dist(towns[a], towns[b]), td = treeDist(a, b); if (td > d * 1.9) extra.push([td / d, a, b]); }
     extra.sort((x, y) => y[0] - x[0]);
-    for (const [, a, b] of extra.slice(0, Math.max(1, Math.round(n / 4)))) addPair(a, b);
+    for (const [, a, b] of extra.slice(0, Math.max(1, Math.round(n / 4)))) {
+      if (treeDist(a, b) <= dist(towns[a], towns[b]) * 1.9) continue;   // an earlier shortcut already fixed it
+      addPair(a, b); const d = dist(towns[a], towns[b]); adj[a].push([b, d]); adj[b].push([a, d]);
+    }
+    if (!pairs.length) { toast(haveEdges.length ? 'Every settlement in view already has its roads.' : 'Could not plan any roads here.', 3800); return; }
+    pairs.sort((x, y) => dist(towns[x[0]], towns[x[1]]) - dist(towns[y[0]], towns[y[1]]));
     // climbing costs a lot; water nearly blocks the way (fords and ferries still happen)
-    const step = (k1, k2, diag) => { if (wet[k2] === 2) return Infinity; const len = cellM * (diag ? Math.SQRT2 : 1), g = Math.abs(elev[k2] - elev[k1]) / len; return len * (1 + 8 * g + 60 * g * g) * (wet[k2] ? 25 : 1); };
+    const step = (k1, k2, diag) => { if (wet[k2] === 2) return Infinity; const len = cellM * (diag ? Math.SQRT2 : 1), g = Math.abs(elev[k2] - elev[k1]) / len; return len * (1 + 8 * g + 60 * g * g) * (wet[k2] ? 25 : 1) * (onRoad[k2] ? 0.3 : 1); };
     function route(a, b) {
       const start = node(a.s), goal = node(b.s), gx = goal % GW, gy = (goal / GW) | 0;
       const gS = new Float64Array(N).fill(Infinity), from = new Int32Array(N).fill(-1), closed = new Uint8Array(N), heap = [];
@@ -3623,6 +3647,8 @@ const MapView = (() => {
       const scr = [A.s, ...pts.slice(1, -1).filter((_, i) => i % 2 === 1), B.s];
       const lls = scr.map(s => screenToLL(s[0], s[1])).filter(Boolean); if (lls.length < 2) continue;
       const f = createLineFeature('road', lls);
+      f.from = A.p.id; f.to = B.p.id;
+      markCells(scr);
       if (['city', 'capital', 'port'].includes(A.p.type) && ['city', 'capital', 'port'].includes(B.p.type)) { f.name = Names.make('road'); for (let k = 0; k < 10 && S.world.features.concat(recs).some(x => x.name === f.name); k++) f.name = Names.make('road'); }
       recs.push(f);
     }
