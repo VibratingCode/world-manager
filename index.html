@@ -400,6 +400,29 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .sym { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 2px; border-radius: 9px; background: none; border: 1.5px solid transparent; color: var(--muted); font: inherit; font-size: 10px; cursor: pointer; }
 .sym span { line-height: 1.15; text-align: center; max-height: 2.3em; overflow: hidden; }
 .sym.on { border-color: var(--accent); color: var(--text); background: var(--card2); }
+.ph-banner { height: 150px; border-radius: 14px; background-size: cover; background-position: center; margin: 0 0 12px; background-color: var(--card2); }
+.ph-status { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: 3px; background: var(--card2); color: var(--muted); letter-spacing: 0; }
+.ph-status.visited { background: rgba(46,157,87,.18); color: #3fb950; }
+.ph-status.ruined { background: rgba(214,48,49,.16); color: #ef6158; }
+.ph-status.secret { background: rgba(167,123,243,.18); color: #b993ff; }
+.sec-head { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; -webkit-user-select: none; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 650; min-height: 28px; }
+.sec-head .grow { flex: 1; }
+.sec-count { background: var(--card2); color: var(--text); border-radius: 999px; padding: 1px 8px; font-size: 11px; letter-spacing: 0; }
+.sec-chev { display: inline-flex; transition: transform .15s; }
+.sec-chev.open { transform: rotate(90deg); }
+.sec-body { margin-top: 8px; }
+.sec.collapsed { padding-top: 8px; padding-bottom: 8px; }
+.sec.collapsed .sec-body { display: none; }
+.sec-extra { display: inline-flex; gap: 6px; text-transform: none; letter-spacing: 0; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; font-size: 14px; align-items: baseline; }
+.kv .k { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.kv .v { overflow-wrap: anywhere; }
+.ed-grp { border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; margin: 10px 0; }
+.ed-grp summary { cursor: pointer; padding: 11px 0; font-weight: 650; font-size: 14px; }
+.ed-grp[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.ed-body { padding-bottom: 6px; }
+.poi-ic { font-size: 20px; width: 30px; text-align: center; flex: none; }
+.img-prev { width: 104px; height: 66px; border-radius: 10px; background: var(--card2) center / cover no-repeat; flex: none; }
 .place-hero { display: flex; gap: 12px; align-items: center; margin: 0 0 12px; }
 .place-hero .ph-ic { width: 54px; height: 54px; border-radius: 15px; background: var(--card2); display: grid; place-items: center; flex: none; }
 .place-hero .ph-name { font-size: 23px; font-weight: 750; line-height: 1.15; letter-spacing: -0.01em; overflow-wrap: anywhere; }
@@ -2704,7 +2727,7 @@ const MapView = (() => {
         const sy = best.sym && SYMBOLS.get(best.sym), y0 = S.world.here;
         const far = y0 ? gcAngle([y0.lat, y0.lon], [best.lat, best.lon]) * T.RM : 0;
         const pf = S.world.terr.length || best.fac ? placeFaction(best) : { f: null };
-        txt = [best.name, [sy ? sy.name : null, (PTYPES[best.type] || PTYPES.other).name, best.pop ? 'pop. ' + fmtInt(best.pop) : null, pf.f ? pf.f.name : null, y0 && far > 50 ? `${fmtDist(far)} from you` : null].filter(Boolean).join(' · ')];
+        txt = [best.name, [PSTAT[best.status] ? PSTAT[best.status][0] : null, sy ? sy.name : null, (PTYPES[best.type] || PTYPES.other).name, best.pop ? 'pop. ' + fmtInt(best.pop) : null, pf.f ? pf.f.name : null, y0 && far > 50 ? `${fmtDist(far)} from you` : null].filter(Boolean).join(' · ')];
         if (tool === 'place') cur = 'grab';
       } else if (tool !== 'measure' && hereHit && Math.hypot(hereHit[0] - x, hereHit[1] - y) < 20) txt = ['You are here', `Heading ${S.world.here.hdg}° ${hdgName(S.world.here.hdg)} · tap to change`];
       else if (tool !== 'measure') { const f = featureAt(x, y, 8); if (f) txt = [f.name || (STAMPS[f.kind] || { name: f.kind }).name, featureSummary(f)]; }
@@ -3193,6 +3216,7 @@ const MapView = (() => {
   }
   function placeVisible(p, widthMi, cll) {
     if ((S.ui.layers.hide || {})[placeGroup(p)]) return false;
+    if (p.status === 'secret' && S.ui.layers.hideSecret) return false;
     const ty = PTYPES[p.type] || PTYPES.other;
     if (!p.always && widthMi > ty.max) return false;
     if (cam.mode === 'local' && gcAngle(cll, [p.lat, p.lon]) > 0.6) return false;
@@ -3219,8 +3243,22 @@ const MapView = (() => {
     if (ty.glyph === 'anchor') { ctx.strokeStyle = fill === '#fff' ? '#111' : '#fff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, y - r * 0.5); ctx.lineTo(x, y + r * 0.5); ctx.moveTo(x - r * 0.45, y + r * 0.15); ctx.lineTo(x + r * 0.45, y + r * 0.15); ctx.stroke(); }
   }
   const symR = p => (p.type === 'capital' || p.type === 'city' ? 11 : p.type === 'village' || p.type === 'camp' ? 8 : 9.5) * (+p.symSize || 1) * lsc();
+  const PSTAT = { unexplored: ['Unexplored', '?'], visited: ['Visited', '✓'], abandoned: ['Abandoned', ''], ruined: ['Ruined', '✕'], secret: ['Secret', ''] };
   function mark(p, x, y, topo) {
+    const st = p.status;
+    ctx.save(); if (st === 'unexplored' || st === 'abandoned') ctx.globalAlpha = 0.5; else if (st === 'secret') ctx.globalAlpha = 0.8;
     if (p.sym && SYMBOLS.get(p.sym)) SYMBOLS.draw(ctx, p.sym, x, y, symR(p), topo); else glyph(p.type, x, y, topo);
+    ctx.restore();
+    if (!PSTAT[st]) return;
+    const r = p.sym && SYMBOLS.get(p.sym) ? symR(p) : (PTYPES[p.type] || PTYPES.other).size;
+    ctx.save();
+    if (st === 'ruined') { ctx.strokeStyle = '#d63031'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; const k = r + 2; ctx.beginPath(); ctx.moveTo(x - k, y - k); ctx.lineTo(x + k, y + k); ctx.moveTo(x + k, y - k); ctx.lineTo(x - k, y + k); ctx.stroke(); }
+    else if (st === 'secret') { ctx.setLineDash([3, 3]); ctx.strokeStyle = topo ? '#6c3483' : '#d6a2e8'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y, r + 5, 0, Math.PI * 2); ctx.stroke(); }
+    else if (st === 'unexplored' || st === 'visited') {
+      const bx = x - r - 2, by = y + r + 2; ctx.beginPath(); ctx.arc(bx, by, 6.5, 0, Math.PI * 2); ctx.fillStyle = st === 'visited' ? '#2e9d57' : '#7d8590'; ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = '800 9px -apple-system, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(PSTAT[st][1], bx, by + 0.5);
+    }
+    ctx.restore();
   }
   // label placement: a candidate is [dx, dy, angle in degrees, align] from the marker. Straight spots come first,
   // then tilted ones, so names slide and tilt out of each other's way instead of vanishing
@@ -3293,7 +3331,7 @@ const MapView = (() => {
       else if (manual || ang) cands = [manualSpot(manual ? p.lblPos : 'right', ang, gs, hh)];
       else cands = labelSpots(gs, hh, tilt);
       const c = placeLabel(boxes, s[0], s[1], cands, tw, hh, p.always || manual || !!ang);
-      if (c) drawSpot(c, s[0], s[1], text, fillOf(p), halo, font);
+      if (c) { const dim = p.status === 'unexplored' || p.status === 'abandoned'; if (dim) ctx.globalAlpha = 0.6; drawSpot(c, s[0], s[1], text, fillOf(p), halo, font); if (dim) ctx.globalAlpha = 1; }
       if (p.type === 'region') ctx.letterSpacing = '0px';
     }
   }
@@ -3641,6 +3679,17 @@ const MapView = (() => {
       if (g) { gest = g; return; }
       gest = { type: editing() ? 'stroke' : 'pan', x0: x, y0: y, lx: x, ly: y, t0: performance.now(), moved: false };
       if (gest.type === 'stroke') { hover = [x, y]; beginStroke(x, y); }
+      // press and hold a place in the hand tool to pick it up and move it
+      if (gest.type === 'pan' && tool === 'pan') {
+        const hp = placeHitAt(x, y, 18), g0 = gest;
+        if (hp) g0.lp = setTimeout(() => {
+          if (gest !== g0 || g0.moved || ptrs.size !== 1) return;
+          const cur = [...ptrs.values()][0];
+          gest = placeGrab(hp.p, hp.x, hp.y, cur.x, cur.y); gest.held = true; selPlace = hp.p; dirty = true;
+          cv.style.cursor = 'grabbing'; toast(`Moving ${hp.p.name}: drag it, then let go`, 1800);
+          if (navigator.vibrate) try { navigator.vibrate(15); } catch (_) {}
+        }, 480);
+      }
     } else if (ptrs.size === 2) {
       if (gest && (isGrab(gest))) endGrab(gest, false);
       if (gest && gest.type === 'stroke') { if (stroke && stroke.n <= 2 && performance.now() - gest.t0 < 350) { stroke = null; dirty = true; } else commitStroke(); }
@@ -3673,6 +3722,7 @@ const MapView = (() => {
     if (!ptrs.has(e.pointerId)) return;
     ptrs.delete(e.pointerId);
     if (!gest) return;
+    if (gest.lp) clearTimeout(gest.lp);
     if (isGrab(gest)) { endGrab(gest, cancel); gest = null; return; }
     if (gest.type === 'stroke') { if (cancel) { stroke = null; dirty = true; } else commitStroke(); gest = null; if (e.pointerType !== 'mouse') hover = null; }
     else if (gest.type === 'pan') { if (!cancel && !gest.moved && performance.now() - gest.t0 < 500) onTap(gest.x0, gest.y0); gest = null; cv.style.cursor = ''; }
@@ -3733,7 +3783,7 @@ const MapView = (() => {
     }
     const ll = screenToLL(x, y);
     if (!ll) { hideChip(); return; }
-    if (tool === 'place') { editPlace(null, ll); return; }
+    if (tool === 'place') { if (moving) { movePlaceTo(moving, x, y); return; } editPlace(null, ll); return; }
     if (tool === 'measure') {
       let sn = null, bd = 18; for (const hp of placeHits) { const d = Math.hypot(hp.x - x, hp.y - y); if (d < bd) { bd = d; sn = hp.p; } }
       measure.push(sn ? [sn.lat, sn.lon] : ll); dirty = true; renderPanel(); return;
@@ -3875,60 +3925,126 @@ const MapView = (() => {
   }
   const daysOnFoot = m => m / T.MI / TRAVEL.foot[1];
   const footDays = m => { const v = fmtNum(daysOnFoot(m), 1); return v === '1' ? '1 day' : v + ' days'; };
+  const POI_KINDS = { inn: ['🍺', 'Inn / tavern'], shop: ['🛒', 'Shop / market'], temple: ['⛪', 'Temple / shrine'], guild: ['⚒️', 'Guild / workshop'], hall: ['🏛️', 'Hall / palace'],
+    mil: ['🛡️', 'Barracks / defences'], home: ['🏠', 'Residence'], landmark: ['🗿', 'Landmark'], dungeon: ['🕳️', 'Dungeon / cave'], secret: ['🗝️', 'Secret'], other: ['📍', 'Other'] };
+  const INFO = [['ruler', 'Ruler'], ['gov', 'Government'], ['founded', 'Founded'], ['economy', 'Economy & trade'], ['defense', 'Defences'], ['religion', 'Religion'], ['culture', 'Culture'], ['lang', 'Languages']];
+  // a card on the place page that folds away; whether it is folded is remembered for every place
+  function psection(key, ic, title, count, build, extra) {
+    const isCol = () => !!(S.ui.pcol || {})[key];
+    const body = h('div', { class: 'sec-body' }), chev = h('span', { class: 'sec-chev' }, icon('chev', 15));
+    const fill = () => { body.innerHTML = ''; if (!isCol()) body.append(...[].concat(build()).filter(Boolean)); chev.classList.toggle('open', !isCol()); card.classList.toggle('collapsed', isCol()); };
+    const head = h('div', { class: 'sec-head', role: 'button', tabindex: 0, 'aria-label': (isCol() ? 'Show ' : 'Hide ') + title,
+      onclick: e => { if (e.target.closest('.sec-extra')) return; S.ui.pcol = { ...(S.ui.pcol || {}), [key]: !isCol() }; save(); fill(); },
+      onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); head.click(); } } },
+      icon(ic, 15), h('span', null, title), count ? h('span', { class: 'sec-count' }, String(count)) : null, h('span', { class: 'grow' }), extra ? h('span', { class: 'sec-extra' }, extra) : null, chev);
+    const card = h('div', { class: 'card sec' }, head, body);
+    fill();
+    return card;
+  }
+  function poiSheet(p, poi) {
+    const isNew = !poi, d = poi ? { ...poi } : { id: uid(), name: '', kind: 'inn', note: '' };
+    const name = h('input', { value: d.name, placeholder: 'e.g. The Rusty Anchor', autocomplete: 'off' });
+    const kind = h('select', null, Object.entries(POI_KINDS).map(([k, v]) => h('option', { value: k }, v[0] + '  ' + v[1]))); kind.value = d.kind;
+    const note = h('textarea', { rows: 4, placeholder: 'Who runs it, what is there, prices, rumours… [[links]] work' }); note.value = d.note || '';
+    let sh;
+    sh = openSheet({ title: isNew ? `Add to ${p.name}` : d.name, body: h('div', null, field('Name', name), field('Kind', kind), field('Notes', note)), foot: [
+      !isNew ? h('button', { class: 'btn danger', onclick: () => { const u = undoable(['world.places']); p.poi = (p.poi || []).filter(x => x.id !== d.id); save(); sh.close(); openPlace(p); u(`Removed ${d.name}`); } }, icon('trash', 16), 'Remove') : null,
+      h('div', { class: 'spacer' }),
+      h('button', { class: 'btn primary', onclick: () => {
+        d.name = name.value.trim() || POI_KINDS[kind.value][1]; d.kind = kind.value; d.note = note.value.trim();
+        p.poi = p.poi || []; const i = p.poi.findIndex(x => x.id === d.id); if (i >= 0) p.poi[i] = d; else p.poi.push(d);
+        save(); emit('data'); sh.close(); openPlace(p);
+      } }, 'Save')].filter(Boolean) });
+    setTimeout(() => { if (isNew) name.focus(); }, 60);
+  }
+  function duplicatePlace(p) {
+    const u = undoable(['world.places']);
+    const c = JSON.parse(JSON.stringify(p)); c.id = uid(); c.name = p.name + ' (copy)'; c.lat = +(p.lat + 0.01).toFixed(6); c.lon = +(p.lon + 0.01).toFixed(6);
+    if (c.poi) for (const q of c.poi) q.id = uid();
+    S.world.places.push(c); save(); dirty = true; emit('data'); openPlace(c); u(`Duplicated ${p.name}`);
+  }
   function openPlace(p) {
     selPlace = p; dirty = true;
     const smp = T.sample(p.lat, p.lon);
     const chars = S.chars.filter(c => c.at === p.id || c.home === p.id);
     const evs = S.events.filter(e => e.place === p.id).sort((a, b) => a.start - b.start);
-    const near = nearby([p.lat, p.lon], 5, p), twin = S.codex.find(e => lc(e.title) === lc(p.name));
+    const twin = S.codex.find(e => lc(e.title) === lc(p.name));
     let sh;
+    const close = () => sh.close();
     const party = S.chars.filter(c => c.role === 'PC' && c.status !== 'dead');
-    const sy = p.sym && SYMBOLS.get(p.sym), tName = (PTYPES[p.type] || PTYPES.other).name, pf = placeFaction(p);
+    const sy = p.sym && SYMBOLS.get(p.sym), tName = (PTYPES[p.type] || PTYPES.other).name, pf = placeFaction(p), stt = PSTAT[p.status];
     const tile = (k, v, sub, onclick) => h('div', { class: 'ph-tile' + (onclick ? ' tap' : ''), onclick }, h('div', { class: 'k' }, k), h('div', { class: 'v' }, v), sub ? h('div', { class: 's' }, sub) : null);
     const popWord = n => (n < 100 ? 'Hamlet-sized' : n < 1000 ? 'Village-sized' : n < 10000 ? 'Town-sized' : n < 100000 ? 'City-sized' : 'A great metropolis');
     const dot = c => h('i', { class: 'ph-dot', style: `background:${c}` });
     const youTxt = S.world.here ? (() => { const y = S.world.here, d = gcAngle([y.lat, y.lon], [p.lat, p.lon]) * T.RM; return d < 50 ? 'You are here' : `${fmtDist(d)} ${bearingName([y.lat, y.lon], [p.lat, p.lon])} of you · ≈ ${footDays(d)} on foot`; })() : null;
+    const info = INFO.filter(([k]) => p.info && p.info[k]), tags = p.tags || [], pois = p.poi || [];
+    const roads = p.type !== 'region' && p.type !== 'water' ? roadEdges().filter(e => e.a === p || e.b === p) : null;
+    const copyLink = () => { const t = `[[${p.name}]]`; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(`Copied ${t}. Paste it into any notes to link here`), () => toast(t, 5000)); };
     const body = h('div', null,
+      p.img ? h('div', { class: 'ph-banner', style: `background-image:url("${p.img}")` }) : null,
       h('div', { class: 'place-hero' }, h('div', { class: 'ph-ic' }, placeIcon(p, 40)),
-        h('div', { style: 'min-width:0' }, h('div', { class: 'ph-name' }, p.name),
-          h('div', { class: 'ph-sub' }, [sy ? sy.name : tName, pf.f ? (pf.contested ? 'contested' : `in ${pf.f.name}`) : null].filter(Boolean).join(' · ')))),
+        h('div', { style: 'min-width:0' }, h('div', { class: 'ph-name' }, p.name, stt ? h('span', { class: 'ph-status ' + p.status }, stt[0]) : null),
+          h('div', { class: 'ph-sub' }, [sy ? sy.name : tName, pf.f ? (pf.contested ? 'contested' : `in ${pf.f.name}`) : null, tags.length ? tags.map(t => '#' + t).join(' ') : null].filter(Boolean).join(' · ')))),
       h('div', { class: 'ph-tiles' },
-        tile('Population', p.pop ? fmtInt(p.pop) : 'Unknown', p.pop ? popWord(p.pop) : 'Tap to set', () => { sh.close(); editPlace(p); }),
+        tile('Population', p.pop ? fmtInt(p.pop) : 'Unknown', p.pop ? popWord(p.pop) : 'Tap to set', () => { close(); editPlace(p); }),
         tile('Faction', pf.f ? [dot(safeColor(pf.f.color)), h('span', null, pf.f.name)] : (pf.contested ? 'Contested' : 'Unclaimed'),
           pf.contested ? `Contested: ${pf.contested[0].name} vs ${pf.contested[1].name}` : pf.how === 'chosen' ? 'Set on this place' : pf.how === 'territory' ? 'From painted territory' : 'Paint land with the flag tool',
-          () => { sh.close(); factionsSheet(); }),
-        tile('Type', sy ? sy.name : tName, sy ? tName : null, () => { sh.close(); editPlace(p); }),
+          () => { close(); factionsSheet(); }),
+        tile('Type', sy ? sy.name : tName, sy ? tName : null, () => { close(); editPlace(p); }),
         tile('Terrain', smp.elev > 0 ? T.BIOMES[smp.biome][2] : 'At sea', smp.elev > 0 ? `${fmtElev(smp.elev)} · ${fmtTemp(smp.temp)} average` : null)),
       h('div', { class: 'ph-meta' }, fmtLL([p.lat, p.lon]), youTxt ? h('br') : null, youTxt),
       h('div', { class: 'row wrap', style: 'gap:6px;margin:0 0 8px' },
-        h('button', { class: 'btn small', onclick: () => { sh.close(); routeSheet(p); } }, icon('map', 14), 'Route'),
-        h('button', { class: 'btn small', onclick: () => { sh.close(); setTab('map'); setHere([p.lat, p.lon]); toast(`You are here: ${p.name}`); } }, icon('target', 14), "I'm here"),
-        h('button', { class: 'btn small', onclick: () => { sh.close(); setTab('map'); measure = [[p.lat, p.lon]]; mClosed = false; setTool('measure'); } }, icon('ruler', 14), 'Measure')),
-      p.notes ? h('div', { class: 'card' }, md(p.notes, { onToggle: (i, on) => { p.notes = mdToggle(p.notes, i, on); save(); } })) : null,
-      twin ? h('button', { class: 'btn small', style: 'margin:2px 0 6px', onclick: () => { sh.close(); Codex.open(twin.id); } }, icon('book', 14), 'Codex: ' + twin.title) : null,
-      h('div', { class: 'card' }, h('h3', null, icon('users', 15), 'Characters', h('span', { class: 'grow' }),
-        party.length ? h('button', { class: 'btn small', onclick: () => { for (const c of party) c.at = p.id; const hr = S.world.here; setHere([p.lat, p.lon], hr ? brgDeg([hr.lat, hr.lon], [p.lat, p.lon]) : 0); save(); emit('data'); sh.close(); openPlace(p); toast(`The party is now at ${p.name}`); } }, 'Party is here') : null),
-        chars.length ? chars.map(c => h('div', { class: 'list-row tap', onclick: () => { sh.close(); Chars.open(c.id); } }, avatar(c, 30),
-          h('div', { class: 'main' }, h('div', { class: 'title' }, c.name), h('div', { class: 'sub' }, [c.at === p.id ? 'Currently here' : null, c.home === p.id ? 'Home' : null].filter(Boolean).join(' · '))))) : h('div', { class: 'small muted' }, 'Nobody is here or lives here.')),
-      p.type !== 'region' && p.type !== 'water' ? placeRoadsCard(p, () => sh.close()) : null,
-      evs.length ? h('div', { class: 'card' }, h('h3', null, icon('timeline', 15), 'Events here'), evs.map(e => h('div', { class: 'list-row tap', onclick: () => { sh.close(); Timeline.focusEvent(e.id); } },
-        h('div', { class: 'main' }, h('div', { class: 'title' }, e.title), h('div', { class: 'sub' }, Cal.fmt(e.start)))))) : null,
-      near.length ? h('div', { class: 'card' }, h('h3', null, icon('pin', 15), 'Nearby'), near.map(n => h('div', { class: 'list-row tap', onclick: () => { sh.close(); openPlace(n.p); } },
-        h('div', { class: 'main' }, h('div', { class: 'title' }, n.p.name), h('div', { class: 'sub' }, `${fmtDist(n.d)} ${bearingName([p.lat, p.lon], [n.p.lat, n.p.lon])} · ≈ ${footDays(n.d)} on foot · ${(PTYPES[n.p.type] || PTYPES.other).name}`)), icon('chev', 16)))) : null,
-      backlinksCard(p.name, p));
+        h('button', { class: 'btn small', onclick: () => { close(); routeSheet(p); } }, icon('map', 14), 'Route'),
+        h('button', { class: 'btn small', onclick: () => { close(); setTab('map'); setHere([p.lat, p.lon]); toast(`You are here: ${p.name}`); } }, icon('target', 14), "I'm here"),
+        h('button', { class: 'btn small', onclick: () => { close(); setTab('map'); measure = [[p.lat, p.lon]]; mClosed = false; setTool('measure'); } }, icon('ruler', 14), 'Measure'),
+        h('button', { class: 'btn small', onclick: () => startMove(p) }, icon('hand', 14), 'Move'),
+        h('button', { class: 'btn small', onclick: copyLink }, icon('link', 14), 'Copy link'),
+        twin ? h('button', { class: 'btn small', onclick: () => { close(); Codex.open(twin.id); } }, icon('book', 14), 'Codex') : null),
+      psection('notes', 'note', 'Notes', null, () => p.notes ? md(p.notes, { onToggle: (i, on) => { p.notes = mdToggle(p.notes, i, on); save(); } })
+        : h('div', { class: 'small muted' }, 'No notes yet. ', h('a', { class: 'wl', role: 'button', onclick: () => { close(); editPlace(p); } }, 'Write some'))),
+      psection('details', 'info', 'Details', info.length || null, () => [
+        info.length ? h('div', { class: 'kv' }, info.flatMap(([k, label]) => [h('span', { class: 'k' }, label), h('span', { class: 'v' }, p.info[k])]))
+          : h('div', { class: 'small muted' }, 'Ruler, government, economy, defences, religion… ', h('a', { class: 'wl', role: 'button', onclick: () => { close(); editPlace(p, null, 'details'); } }, 'Add details')),
+        tags.length ? h('div', { class: 'row wrap', style: 'gap:6px;margin-top:10px' }, tags.map(t => h('span', { class: 'chip tag-chip' }, '#' + t))) : null]),
+      psection('poi', 'bookmark', 'Points of interest', pois.length || null, () => pois.length
+        ? pois.map(q => h('div', { class: 'list-row tap', onclick: () => { close(); poiSheet(p, q); } }, h('span', { class: 'poi-ic' }, (POI_KINDS[q.kind] || POI_KINDS.other)[0]),
+          h('div', { class: 'main' }, h('div', { class: 'title' }, q.name), h('div', { class: 'sub' }, [(POI_KINDS[q.kind] || POI_KINDS.other)[1], q.note ? mdPlain(q.note).slice(0, 90) : null].filter(Boolean).join(' · '))), icon('chev', 16)))
+        : h('div', { class: 'small muted' }, 'Inns, shops, temples, guildhalls, secrets… anything worth finding here.'),
+        h('button', { class: 'btn small', onclick: () => { close(); poiSheet(p); } }, icon('plus', 14), 'Add')),
+      psection('chars', 'users', 'Characters', chars.length || null, () => chars.length
+        ? chars.map(c => h('div', { class: 'list-row tap', onclick: () => { close(); Chars.open(c.id); } }, avatar(c, 30),
+          h('div', { class: 'main' }, h('div', { class: 'title' }, c.name), h('div', { class: 'sub' }, [c.at === p.id ? 'Currently here' : null, c.home === p.id ? 'Home' : null].filter(Boolean).join(' · ')))))
+        : h('div', { class: 'small muted' }, 'Nobody is here or lives here.'),
+        party.length ? h('button', { class: 'btn small', onclick: () => { for (const c of party) c.at = p.id; const hr = S.world.here; setHere([p.lat, p.lon], hr ? brgDeg([hr.lat, hr.lon], [p.lat, p.lon]) : 0); save(); emit('data'); close(); openPlace(p); toast(`The party is now at ${p.name}`); } }, 'Party is here') : null),
+      roads ? psection('roads', 'road', 'Roads', roads.length || null, () => roads.length
+        ? roads.map(e => { const o = e.a === p ? e.b : e.a; return h('div', { class: 'list-row tap', onclick: () => { close(); openFeature(e.f); } },
+          h('div', { class: 'main' }, h('div', { class: 'title' }, o ? `To ${o.name}` : 'Leads out of town'), h('div', { class: 'sub' }, [e.f.name || ROAD_STYLE[roadCls(e.f)].name, fmtDist(e.len), daysTxt(e.days), o ? bearingName([p.lat, p.lon], [o.lat, o.lon]) : null].filter(Boolean).join(' · '))), icon('chev', 16)); })
+        : h('div', { class: 'small muted' }, 'No roads here yet.'),
+        [h('button', { class: 'btn small', onclick: () => { close(); connectFrom(p); } }, icon('plus', 14), 'Connect'), h('button', { class: 'btn small', onclick: () => { close(); routeSheet(p); } }, icon('map', 14), 'Route')]) : null,
+      psection('events', 'timeline', 'Events here', evs.length || null, () => evs.length
+        ? evs.map(e => h('div', { class: 'list-row tap', onclick: () => { close(); Timeline.focusEvent(e.id); } }, h('div', { class: 'main' }, h('div', { class: 'title' }, e.title), h('div', { class: 'sub' }, Cal.fmt(e.start)))))
+        : h('div', { class: 'small muted' }, 'Nothing has happened here yet.'),
+        h('button', { class: 'btn small', onclick: () => { close(); Timeline.editEvent(null, S.meta.today, { place: p.id }); } }, icon('plus', 14), 'Event')),
+      psection('nearby', 'pin', 'Nearby', null, () => { const near = nearby([p.lat, p.lon], 6, p); return near.length
+        ? near.map(n => h('div', { class: 'list-row tap', onclick: () => { close(); openPlace(n.p); } },
+          h('div', { class: 'main' }, h('div', { class: 'title' }, n.p.name), h('div', { class: 'sub' }, `${fmtDist(n.d)} ${bearingName([p.lat, p.lon], [n.p.lat, n.p.lon])} · ≈ ${footDays(n.d)} on foot · ${(PTYPES[n.p.type] || PTYPES.other).name}`)), icon('chev', 16)))
+        : h('div', { class: 'small muted' }, 'No other places yet.'); }),
+      (() => { const bl = backlinksCard(p.name, p); if (!bl) return null; const kids = [...bl.childNodes]; if (kids[0] && kids[0].tagName === 'H3') kids.shift(); return psection('links', 'link', 'Mentioned in', null, () => kids); })());
     sh = openSheet({ title: 'Place', body, onClose: () => { if (selPlace === p) { selPlace = null; dirty = true; } }, foot: [
-      h('button', { class: 'btn', onclick: () => { sh.close(); editPlace(p); } }, icon('edit', 16), 'Edit'),
-      h('button', { class: 'btn', onclick: () => { sh.close(); Timeline.editEvent(null, S.meta.today, { place: p.id }); } }, icon('plus', 16), 'Event'),
+      h('button', { class: 'btn', onclick: () => { close(); editPlace(p); } }, icon('edit', 16), 'Edit'),
+      h('button', { class: 'btn', onclick: () => { close(); duplicatePlace(p); } }, icon('plus', 16), 'Duplicate'),
       h('div', { class: 'spacer' }),
-      h('button', { class: 'btn primary', onclick: () => { sh.close(); setTab('map'); flyTo(p.lat, p.lon, placeWidth(p)); } }, icon('target', 16), 'Zoom to')] });
+      h('button', { class: 'btn primary', onclick: () => { close(); setTab('map'); flyTo(p.lat, p.lon, placeWidth(p)); } }, icon('target', 16), 'Zoom to')] });
   }
-  function editPlace(p, ll) {
+  function editPlace(p, ll, openGrp) {
     const isNew = !p;
-    const d = p ? { ...p } : { id: uid(), name: '', type: 'town', lat: +ll[0].toFixed(6), lon: +ll[1].toFixed(6), notes: '', always: false };
+    const d = p ? JSON.parse(JSON.stringify(p)) : { id: uid(), name: '', type: 'town', lat: +ll[0].toFixed(6), lon: +ll[1].toFixed(6), notes: '', always: false };
     const name = h('input', { value: d.name, placeholder: 'Name', autocomplete: 'off' });
     const type = h('select', null, Object.entries(PTYPES).map(([k, v]) => h('option', { value: k }, v.name))); type.value = d.type;
     const pop = h('input', { type: 'number', inputmode: 'numeric', min: 0, value: d.pop ?? '', placeholder: 'unknown' });
     const always = h('input', { type: 'checkbox', checked: d.always });
+    const status = h('select', null, h('option', { value: '' }, 'Known'), Object.entries(PSTAT).map(([k, v]) => h('option', { value: k }, v[0]))); status.value = PSTAT[d.status] ? d.status : '';
+    const tags = [...(d.tags || [])];
     let notesV = d.notes || '';
     const notes = mdEditor(notesV, v => { notesV = v; }, { minHeight: '110px', placeholder: 'Notes, history, who lives here… [[links]] work here too' });
     let symV = d.sym && SYMBOLS.get(d.sym) ? d.sym : null;
@@ -3949,29 +4065,60 @@ const MapView = (() => {
     const lblAng = slider('Tilt', -75, 75, lblAngV, v => { lblAngV = v; }, v => (v ? (v > 0 ? '↘ ' : '↗ ') + Math.abs(v) + '°' : 'Level'));
     const facSel = h('select', null, h('option', { value: '' }, 'Automatic (from painted territory)'), h('option', { value: 'none' }, 'None'), S.world.factions.map(f => h('option', { value: f.id }, f.name)));
     facSel.value = d.fac && (d.fac === 'none' || facOf(d.fac)) ? d.fac : '';
+    const infoIn = {}; for (const [k, label] of INFO) infoIn[k] = h('input', { value: (d.info && d.info[k]) || '', placeholder: label, autocomplete: 'off' });
+    let imgV = d.img || null;
+    const imgBox = h('div', { class: 'row', style: 'gap:10px' });
+    const drawImg = () => {
+      imgBox.innerHTML = '';
+      imgBox.append(h('div', { class: 'img-prev', style: imgV ? `background-image:url("${imgV}")` : '' }),
+        h('button', { class: 'btn small', type: 'button', onclick: async () => { const v = await pickImage(512); if (v) { imgV = v; drawImg(); } } }, icon('edit', 14), imgV ? 'Change' : 'Choose a picture'),
+        imgV ? h('button', { class: 'btn small', type: 'button', onclick: () => { imgV = null; drawImg(); } }, 'Remove') : null);
+    };
+    drawImg();
+    const latIn = h('input', { type: 'number', step: 'any', inputmode: 'decimal', value: d.lat }), lonIn = h('input', { type: 'number', step: 'any', inputmode: 'decimal', value: d.lon });
+    const grp = (key, title, kids) => { const el = h('details', { class: 'ed-grp' }, h('summary', null, title), h('div', { class: 'ed-body' }, ...kids)); if (openGrp === key) el.open = true; return el; };
     let sh;
     const doSave = () => {
-      const old = p && p.name;
+      const old = p && p.name, oldLL = [d.lat, d.lon];
       d.name = name.value.trim() || 'Unnamed place'; d.type = type.value; d.always = always.checked; d.notes = notesV;
       const pv = Math.round(numOr(pop.value, NaN)); d.pop = isFinite(pv) && pv >= 0 ? pv : null;
       d.symSize = symSizeV === 1 ? undefined : symSizeV; d.noLabel = noLabel.checked || undefined;
       d.lblPos = lblPosV === 'auto' ? undefined : lblPosV; d.lblAngle = lblAngV ? Math.round(lblAngV) : undefined; d.fac = facSel.value || undefined;
+      d.status = status.value || undefined; d.tags = tags.length ? tags : undefined; d.img = imgV || undefined;
+      const inf = {}; for (const [k] of INFO) { const v = infoIn[k].value.trim(); if (v) inf[k] = v; }
+      d.info = Object.keys(inf).length ? inf : undefined;
+      const la = numOr(latIn.value, NaN), lo = numOr(lonIn.value, NaN);
+      if (isFinite(la) && isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180) { d.lat = +la.toFixed(6); d.lon = +lo.toFixed(6); }
       if (symV) d.sym = symV; else delete d.sym;
-      if (isNew) S.world.places.push(d); else { Object.assign(p, d); if (!symV) delete p.sym; }
+      if (isNew) S.world.places.push(d);
+      else {
+        for (const k of ['symSize', 'noLabel', 'lblPos', 'lblAngle', 'fac', 'status', 'tags', 'img', 'info', 'sym']) if (d[k] === undefined) delete p[k];
+        Object.assign(p, d);
+        if (d.lat !== oldLL[0] || d.lon !== oldLL[1]) {   // typed coordinates: roads that end here are re-attached
+          for (const f of S.world.features) if (f.pts && (f.from === p.id || f.to === p.id)) { const P = f.pts.slice(); if (f.from === p.id) { P[0] = p.lat; P[1] = p.lon; } if (f.to === p.id) { P[P.length - 2] = p.lat; P[P.length - 1] = p.lon; } f.pts = P; }
+          afterEdit({ cap: null });
+        }
+      }
       if (old) renameLinks(old, d.name);
       save(); dirty = true; sh.close(); hideChip(); toast(isNew ? 'Place added' : 'Place saved'); emit('data');
+      if (!isNew) openPlace(p);
     };
     sh = openSheet({ title: isNew ? 'New place' : 'Edit place', body: h('div', null,
       field('Name', Names.field(name, () => type.value)),
       h('div', { class: 'cols2' }, field('Type', type), field('Population', pop)),
-      field('Faction', facSel),
-      field('Map symbol', symBox),
-      field('Symbol size', symSize),
-      h('label', { class: 'check' }, noLabel, 'Hide the name on the map (the marker still shows)'),
-      field('Name on the map', h('div', null, lblPos, h('div', { style: 'height:6px' }), lblAng), 'Auto slides and tilts the name out of other names\' way. Pick a side or a tilt to pin it there.'),
-      h('label', { class: 'check' }, always, 'Always show this label (at every zoom level)'),
-      field('Notes', notes),
-      h('div', { class: 'tiny muted num' }, fmtLL([d.lat, d.lon]))),
+      h('div', { class: 'cols2' }, field('Faction', facSel), field('Status', status)),
+      field('Tags', tagEditor(tags, () => {}, 'place-tags')),
+      field('Picture', imgBox),
+      grp('details', 'Details: ruler, government, economy…', [h('div', { class: 'cols2' }, INFO.map(([k, label]) => field(label, infoIn[k])))]),
+      grp('map', 'On the map: symbol, label, visibility', [
+        field('Map symbol', symBox), field('Symbol size', symSize),
+        field('Name on the map', h('div', null, lblPos, h('div', { style: 'height:6px' }), lblAng), 'Auto slides and tilts the name out of other names\' way. Pick a side or a tilt to pin it there.'),
+        h('label', { class: 'check' }, noLabel, 'Hide the name on the map (the marker still shows)'),
+        h('label', { class: 'check' }, always, 'Always show this label (at every zoom level)')]),
+      grp('where', 'Location', [h('div', { class: 'cols2' }, field('Latitude', latIn), field('Longitude', lonIn)),
+        !isNew ? h('button', { class: 'btn small', type: 'button', onclick: () => { sh.close(); startMove(p); } }, icon('hand', 14), 'Move it on the map…') : null,
+        h('div', { class: 'tiny muted', style: 'margin-top:6px' }, fmtLL([d.lat, d.lon]))]),
+      field('Notes', notes)),
     foot: [
       !isNew ? h('button', { class: 'btn danger', onclick: async () => {
         if (!await confirmDlg(`Delete "${p.name}"? Characters and events that refer to it will keep their other details.`)) return;
@@ -4273,7 +4420,7 @@ const MapView = (() => {
 
   /* ---------- tools: sculpt, paint, stamps, measure ---------- */
   function setTool(t) {
-    tool = t; shape = null; routeHL = null;
+    tool = t; shape = null; routeHL = null; if (moving) { if (selPlace === moving) selPlace = null; moving = null; }
     if (t === 'war' && !S.world.factions.length) { addFaction('#c0392b'); addFaction('#1f6feb'); toast('Two starter factions made. Rename them under Factions…', 4500); }
     for (const b of $$('#map-tools button')) b.classList.toggle('on', b.dataset.tool === t);
     if (t !== 'measure' && t !== 'pan') hideChip();
@@ -5246,23 +5393,32 @@ const MapView = (() => {
       let bi = -1, bd = 22; scr.forEach((sc, k) => { if (sc) { const d = Math.hypot(sc[0] - x, sc[1] - y); if (d < bd) { bd = d; bi = k; } } });
       if (bi >= 0) return { type: 'shape', x0: x, y0: y, moved: false, lines: [lineGrab(shape.f, bi)] };
     }
-    if (tool === 'place') {
-      let best = null, bd = 20;
-      for (const hp of placeHits) { const d = Math.hypot(hp.x - x, hp.y - y); if (d < bd) { bd = d; best = hp; } }
-      if (best) {
-        const p = best.p, lines = [];
-        for (const f of S.world.features) {
-          if (!SHAPEABLE.has(f.kind) || !f.pts || f.pts.length < 4) continue;
-          const n = f.pts.length / 2, ends = [[0, f.from], [n - 1, f.to]];
-          for (const [k, id] of ends) {
-            const sc = llToScreen(f.pts[2 * k], f.pts[2 * k + 1]);
-            if (id === p.id || (!id && sc && Math.hypot(sc[0] - best.x, sc[1] - best.y) < 14)) { lines.push(lineGrab(f, k)); break; }
-          }
-        }
-        return { type: 'place', x0: x, y0: y, moved: false, p, before: [p.lat, p.lon], px: best.x - x, py: best.y - y, lines };
+    if (tool === 'place') { const hp = placeHitAt(x, y, 20); if (hp) return placeGrab(hp.p, hp.x, hp.y, x, y); }
+    return null;
+  }
+  function placeHitAt(x, y, tol) { let best = null, bd = tol; for (const hp of placeHits) { const d = Math.hypot(hp.x - x, hp.y - y); if (d < bd) { bd = d; best = hp; } } return best; }
+  // a drag of place p (marker at mx,my on screen, pointer at x,y); roads and trails that end there come along
+  function placeGrab(p, mx, my, x, y) {
+    const lines = [];
+    for (const f of S.world.features) {
+      if (!SHAPEABLE.has(f.kind) || !f.pts || f.pts.length < 4) continue;
+      const n = f.pts.length / 2, ends = [[0, f.from], [n - 1, f.to]];
+      for (const [k, id] of ends) {
+        const sc = llToScreen(f.pts[2 * k], f.pts[2 * k + 1]);
+        if (id === p.id || (!id && sc && Math.hypot(sc[0] - mx, sc[1] - my) < 14)) { lines.push(lineGrab(f, k)); break; }
       }
     }
-    return null;
+    return { type: 'place', x0: x, y0: y, moved: false, p, before: [p.lat, p.lon], px: mx - x, py: my - y, lines };
+  }
+  let moving = null;   // a place being moved from its page: drag it, or tap where it should go
+  function startMove(p) {
+    closeSheets(); setTab('map'); setTool('place'); moving = p; selPlace = p; renderPanel(); dirty = true;
+    const sc = llToScreen(p.lat, p.lon);
+    if (!sc || sc[0] < 30 || sc[0] > W - 30 || sc[1] < 30 || sc[1] > H - 120) flyTo(p.lat, p.lon, Math.min(W * mpp() / T.MI, 60));
+  }
+  function movePlaceTo(p, x, y) {
+    const sc = llToScreen(p.lat, p.lon); if (!sc) return;
+    const g = placeGrab(p, sc[0], sc[1], sc[0], sc[1]); g.moved = true; dragGrab(g, x, y); endGrab(g, false);
   }
   function dragGrab(g, x, y) {
     if (g.type === 'mil') { const ll = screenToLL(x, y); if (ll) { g.m.lat = +ll[0].toFixed(6); g.m.lon = +ll[1].toFixed(6); } dirty = true; return; }
@@ -5272,7 +5428,8 @@ const MapView = (() => {
     dirty = true;
   }
   function endGrab(g, cancel) {
-    if (!g.moved) { if (!cancel) onTap(g.x0, g.y0); return; }
+    if (!g.moved) { if (!cancel && !g.held) onTap(g.x0, g.y0); if (g.held && selPlace === g.p) { selPlace = null; dirty = true; } return; }
+    if (g.held && selPlace === g.p) selPlace = null;
     if (g.type === 'mil') {
       const m = g.m, b = g.before, back = () => { m.lat = b[0]; m.lon = b[1]; save(); dirty = true; };
       if (cancel) { back(); return; }
@@ -5471,6 +5628,10 @@ const MapView = (() => {
         h('button', { class: 'btn small', onclick: () => measureToLine('trail') }, icon('trail', 16), 'Trail'),
         h('button', { class: 'btn small', onclick: () => measureToLine('border') }, icon('border', 16), 'Border')));
       else panel.append(h('div', { class: 'tiny muted', style: 'margin-top:6px' }, 'Taps near a place snap to it. Two or more points unlock the elevation profile, area, and turning the line into a road, trail or border.'));
+    } else if (tool === 'place' && moving) {
+      panel.append(h('div', { class: 'row' }, icon('hand', 18), h('div', { class: 'grow small' }, h('b', null, `Moving ${moving.name}`),
+        h('div', { class: 'tiny muted' }, 'Drag its marker, or tap where it should go. Roads that end there follow, and each move can be undone.'))),
+        h('div', { class: 'row', style: 'margin-top:8px' }, h('div', { class: 'grow' }), h('button', { class: 'btn small primary', onclick: () => { const q = moving; setTool('pan'); openPlace(q); } }, 'Done')));
     } else if (tool === 'place') {
       panel.append(h('div', { class: 'row' }, icon('pin', 18), h('div', { class: 'grow small' }, 'Tap the map to add a place. Tap a marker to open it, or drag it to move it (its roads follow).'),
         h('button', { class: 'btn small', onclick: () => placesSheet() }, 'List')),
@@ -5659,6 +5820,7 @@ const MapView = (() => {
         };
         draw(); return box;
       })(), 'Tap a group to hide or show it.'),
+      inv('hideSecret', 'Secret places', 'Untick before sharing your screen or making images for players'),
       tog('symNoLabels', 'Hide names beside land-use and other symbols', 'Just the symbol, for farm, herd, hazard and similar markers'),
       h('div', { class: 'lbl', style: 'margin-top:10px' }, 'FACTIONS & WAR'),
       inv('noTerr', 'Territories and contested zones'), inv('noTerrNames', 'Faction names across their land'),
@@ -8114,7 +8276,8 @@ function openSearch(initial = '') {
     for (const c of S.chars) for (const it of c.inv.items) add('Items', 'bag', it.name + (+it.qty !== 1 ? ' ×' + fmtNum(+it.qty || 0, 2) : ''), 'Carried by ' + c.name, () => Chars.open(c.id, 'items'), score(it.name, q));
     const cq = parseCoords(q); if (cq) add('Map', 'target', `Go to ${fmtLL(cq)}`, 'Coordinates', () => { setTab('map'); MapView.flyTo(cq[0], cq[1], 60); }, 9);
     for (const p of S.world.places) { const sy = p.sym && SYMBOLS.get(p.sym); add('Places', 'pin', p.name, (sy ? sy.name + ' · ' : '') + (PTYPES[p.type] || PTYPES.other).name + (p.pop ? ' · pop. ' + fmtInt(p.pop) : ''), () => { setTab('map'); MapView.flyTo(p.lat, p.lon, MapView.placeWidth(p)); },
-      Math.max(score(p.name, q) * 2, q.length > 2 ? score(p.notes, q) * 0.5 : 0, q.length > 2 ? score((PTYPES[p.type] || PTYPES.other).name, q) * 0.6 : 0, q.length > 2 && sy ? score(sy.name, q) * 0.8 : 0)); }
+      Math.max(score(p.name, q) * 2, q.length > 2 ? score(p.notes, q) * 0.5 : 0, q.length > 2 ? score((PTYPES[p.type] || PTYPES.other).name, q) * 0.6 : 0, q.length > 2 && sy ? score(sy.name, q) * 0.8 : 0, ...(p.tags || []).map(t => score(t, q)), ...(p.info ? Object.values(p.info).map(v => q.length > 2 ? score(v, q) * 0.5 : 0) : [0])));
+      for (const poi of p.poi || []) add('Places', 'bookmark', poi.name, 'In ' + p.name, () => { setTab('map'); MapView.flyTo(p.lat, p.lon, MapView.placeWidth(p)); setTimeout(() => MapView.openPlace(p), 450); }, score(poi.name, q) * 1.6); }
     for (const f of S.world.factions) add('Factions', 'flag', f.name, 'Faction', () => { setTab('map'); MapView.factionsSheet(); }, score(f.name, q) * 1.5);
     for (const m of S.world.mil) if (m.name) add('Military', 'flag', m.name, MapView.milLabel(m), () => { setTab('map'); MapView.showMil(m); }, score(m.name, q));
     for (const f of S.world.features) if (f.name) add('Map features', 'river', f.name, MapView.stampName(f.kind), () => { setTab('map'); MapView.zoomToFeature(f); }, score(f.name, q) * 2);

@@ -79,6 +79,13 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 - The dice button next to any name field makes up a fitting name: towns, rivers, peaks, regions, people.
 - The cog button holds **World generation**: seed, planet radius, ocean %, continent size, mountains, roughness, climate, moisture, and which longitude sits in the middle of the world map. Places and edits are stored by latitude/longitude and stay where they are when you regenerate.
 - **Biome painting**: 57 biomes in groups (Forests, Grass & scrub, Dry lands, Cold & high, Wet lands, Farmed & built, Volcanic & strange). New ones include mangrove, swamp forest, bog, heath, steppe, prairie, alpine meadow, chaparral, cloud and bamboo forest, fungal forest, salt flats, red-rock canyonlands, scree, snowfield, lava field, ash plain, crystal fields, blighted land, orchards, vineyards, rice paddies, pasture, quarries, ruins, beach, oasis and karst. Map sheets draw sand, rock and marsh symbols on them.
+- **Places, overhauled**:
+  - **Moving**: press and hold a marker with the hand tool to pick it up and drag it. Or tap *Move* on its page and then drag it or tap the new spot. Or type its coordinates in Edit → Location. Roads that end there follow, and every move can be undone.
+  - **Folding sections**: every section on a place's page (Notes, Details, Points of interest, Characters, Roads, Events, Nearby, Mentioned in) folds away with a tap, and the app remembers which ones you folded.
+  - **More to fill in**: a picture shown as a banner, a status (Unexplored, Visited, Abandoned, Ruined, Secret), tags, and details (ruler, government, founded, economy, defences, religion, culture, languages).
+  - **Points of interest**: inns, shops, temples, guildhalls, secrets, each with notes. Search finds them.
+  - **Status on the map**: unexplored and abandoned places are faded, unexplored ones get a ? and visited ones a ✓, ruined places are crossed out, and secret ones have a dashed ring. Layers can hide secret places before you share your screen.
+  - **New buttons**: *Copy link* puts `[[Place]]` on the clipboard, and *Duplicate* makes a copy.
 - **Place page**: opens with the name and symbol, then tiles for Population, Faction (from painted territory, or set on the place), Type and Terrain. Tap a tile to edit it. Tapping the map or hovering a place also says whose territory it is.
 - **Factions & war** (flag tool):
   - **Land**: paint a faction's territory with a brush. Claiming land takes it from whoever held it, *Unclaim* shrinks it, and Undo works. Territories are tinted and outlined, with the faction's name written across them.
