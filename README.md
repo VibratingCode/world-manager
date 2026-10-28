@@ -78,6 +78,8 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 - Tap a river, road, trail or border in Explore mode to name it (names are drawn along the line) or remove it.
 - The dice button next to any name field makes up a fitting name: towns, rivers, peaks, regions, people.
 - The cog button holds **World generation**: seed, planet radius, ocean %, continent size, mountains, roughness, climate, moisture, and which longitude sits in the middle of the world map. Places and edits are stored by latitude/longitude and stay where they are when you regenerate.
+- **Biome painting**: 57 biomes in groups (Forests, Grass & scrub, Dry lands, Cold & high, Wet lands, Farmed & built, Volcanic & strange). New ones include mangrove, swamp forest, bog, heath, steppe, prairie, alpine meadow, chaparral, cloud and bamboo forest, fungal forest, salt flats, red-rock canyonlands, scree, snowfield, lava field, ash plain, crystal fields, blighted land, orchards, vineyards, rice paddies, pasture, quarries, ruins, beach, oasis and karst. Map sheets draw sand, rock and marsh symbols on them.
+- **Place page**: opens with the name and symbol, then tiles for Population, Faction (from painted territory, or set on the place), Type and Terrain. Tap a tile to edit it. Tapping the map or hovering a place also says whose territory it is.
 - **Factions & war** (flag tool):
   - **Land**: paint a faction's territory with a brush. Claiming land takes it from whoever held it, *Unclaim* shrinks it, and Undo works. Territories are tinted and outlined, with the faction's name written across them.
   - **Contest**: paint a disputed zone between two sides, or slide *Frontier* to stripe a band along their whole shared border.

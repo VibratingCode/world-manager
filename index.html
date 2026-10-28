@@ -400,6 +400,19 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .sym { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 2px; border-radius: 9px; background: none; border: 1.5px solid transparent; color: var(--muted); font: inherit; font-size: 10px; cursor: pointer; }
 .sym span { line-height: 1.15; text-align: center; max-height: 2.3em; overflow: hidden; }
 .sym.on { border-color: var(--accent); color: var(--text); background: var(--card2); }
+.place-hero { display: flex; gap: 12px; align-items: center; margin: 0 0 12px; }
+.place-hero .ph-ic { width: 54px; height: 54px; border-radius: 15px; background: var(--card2); display: grid; place-items: center; flex: none; }
+.place-hero .ph-name { font-size: 23px; font-weight: 750; line-height: 1.15; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.place-hero .ph-sub { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+.ph-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 10px; }
+.ph-tile { background: var(--card2); border-radius: 13px; padding: 10px 12px; min-width: 0; border: 1px solid transparent; }
+.ph-tile.tap { cursor: pointer; }
+.ph-tile.tap:hover { border-color: var(--line); }
+.ph-tile .k { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+.ph-tile .v { font-size: 17px; font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 7px; min-width: 0; line-height: 1.25; overflow-wrap: anywhere; }
+.ph-tile .s { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+.ph-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(255,255,255,.15); }
+.ph-meta { font-size: 12.5px; color: var(--muted); margin: -2px 0 10px; line-height: 1.55; font-variant-numeric: tabular-nums; }
 .map-tip { position: absolute; z-index: 4; pointer-events: none; padding: 6px 10px; border-radius: 9px; font-size: 12.5px; max-width: 280px; display: none;
   background: var(--card); color: var(--text); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
 .map-tip.show { display: block; }
@@ -618,21 +631,60 @@ const Terrain = (function () {
     [5, 'train', 'Temperate rainforest', [60, 114, 80], [193, 224, 177]],
     [6, 'grass', 'Grassland', [168, 176, 106], [252, 251, 244]],
     [7, 'shrub', 'Shrubland', [156, 148, 100], [236, 242, 216]],
-    [8, 'desert', 'Desert', [223, 197, 142], [251, 244, 225]],
+    [8, 'desert', 'Desert', [223, 197, 142], [251, 244, 225], 1],
     [9, 'cdesert', 'Cold desert', [186, 176, 146], [248, 245, 233]],
     [10, 'savanna', 'Savanna', [186, 170, 94], [244, 245, 222]],
     [11, 'tropical', 'Tropical forest', [106, 148, 64], [199, 228, 181]],
     [12, 'jungle', 'Rainforest', [44, 104, 54], [187, 222, 171]],
-    [13, 'wetland', 'Wetland', [98, 136, 112], [229, 242, 237]],
-    [14, 'alpine', 'Alpine rock', [146, 140, 132], [240, 238, 233]],
-    [15, 'sand', 'Sand / dunes', [231, 214, 166], [251, 241, 214]],
+    [13, 'wetland', 'Wetland', [98, 136, 112], [229, 242, 237], 3],
+    [14, 'alpine', 'Alpine rock', [146, 140, 132], [240, 238, 233], 2],
+    [15, 'sand', 'Sand / dunes', [231, 214, 166], [251, 241, 214], 1],
     [16, 'farm', 'Farmland', [198, 186, 112], [249, 246, 226]],
     [17, 'urban', 'Urban', [156, 148, 145], [242, 212, 204]],
-    [18, 'volcanic', 'Volcanic', [84, 74, 70], [228, 223, 221]],
+    [18, 'volcanic', 'Volcanic', [84, 74, 70], [228, 223, 221], 2],
     [19, 'badlands', 'Badlands', [180, 122, 82], [245, 229, 212]],
     [20, 'water', 'Lake / river', [86, 144, 196], [169, 209, 239]],
+    [21, 'mangrove', 'Mangrove', [52, 98, 72], [196, 226, 204], 3],
+    [22, 'swamp', 'Swamp forest', [66, 96, 70], [200, 222, 196], 3],
+    [23, 'bog', 'Bog / moor', [122, 112, 92], [236, 233, 222], 3],
+    [24, 'heath', 'Heathland', [140, 110, 120], [245, 236, 240]],
+    [25, 'steppe', 'Steppe', [184, 178, 124], [250, 248, 232]],
+    [26, 'prairie', 'Prairie', [176, 182, 96], [248, 249, 228]],
+    [27, 'meadow', 'Alpine meadow', [140, 168, 104], [238, 245, 222]],
+    [28, 'chaparral', 'Chaparral', [150, 132, 88], [240, 236, 214]],
+    [29, 'dryforest', 'Dry forest', [128, 130, 74], [222, 232, 196]],
+    [30, 'cloudforest', 'Cloud forest', [70, 120, 98], [196, 226, 200]],
+    [31, 'bamboo', 'Bamboo forest', [104, 150, 78], [204, 232, 186]],
+    [32, 'mixed', 'Mixed forest', [80, 120, 72], [200, 228, 186]],
+    [33, 'deadforest', 'Dead / burnt forest', [96, 86, 74], [232, 226, 218], 2],
+    [34, 'fungal', 'Fungal forest', [146, 96, 140], [238, 222, 236]],
+    [35, 'salt', 'Salt flats', [236, 232, 222], [252, 251, 248], 1],
+    [36, 'scrub', 'Desert scrub', [196, 170, 120], [248, 240, 220], 1],
+    [37, 'hamada', 'Rocky desert', [170, 140, 110], [244, 234, 220], 2],
+    [38, 'redrock', 'Red-rock canyonlands', [190, 104, 70], [246, 222, 206], 2],
+    [39, 'scree', 'Scree / talus', [126, 122, 118], [236, 234, 230], 2],
+    [40, 'snow', 'Snowfield', [246, 248, 252], [253, 254, 255]],
+    [41, 'permafrost', 'Permafrost', [150, 152, 140], [244, 245, 240]],
+    [42, 'lava', 'Lava field', [52, 44, 44], [214, 208, 206], 2],
+    [43, 'ash', 'Ash plain', [128, 124, 120], [232, 230, 228], 1],
+    [44, 'crystal', 'Crystal fields', [150, 196, 214], [228, 242, 248], 2],
+    [45, 'blight', 'Blighted land', [92, 70, 96], [228, 218, 230], 2],
+    [46, 'orchard', 'Orchards', [120, 156, 82], [226, 240, 210]],
+    [47, 'vineyard', 'Vineyards', [124, 120, 82], [236, 236, 214]],
+    [48, 'paddy', 'Rice paddies', [120, 170, 140], [222, 240, 232], 3],
+    [49, 'pasture', 'Pasture', [150, 172, 98], [244, 248, 230]],
+    [50, 'plantation', 'Plantation', [110, 138, 70], [222, 236, 204]],
+    [51, 'quarry', 'Quarry / mines', [168, 160, 150], [240, 236, 232], 2],
+    [52, 'ruins', 'Ruined land', [140, 130, 118], [238, 232, 224], 2],
+    [53, 'park', 'Parkland', [112, 160, 90], [220, 240, 206]],
+    [54, 'beach', 'Beach', [236, 222, 176], [252, 246, 226], 1],
+    [55, 'oasis', 'Oasis', [92, 150, 90], [214, 236, 200]],
+    [56, 'karst', 'Karst', [160, 160, 140], [240, 240, 232], 2],
+    [57, 'saltmarsh', 'Salt marsh', [120, 150, 120], [226, 240, 232], 3],
   ];
   const PAINTABLE = [4, 3, 5, 11, 12, 6, 7, 10, 8, 9, 15, 2, 1, 13, 14, 16, 17, 18, 19, 20];
+  for (let id = 21; id < BIOMES.length; id++) PAINTABLE.push(id);
+  const PAT = new Uint8Array(BIOMES.length); BIOMES.forEach(b => { PAT[b[0]] = b[5] || 0; });
   const ATL = new Uint8Array(BIOMES.length * 3), TOP = new Uint8Array(BIOMES.length * 3);
   BIOMES.forEach(b => { for (let c = 0; c < 3; c++) { ATL[b[0] * 3 + c] = b[3][c]; TOP[b[0] * 3 + c] = b[4][c]; } });
 
@@ -1247,9 +1299,10 @@ const Terrain = (function () {
         // map symbols on topographic sheets
         if (topo && !water) {
           const gx = gx0 + ou, gy = gy0 + ov;
-          if (b === 8 || b === 15) { if (ihash(gx, gy) < 0.045) { r *= 0.72; g *= 0.66; bl *= 0.58; } }
-          else if (b === 14 || b === 18) { if (ihash(gx, gy) < 0.03) { r *= 0.7; g *= 0.68; bl *= 0.66; } }
-          else if (b === 13) {
+          const pt = PAT[b];
+          if (pt === 1) { if (ihash(gx, gy) < 0.045) { r *= 0.72; g *= 0.66; bl *= 0.58; } }
+          else if (pt === 2) { if (ihash(gx, gy) < 0.03) { r *= 0.7; g *= 0.68; bl *= 0.66; } }
+          else if (pt === 3) {
             const C = Math.round(8 * lw), row = Math.floor(gy / C), sh = (row & 1) * (C >> 1);
             const cxm = (((gx + sh) % C) + C) % C, cym = ((gy % C) + C) % C, cellX = Math.floor((gx + sh) / C);
             if (ihash(cellX, row) < 0.55) {
@@ -2522,7 +2575,8 @@ const MapView = (() => {
       if (best) {
         const sy = best.sym && SYMBOLS.get(best.sym), y0 = S.world.here;
         const far = y0 ? gcAngle([y0.lat, y0.lon], [best.lat, best.lon]) * T.RM : 0;
-        txt = [best.name, [sy ? sy.name : null, (PTYPES[best.type] || PTYPES.other).name, best.pop ? 'pop. ' + fmtInt(best.pop) : null, y0 && far > 50 ? `${fmtDist(far)} from you` : null].filter(Boolean).join(' · ')];
+        const pf = S.world.terr.length || best.fac ? placeFaction(best) : { f: null };
+        txt = [best.name, [sy ? sy.name : null, (PTYPES[best.type] || PTYPES.other).name, best.pop ? 'pop. ' + fmtInt(best.pop) : null, pf.f ? pf.f.name : null, y0 && far > 50 ? `${fmtDist(far)} from you` : null].filter(Boolean).join(' · ')];
         if (tool === 'place') cur = 'grab';
       } else if (tool !== 'measure' && hereHit && Math.hypot(hereHit[0] - x, hereHit[1] - y) < 20) txt = ['You are here', `Heading ${S.world.here.hdg}° ${hdgName(S.world.here.hdg)} · tap to change`];
       else if (tool !== 'measure') { const f = featureAt(x, y, 8); if (f) txt = [f.name || (STAMPS[f.kind] || { name: f.kind }).name, featureSummary(f)]; }
@@ -2998,7 +3052,7 @@ const MapView = (() => {
   function placeIcon(p, px = 26) {
     if (p.sym && SYMBOLS.get(p.sym)) return SYMBOLS.swatch(p.sym, px);
     const c = document.createElement('canvas'), k = 2; c.width = c.height = px * k; c.style.width = c.style.height = px + 'px'; c.style.flex = 'none';
-    const g = c.getContext('2d'); g.scale(k, k); const keep = ctx; ctx = g; try { glyph(p.type, px / 2, px / 2, false); } finally { ctx = keep; }
+    const g = c.getContext('2d'), z = Math.max(1, px / 16); g.scale(k * z, k * z); const keep = ctx; ctx = g; try { glyph(p.type, px / 2 / z, px / 2 / z, false); } finally { ctx = keep; }
     return c;
   }
   function fitPlaces(list) {
@@ -3364,6 +3418,9 @@ const MapView = (() => {
     ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(at[0], at[1], brush.size + 1, 0, Math.PI * 2); ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.arc(at[0], at[1], brush.size, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
   }
+  const BGROUPS = { all: ['All'], forest: ['Forests', [4, 3, 5, 32, 11, 12, 29, 30, 31, 22, 21, 33, 34]], open: ['Grass & scrub', [6, 25, 26, 27, 7, 28, 24, 10, 53]],
+    dry: ['Dry lands', [8, 15, 36, 37, 38, 19, 35, 9, 55, 54, 56]], cold: ['Cold & high', [2, 41, 40, 1, 27, 14, 39]], wet: ['Wet lands', [13, 23, 57, 22, 21, 48, 20]],
+    farm: ['Farmed & built', [16, 46, 47, 48, 49, 50, 53, 17, 51, 52]], strange: ['Volcanic & strange', [18, 42, 43, 44, 45, 34, 33]] };
   function biomeCss(id, a = 1) { const b = T.BIOMES[id]; if (!b) return 'rgba(200,200,200,' + a + ')'; const c = b[3]; return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
   function niceDist(maxM) {
     const metric = S.meta.units === 'metric';
@@ -3532,6 +3589,7 @@ const MapView = (() => {
       h('div', { class: 'tiny muted num', style: 'margin-top:2px' }, gridRef(ll)),
       (() => { const n = nearby(ll, 1)[0]; return n ? h('div', { class: 'small', style: 'margin-top:3px' }, `${fmtDist(n.d)} ${bearingName([n.p.lat, n.p.lon], ll)} of `, h('a', { class: 'wl', role: 'button', onclick: () => openPlace(n.p) }, n.p.name), ` · ≈ ${footDays(n.d)} on foot`) : null; })(),
       S.world.here ? (() => { const y = S.world.here, d = gcAngle([y.lat, y.lon], ll) * T.RM; return d > 50 ? h('div', { class: 'small muted' }, `${fmtDist(d)} ${bearingName([y.lat, y.lon], ll)} of you · ≈ ${footDays(d)} on foot`) : null; })() : null,
+      S.world.terr.length ? (() => { const t = territoryAt(ll); return t.f || t.contested ? h('div', { class: 'small', style: 'margin-top:3px;display:flex;align-items:center;gap:6px' }, h('i', { class: 'ph-dot', style: `background:${safeColor((t.f || t.contested[0]).color)}` }), t.contested ? `Contested: ${t.contested[0].name} vs ${t.contested[1].name}` : `${t.f.name} territory`) : null; })() : null,
       h('div', { class: 'row wrap', style: 'margin-top:8px;gap:6px' },
         h('button', { class: 'btn small primary', onclick: () => { editPlace(null, ll); } }, icon('pin', 16), 'Add place here'),
         h('button', { class: 'btn small', onclick: () => { measure = [ll]; setTool('measure'); hideChip(); } }, icon('ruler', 16), 'Measure'),
@@ -3646,14 +3704,27 @@ const MapView = (() => {
     const near = nearby([p.lat, p.lon], 5, p), twin = S.codex.find(e => lc(e.title) === lc(p.name));
     let sh;
     const party = S.chars.filter(c => c.role === 'PC' && c.status !== 'dead');
+    const sy = p.sym && SYMBOLS.get(p.sym), tName = (PTYPES[p.type] || PTYPES.other).name, pf = placeFaction(p);
+    const tile = (k, v, sub, onclick) => h('div', { class: 'ph-tile' + (onclick ? ' tap' : ''), onclick }, h('div', { class: 'k' }, k), h('div', { class: 'v' }, v), sub ? h('div', { class: 's' }, sub) : null);
+    const popWord = n => (n < 100 ? 'Hamlet-sized' : n < 1000 ? 'Village-sized' : n < 10000 ? 'Town-sized' : n < 100000 ? 'City-sized' : 'A great metropolis');
+    const dot = c => h('i', { class: 'ph-dot', style: `background:${c}` });
+    const youTxt = S.world.here ? (() => { const y = S.world.here, d = gcAngle([y.lat, y.lon], [p.lat, p.lon]) * T.RM; return d < 50 ? 'You are here' : `${fmtDist(d)} ${bearingName([y.lat, y.lon], [p.lat, p.lon])} of you · ≈ ${footDays(d)} on foot`; })() : null;
     const body = h('div', null,
-      h('div', { class: 'muted small' }, (p.sym && SYMBOLS.get(p.sym) ? SYMBOLS.get(p.sym).name + ' · ' : '') + (PTYPES[p.type] || PTYPES.other).name + (p.pop ? ' · population ' + fmtInt(p.pop) : '') + ' · ' + fmtLL([p.lat, p.lon])),
-      h('div', { class: 'small', style: 'margin:4px 0 8px' }, smp.elev > 0 ? 'Elevation ' + fmtElev(smp.elev) + ' · ' + T.BIOMES[smp.biome][2] + ' · ' + fmtTemp(smp.temp) + ' on average' : 'At sea'),
+      h('div', { class: 'place-hero' }, h('div', { class: 'ph-ic' }, placeIcon(p, 40)),
+        h('div', { style: 'min-width:0' }, h('div', { class: 'ph-name' }, p.name),
+          h('div', { class: 'ph-sub' }, [sy ? sy.name : tName, pf.f ? (pf.contested ? 'contested' : `in ${pf.f.name}`) : null].filter(Boolean).join(' · ')))),
+      h('div', { class: 'ph-tiles' },
+        tile('Population', p.pop ? fmtInt(p.pop) : 'Unknown', p.pop ? popWord(p.pop) : 'Tap to set', () => { sh.close(); editPlace(p); }),
+        tile('Faction', pf.f ? [dot(safeColor(pf.f.color)), h('span', null, pf.f.name)] : (pf.contested ? 'Contested' : 'Unclaimed'),
+          pf.contested ? `Contested: ${pf.contested[0].name} vs ${pf.contested[1].name}` : pf.how === 'chosen' ? 'Set on this place' : pf.how === 'territory' ? 'From painted territory' : 'Paint land with the flag tool',
+          () => { sh.close(); factionsSheet(); }),
+        tile('Type', sy ? sy.name : tName, sy ? tName : null, () => { sh.close(); editPlace(p); }),
+        tile('Terrain', smp.elev > 0 ? T.BIOMES[smp.biome][2] : 'At sea', smp.elev > 0 ? `${fmtElev(smp.elev)} · ${fmtTemp(smp.temp)} average` : null)),
+      h('div', { class: 'ph-meta' }, fmtLL([p.lat, p.lon]), youTxt ? h('br') : null, youTxt),
       h('div', { class: 'row wrap', style: 'gap:6px;margin:0 0 8px' },
         h('button', { class: 'btn small', onclick: () => { sh.close(); routeSheet(p); } }, icon('map', 14), 'Route'),
         h('button', { class: 'btn small', onclick: () => { sh.close(); setTab('map'); setHere([p.lat, p.lon]); toast(`You are here: ${p.name}`); } }, icon('target', 14), "I'm here"),
-        h('button', { class: 'btn small', onclick: () => { sh.close(); setTab('map'); measure = [[p.lat, p.lon]]; mClosed = false; setTool('measure'); } }, icon('ruler', 14), 'Measure'),
-        S.world.here ? h('span', { class: 'small muted', style: 'align-self:center' }, (() => { const y = S.world.here, d = gcAngle([y.lat, y.lon], [p.lat, p.lon]) * T.RM; return d < 50 ? 'You are here' : `${fmtDist(d)} ${bearingName([y.lat, y.lon], [p.lat, p.lon])} of you · ≈ ${footDays(d)} on foot`; })()) : null),
+        h('button', { class: 'btn small', onclick: () => { sh.close(); setTab('map'); measure = [[p.lat, p.lon]]; mClosed = false; setTool('measure'); } }, icon('ruler', 14), 'Measure')),
       p.notes ? h('div', { class: 'card' }, md(p.notes, { onToggle: (i, on) => { p.notes = mdToggle(p.notes, i, on); save(); } })) : null,
       twin ? h('button', { class: 'btn small', style: 'margin:2px 0 6px', onclick: () => { sh.close(); Codex.open(twin.id); } }, icon('book', 14), 'Codex: ' + twin.title) : null,
       h('div', { class: 'card' }, h('h3', null, icon('users', 15), 'Characters', h('span', { class: 'grow' }),
@@ -3666,7 +3737,7 @@ const MapView = (() => {
       near.length ? h('div', { class: 'card' }, h('h3', null, icon('pin', 15), 'Nearby'), near.map(n => h('div', { class: 'list-row tap', onclick: () => { sh.close(); openPlace(n.p); } },
         h('div', { class: 'main' }, h('div', { class: 'title' }, n.p.name), h('div', { class: 'sub' }, `${fmtDist(n.d)} ${bearingName([p.lat, p.lon], [n.p.lat, n.p.lon])} · ≈ ${footDays(n.d)} on foot · ${(PTYPES[n.p.type] || PTYPES.other).name}`)), icon('chev', 16)))) : null,
       backlinksCard(p.name, p));
-    sh = openSheet({ title: p.name, body, onClose: () => { if (selPlace === p) { selPlace = null; dirty = true; } }, foot: [
+    sh = openSheet({ title: 'Place', body, onClose: () => { if (selPlace === p) { selPlace = null; dirty = true; } }, foot: [
       h('button', { class: 'btn', onclick: () => { sh.close(); editPlace(p); } }, icon('edit', 16), 'Edit'),
       h('button', { class: 'btn', onclick: () => { sh.close(); Timeline.editEvent(null, S.meta.today, { place: p.id }); } }, icon('plus', 16), 'Event'),
       h('div', { class: 'spacer' }),
@@ -3694,12 +3765,14 @@ const MapView = (() => {
     let symSizeV = +d.symSize || 1;
     const symSize = seg([[0.75, 'Small'], [1, 'Normal'], [1.4, 'Large'], [1.9, 'Huge']], symSizeV, v => { symSizeV = v; });
     const noLabel = h('input', { type: 'checkbox', checked: !!d.noLabel });
+    const facSel = h('select', null, h('option', { value: '' }, 'Automatic (from painted territory)'), h('option', { value: 'none' }, 'None'), S.world.factions.map(f => h('option', { value: f.id }, f.name)));
+    facSel.value = d.fac && (d.fac === 'none' || facOf(d.fac)) ? d.fac : '';
     let sh;
     const doSave = () => {
       const old = p && p.name;
       d.name = name.value.trim() || 'Unnamed place'; d.type = type.value; d.always = always.checked; d.notes = notesV;
       const pv = Math.round(numOr(pop.value, NaN)); d.pop = isFinite(pv) && pv >= 0 ? pv : null;
-      d.symSize = symSizeV === 1 ? undefined : symSizeV; d.noLabel = noLabel.checked || undefined;
+      d.symSize = symSizeV === 1 ? undefined : symSizeV; d.noLabel = noLabel.checked || undefined; d.fac = facSel.value || undefined;
       if (symV) d.sym = symV; else delete d.sym;
       if (isNew) S.world.places.push(d); else { Object.assign(p, d); if (!symV) delete p.sym; }
       if (old) renameLinks(old, d.name);
@@ -3708,6 +3781,7 @@ const MapView = (() => {
     sh = openSheet({ title: isNew ? 'New place' : 'Edit place', body: h('div', null,
       field('Name', Names.field(name, () => type.value)),
       h('div', { class: 'cols2' }, field('Type', type), field('Population', pop)),
+      field('Faction', facSel),
       field('Map symbol', symBox),
       field('Symbol size', symSize),
       h('label', { class: 'check' }, noLabel, 'Hide the name on the map (the marker still shows)'),
@@ -4738,6 +4812,34 @@ const MapView = (() => {
       milHits.push({ x: q[0], y: q[1], m });
     }
   }
+  // the faction holding a spot, from the painted territory (later strokes win); contested zones painted over it too
+  function strokeHits(st, ll) {
+    for (let k = 0; k < st.pts.length; k += 2) {
+      const a = [st.pts[k], st.pts[k + 1]];
+      if (gcAngle(a, ll) <= st.r) return true;
+      if (k + 2 < st.pts.length) {
+        const b = [st.pts[k + 2], st.pts[k + 3]], d = gcAngle(a, b);
+        if (d > st.r) for (let i = 1, n = Math.ceil(d / st.r); i < n; i++) if (gcAngle(slerpLL(a, b, i / n), ll) <= st.r) return true;
+      }
+    }
+    return false;
+  }
+  function territoryAt(ll) {
+    let own = null, con = null;
+    for (const st of S.world.terr) {
+      if (!st.pts || !st.pts.length || !strokeHits(st, ll)) continue;
+      if (st.c) { con = st.erase ? null : st.c; continue; }
+      own = st.f; if (st.f == null) con = null;
+    }
+    const f = own ? facOf(own) : null, c = con ? con.map(facOf) : null;
+    return { f, contested: c && c[0] && c[1] ? c : null };
+  }
+  function placeFaction(p) {
+    const t = territoryAt([p.lat, p.lon]);
+    if (p.fac === 'none') return { f: null, how: 'chosen', contested: t.contested };
+    if (p.fac && facOf(p.fac)) return { f: facOf(p.fac), how: 'chosen', contested: t.contested };
+    return { f: t.f, how: t.f ? 'territory' : null, contested: t.contested };
+  }
   function milPointAt(x, y) { let b = null, bd = 18; for (const hp of milHits) { const d = Math.hypot(hp.x - x, hp.y - y); if (d < bd) { bd = d; b = hp.m; } } return b; }
   function milAt(x, y) {
     const pm = milPointAt(x, y); if (pm) return pm;
@@ -5133,7 +5235,10 @@ const MapView = (() => {
         undoRow('Drag to sculpt · two fingers to move'));
     } else if (tool === 'paint') {
       const grid = h('div', { class: 'biome-grid' });
-      const items = [[-1, 'Erase (generated)']].concat(T.PAINTABLE.map(id => [id, T.BIOMES[id][2]]));
+      const grp = BGROUPS[brush.bgroup] ? brush.bgroup : 'all';
+      panel.append(h('div', { class: 'tog-chips', style: 'margin:0 0 4px' }, Object.entries(BGROUPS).map(([k, v]) =>
+        h('button', { type: 'button', class: k === grp ? 'on' : '', onclick: () => { brush.bgroup = k; renderPanel(); } }, v[0]))));
+      const items = [[-1, 'Erase (generated)']].concat((grp === 'all' ? T.PAINTABLE : BGROUPS[grp][1].filter(id => T.BIOMES[id])).map(id => [id, T.BIOMES[id][2]]));
       for (const [id, name] of items) {
         const sw = h('button', { class: 'biome-sw' + (brush.biome === id ? ' on' : ''), type: 'button', onclick: () => { brush.biome = id; renderPanel(); } },
           h('i', { style: id < 0 ? 'background:repeating-linear-gradient(45deg,#ccc 0 5px,#fff 5px 10px)' : 'background:' + biomeCss(id) }), name);
