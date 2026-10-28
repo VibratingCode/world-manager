@@ -106,6 +106,7 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
   - Hovering with a mouse shows a tooltip for places, roads and the arrow.
   - The point card says how far a spot is from you, and has *Symbol* and *Copy* buttons.
   - Search understands coordinates like `-24.1, 2.5` or `12N 40W`.
+  - Dragging with the middle mouse button always moves the map, whatever tool is active.
   - The **Back** button (or `B`) returns to the previous view.
   - The symbol picker remembers your recent symbols.
 - **Roads hub** (Place tool → *Roads…*, or search "Roads"):

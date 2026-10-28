@@ -3586,6 +3586,12 @@ const MapView = (() => {
   const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   const editing = () => tool === 'sculpt' || tool === 'paint' || (tool === 'stamp' && STAMPS[stamp.kind].line) || (tool === 'war' && ['terr', 'cont', 'arrow', 'front'].includes(war.mode));
   cv.addEventListener('pointerdown', e => {
+    // middle button: always moves the map, whatever tool is active
+    if (e.pointerType === 'mouse' && e.button === 1) {
+      e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+      hideTip(); const [x, y] = pos(e); ptrs.set(e.pointerId, { x, y });
+      gest = { type: 'pan', x0: x, y0: y, lx: x, ly: y, t0: 0, moved: false }; cv.style.cursor = 'grabbing'; return;
+    }
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     try { cv.setPointerCapture(e.pointerId); } catch (_) {}
     const [x, y] = pos(e); ptrs.set(e.pointerId, { x, y });
@@ -3629,13 +3635,16 @@ const MapView = (() => {
     if (!gest) return;
     if (isGrab(gest)) { endGrab(gest, cancel); gest = null; return; }
     if (gest.type === 'stroke') { if (cancel) { stroke = null; dirty = true; } else commitStroke(); gest = null; if (e.pointerType !== 'mouse') hover = null; }
-    else if (gest.type === 'pan') { if (!cancel && !gest.moved && performance.now() - gest.t0 < 500) onTap(gest.x0, gest.y0); gest = null; }
+    else if (gest.type === 'pan') { if (!cancel && !gest.moved && performance.now() - gest.t0 < 500) onTap(gest.x0, gest.y0); gest = null; cv.style.cursor = ''; }
     else if (gest.type === 'pinch') {
       if (ptrs.size === 1) { const [p] = [...ptrs.values()]; gest = { type: 'pan', x0: p.x, y0: p.y, lx: p.x, ly: p.y, t0: 0, moved: true }; }
       else if (!ptrs.size) gest = null;
     }
   }
   cv.addEventListener('pointerup', e => endPtr(e, false));
+  // stop the browser's middle-click autoscroll over the map
+  cv.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });
+  cv.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
   cv.addEventListener('pointercancel', e => endPtr(e, true));
   cv.addEventListener('pointerleave', e => { hideTip(); if (e.pointerType === 'mouse' && !ptrs.size) { hover = null; dirty = true; } });
   cv.addEventListener('wheel', e => {
