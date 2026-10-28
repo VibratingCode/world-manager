@@ -78,6 +78,29 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 - Tap a river, road, trail or border in Explore mode to name it (names are drawn along the line) or remove it.
 - The dice button next to any name field makes up a fitting name: towns, rivers, peaks, regions, people.
 - The cog button holds **World generation**: seed, planet radius, ocean %, continent size, mountains, roughness, climate, moisture, and which longitude sits in the middle of the world map. Places and edits are stored by latitude/longitude and stay where they are when you regenerate.
+- **Factions & war** (flag tool):
+  - **Land**: paint a faction's territory with a brush. Claiming land takes it from whoever held it, *Unclaim* shrinks it, and Undo works. Territories are tinted and outlined, with the faction's name written across them.
+  - **Contest**: paint a disputed zone between two sides, or slide *Frontier* to stripe a band along their whole shared border.
+  - **Units**: NATO-style markers in 16 types (infantry, armour, cavalry, artillery, siege, air, naval, HQ, supply, engineers, medical, special forces, militia, mages, war beasts…) and 11 sizes from team to army. Drag them to move them, tap to edit name, side and strength.
+  - **Arrows**: advance, attack, retreat or supply movements. **Front**: front lines with teeth toward the enemy. **Battle**: crossed-swords markers named after the nearest place and dated today, with an outcome.
+  - **Factions…** lets you rename, recolour and delete factions and opens or creates their Codex page. **Military list** shows every unit, battle, front and movement.
+  - In Layers you can turn territories, faction names, the military layer and unit names on or off, set the territory fill strength, and use *War-room view* for a one-tap antique war map.
+- **Layers**:
+  - **Tint**: Natural, Parchment, Antique, Vivid, Mono or Night, also applied to shared images.
+  - **Label size**, show or hide place groups (settlements, forts, each symbol group…), and an option to hide names beside land-use symbols.
+- **Places**: the list filters by group, sorts A–Z, nearest (to you), largest or by type, and shows each place's symbol. *Show these* fits them all on screen. A place's page has Route, I'm here and Measure buttons and shows how far it is from you. The open place is ringed on the map. Each place can have its own symbol size and can hide its name.
+- **Measure**:
+  - Taps snap to places, and each leg is labelled with its length.
+  - *Profile* draws an elevation chart with climb, descent, highest, lowest and steepest grade. Roads, rivers and planned routes have profiles too.
+  - *Close loop* gives the area.
+  - *Make road / Trail / Border* turns the line into a feature, and a closed border shades its territory.
+- **Borders** have their own colour and an optional shaded territory.
+- **Everywhere else on the map**:
+  - Hovering with a mouse shows a tooltip for places, roads and the arrow.
+  - The point card says how far a spot is from you, and has *Symbol* and *Copy* buttons.
+  - Search understands coordinates like `-24.1, 2.5` or `12N 40W`.
+  - The **Back** button (or `B`) returns to the previous view.
+  - The symbol picker remembers your recent symbols.
 - **Roads hub** (Place tool → *Roads…*, or search "Roads"):
   - **Route planner**: the fastest way between two places along the roads, leg by leg, with distance and days. Highways are quicker and tracks slower. *Show on map* highlights the route, and *Travel* moves the date, the party and the you-are-here arrow.
   - **Connect two places**: builds one terrain-following road between them, even off screen. It refuses if they already have a road.

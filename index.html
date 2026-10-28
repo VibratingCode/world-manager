@@ -400,6 +400,18 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .sym { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 2px; border-radius: 9px; background: none; border: 1.5px solid transparent; color: var(--muted); font: inherit; font-size: 10px; cursor: pointer; }
 .sym span { line-height: 1.15; text-align: center; max-height: 2.3em; overflow: hidden; }
 .sym.on { border-color: var(--accent); color: var(--text); background: var(--card2); }
+.map-tip { position: absolute; z-index: 4; pointer-events: none; padding: 6px 10px; border-radius: 9px; font-size: 12.5px; max-width: 280px; display: none;
+  background: var(--card); color: var(--text); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
+.map-tip.show { display: block; }
+.map-tip .k { color: var(--muted); font-size: 11.5px; margin-top: 1px; }
+.fab[hidden] { display: none !important; }
+.tog-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+.tog-chips button { border: 1px solid var(--line); background: var(--card2); color: var(--text); border-radius: 999px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.tog-chips button.off { opacity: .45; text-decoration: line-through; }
+.tog-chips button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 650; }
+.prof svg { width: 100%; height: auto; display: block; }
+.stat-line { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; margin-top: 8px; }
+.stat-line b { font-variant-numeric: tabular-nums; }
 .hdg-dial { display: flex; justify-content: center; touch-action: none; cursor: grab; }
 .hdg-btns { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin: 8px 0; }
 .hdg-btns .btn { padding: 6px 0; justify-content: center; }
@@ -420,6 +432,7 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
       <div id="map-readout" class="map-readout glass"></div>
       <div id="map-busy" class="map-busy glass">Rendering…</div>
       <div class="fab-col">
+        <button class="fab glass" data-act="back" aria-label="Back to the previous view" title="Back to the previous view (B)" hidden><span data-icon="undo"></span></button>
         <button class="fab glass" data-act="zin" aria-label="Zoom in"><span data-icon="plus"></span></button>
         <button class="fab glass" data-act="zout" aria-label="Zoom out"><span data-icon="minus"></span></button>
         <button class="fab glass" data-act="home" aria-label="Whole planet"><span data-icon="globe"></span></button>
@@ -437,6 +450,7 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
         <button data-tool="paint" aria-label="Paint biomes"><span data-icon="brush"></span></button>
         <button data-tool="stamp" aria-label="Stamp features: rivers, lakes, landforms, roads"><span data-icon="stamp"></span></button>
         <button data-tool="measure" aria-label="Measure distance"><span data-icon="ruler"></span></button>
+        <button data-tool="war" aria-label="Factions, territory and war"><span data-icon="flag"></span></button>
       </div>
     </section>
     <section id="view-chars" class="view">
@@ -2001,7 +2015,7 @@ function defaultState() {
       negHp: false, outsideWindow: 5, theme: 'auto', created: Date.now(),
       earth: { on: true, y: 1997, m: 2, d: 13 },   // Earth (Gregorian) date of day 0 CS; m is 0-based
       holidays: [], moons: [] },
-    world: { seed: 'colony', radiusMi: 3959, oceanPct: 64, continentScale: 1, mountains: 1, roughness: 1, temp: 0, moist: 0, cm: 0, places: [], sculpt: [], paint: [], features: [], views: [], here: null },
+    world: { seed: 'colony', radiusMi: 3959, oceanPct: 64, continentScale: 1, mountains: 1, roughness: 1, temp: 0, moist: 0, cm: 0, places: [], sculpt: [], paint: [], features: [], views: [], here: null, factions: [], terr: [], fronts: [], mil: [] },
     species: [{ id: uid(), name: 'Human', gestation: 280, cycle: 28, fertileStart: 10, fertileLen: 6, baseChance: 20, twinChance: 1.5 }],
     chars: [],
     events: [],
@@ -2020,7 +2034,7 @@ function migrate(s) {
   for (const k of ['meta', 'world', 'ui']) s[k] = Object.assign({}, d[k], s[k] || {});
   s.ui.layers = Object.assign({}, d.ui.layers, s.ui.layers || {});
   s.meta.earth = Object.assign({}, d.meta.earth, s.meta.earth || {});
-  for (const k of ['places', 'sculpt', 'paint', 'features', 'views']) if (!Array.isArray(s.world[k])) s.world[k] = [];
+  for (const k of ['places', 'sculpt', 'paint', 'features', 'views', 'factions', 'terr', 'fronts', 'mil']) if (!Array.isArray(s.world[k])) s.world[k] = [];
   for (const k of ['chars', 'events', 'codex', 'eras']) if (!Array.isArray(s[k])) s[k] = [];
   for (const k of ['holidays', 'moons']) if (!Array.isArray(s.meta[k])) s.meta[k] = [];
   s.dice = Object.assign({}, d.dice, s.dice && typeof s.dice === 'object' ? s.dice : {});
@@ -2430,6 +2444,7 @@ const SYMBOLS = (() => {
     return c;
   }
   const cats = CATS.map(([k, name]) => [k, name]);
+  function remember(k) { const r = (S.ui.symRecent || []).filter(x => x !== k); r.unshift(k); S.ui.symRecent = r.slice(0, 18); save(); }
   const search = (q, cat) => { q = lc(q); return list.filter(s => (q ? lc(s.name).includes(q) || lc(s.cat).includes(q) : s.cat === cat)); };
   // a browsable grid: category chips, a search box and the symbols; onPick(symbol)
   function picker(cur, onPick, opts = {}) {
@@ -2438,9 +2453,11 @@ const SYMBOLS = (() => {
     const chips = h('div', { class: 'sym-cats' }), grid = h('div', { class: 'sym-grid' });
     const render = () => {
       chips.innerHTML = ''; grid.innerHTML = '';
-      for (const [k, name] of cats) chips.append(h('button', { type: 'button', class: 'chip' + (k === cat && !q.value ? ' on' : ''), onclick: () => { cat = k; q.value = ''; render(); } }, name));
-      const items = search(q.value, cat);
-      for (const s of items) grid.append(h('button', { type: 'button', class: 'sym' + (s.key === cur ? ' on' : ''), title: s.name, onclick: () => { cur = s.key; onPick(s); render(); } }, swatch(s.key, 32), h('span', null, s.name)));
+      const rec = (S.ui.symRecent || []).filter(k => byKey[k]), cl = rec.length ? [['recent', 'Recent'], ...cats] : cats;
+      if (cat === 'recent' && !rec.length) cat = 'defaults';
+      for (const [k, name] of cl) chips.append(h('button', { type: 'button', class: 'chip' + (k === cat && !q.value ? ' on' : ''), onclick: () => { cat = k; q.value = ''; render(); } }, name));
+      const items = !q.value && cat === 'recent' ? rec.map(k => byKey[k]) : search(q.value, cat);
+      for (const s of items) grid.append(h('button', { type: 'button', class: 'sym' + (s.key === cur ? ' on' : ''), title: s.name, onclick: () => { cur = s.key; remember(s.key); onPick(s); render(); } }, swatch(s.key, 32), h('span', null, s.name)));
       if (!items.length) grid.append(h('div', { class: 'small muted', style: 'padding:10px' }, 'No symbols match.'));
       const on = chips.querySelector('.on'); if (on) requestAnimationFrame(() => on.scrollIntoView({ block: 'nearest', inline: 'center' }));
     };
@@ -2487,6 +2504,34 @@ const MapView = (() => {
     border: { name: 'Border', icon: 'border', line: true },
   };
   const stamp = { kind: 'river', size: 60, amount: 50, sym: 'v:castle' };
+  const tip = h('div', { class: 'map-tip' }); view.append(tip);
+  function featureAt(x, y, tol) {
+    let bf = null, bd = tol;
+    for (const fh of featureHits) for (const r of fh.scr) for (let i = 0; i + 5 < r.length; i += 3) {
+      const ax = r[i], ay = r[i + 1], dx = r[i + 3] - ax, dy = r[i + 4] - ay, L2 = dx * dx + dy * dy || 1;
+      const t = clamp(((x - ax) * dx + (y - ay) * dy) / L2, 0, 1), d = Math.hypot(ax + dx * t - x, ay + dy * t - y);
+      if (d < bd) { bd = d; bf = fh.f; }
+    }
+    return bf;
+  }
+  function hideTip() { tip.classList.remove('show'); cv.style.cursor = ''; }
+  function hoverTip(x, y) {
+    let txt = null, cur = 'pointer';
+    if (tool === 'pan' || tool === 'place' || tool === 'measure') {
+      let best = null, bd = 16; for (const hp of placeHits) { const d = Math.hypot(hp.x - x, hp.y - y); if (d < bd) { bd = d; best = hp.p; } }
+      if (best) {
+        const sy = best.sym && SYMBOLS.get(best.sym), y0 = S.world.here;
+        const far = y0 ? gcAngle([y0.lat, y0.lon], [best.lat, best.lon]) * T.RM : 0;
+        txt = [best.name, [sy ? sy.name : null, (PTYPES[best.type] || PTYPES.other).name, best.pop ? 'pop. ' + fmtInt(best.pop) : null, y0 && far > 50 ? `${fmtDist(far)} from you` : null].filter(Boolean).join(' · ')];
+        if (tool === 'place') cur = 'grab';
+      } else if (tool !== 'measure' && hereHit && Math.hypot(hereHit[0] - x, hereHit[1] - y) < 20) txt = ['You are here', `Heading ${S.world.here.hdg}° ${hdgName(S.world.here.hdg)} · tap to change`];
+      else if (tool !== 'measure') { const f = featureAt(x, y, 8); if (f) txt = [f.name || (STAMPS[f.kind] || { name: f.kind }).name, featureSummary(f)]; }
+    }
+    if (!txt) { hideTip(); return; }
+    tip.innerHTML = ''; tip.append(h('b', null, txt[0]), h('div', { class: 'k' }, txt[1]));
+    tip.style.left = Math.max(4, Math.min(x + 14, W - 290)) + 'px'; tip.style.top = Math.min(y + 16, H - 60) + 'px';
+    tip.classList.add('show'); cv.style.cursor = cur;
+  }
 
   /* ---------- workers ---------- */
   const Pool = (() => {
@@ -2667,8 +2712,23 @@ const MapView = (() => {
     const step = () => { const t = Math.min(1, (performance.now() - t0) / dur), e = 1 - (1 - t) * (1 - t), g = Math.pow(f, e); zoomAt(x, y, g / done); done = g; if (t < 1) requestAnimationFrame(step); };
     requestAnimationFrame(step);
   }
-  function home() { if (cam.mode === 'local') snapshot(); cam.mode = 'world'; cam.rot = 0; cam.x = 0; cam.y = 0; cam.s = minWorldS(); dirty = true; saveCam(); }
+  function home() { pushView(); if (cam.mode === 'local') snapshot(); cam.mode = 'world'; cam.rot = 0; cam.x = 0; cam.y = 0; cam.s = minWorldS(); dirty = true; saveCam(); }
+  const viewHist = [];
+  function updBack() { const b = view.querySelector('.fab[data-act="back"]'); if (b) b.hidden = !viewHist.length; }
+  function pushView() { viewHist.push({ ...cam }); if (viewHist.length > 40) viewHist.shift(); updBack(); }
+  function viewBack() {
+    const c = viewHist.pop(); updBack(); if (!c) return;
+    snapshot(); Object.assign(cam, c); if (cam.mode === 'local') updateRot(); else clampWorld();
+    dirty = true; saveCam();
+  }
+  const TINTS = { natural: ['Natural', ''], parchment: ['Parchment', 'sepia(.5) saturate(.85) contrast(1.04) brightness(1.03)'], antique: ['Antique', 'sepia(.85) saturate(.55) contrast(.95) brightness(1.06)'],
+    vivid: ['Vivid', 'saturate(1.45) contrast(1.08)'], mono: ['Mono', 'grayscale(1) contrast(1.1)'], night: ['Night', 'brightness(.6) saturate(.65) contrast(1.15)'] };
+  const tintCss = () => (TINTS[S.ui.layers.tint] || TINTS.natural)[1];
+  function applyTint() { cv.style.filter = tintCss(); }
+  function tinted(c) { const f = tintCss(); if (!f) return c; const o = document.createElement('canvas'); o.width = c.width; o.height = c.height; const g = o.getContext('2d'); g.filter = f; g.drawImage(c, 0, 0); return o; }
+  const lsc = () => +S.ui.layers.labelScale || 1;
   function flyTo(lat, lon, widthMi) {
+    pushView();
     const m = (widthMi * T.MI) / W;
     snapshot();
     if (W * m / T.RM < LOCAL_IN) enterLocal([lat, lon], m); else enterWorld([lat, lon], m);
@@ -2800,11 +2860,13 @@ const MapView = (() => {
       if (lay.survey && st.topo) drawSurvey();
       if (lay.grid) drawGraticuleLocal(st.topo);
     }
+    drawTerritory(st.topo);
     if (lay.features) drawFeatures(st.topo); else featureHits = [];
     if (!ex) { drawRouteHL(); drawShape(); }
     if (lay.places) drawPlaces(st.topo, labelBoxes);
     if (lay.features) drawFeatureLabels(st.topo, labelBoxes);
     if (st.topo) drawTileLabels(fresh, Sz, st, labelBoxes);
+    drawMil(st.topo);
     drawHere();
     if (ex) { lastStyle = st; return missing; }
     drawMeasure();
@@ -2923,7 +2985,30 @@ const MapView = (() => {
       }
     }
   }
+  const PGROUPS = { settle: ['Settlements', ['capital', 'city', 'town', 'village', 'port']], forts: ['Forts & camps', ['fort', 'camp']], land: ['Landmarks & peaks', ['landmark', 'peak']],
+    ruins: ['Ruins & dungeons', ['ruin', 'dungeon']], labels: ['Region & sea labels', ['region', 'water']], other: ['Other places', ['other']] };
+  function placeGroup(p) {
+    const sy = p.sym && SYMBOLS.get(p.sym); if (sy && sy.cat !== 'defaults') return 'sym:' + sy.cat;
+    for (const [k, v] of Object.entries(PGROUPS)) if (v[1].includes(p.type)) return k;
+    return 'other';
+  }
+  const groupName = k => (k.startsWith('sym:') ? (SYMBOLS.cats.find(c => c[0] === k.slice(4)) || [0, 'Symbols'])[1] : (PGROUPS[k] || PGROUPS.other)[0]);
+  function groupCounts() { const c = {}; for (const p of S.world.places) { const g = placeGroup(p); c[g] = (c[g] || 0) + 1; } return c; }
+  const sortGroups = keys => keys.sort((a, b) => (a.startsWith('sym:') - b.startsWith('sym:')) || groupName(a).localeCompare(groupName(b)));
+  function placeIcon(p, px = 26) {
+    if (p.sym && SYMBOLS.get(p.sym)) return SYMBOLS.swatch(p.sym, px);
+    const c = document.createElement('canvas'), k = 2; c.width = c.height = px * k; c.style.width = c.style.height = px + 'px'; c.style.flex = 'none';
+    const g = c.getContext('2d'); g.scale(k, k); const keep = ctx; ctx = g; try { glyph(p.type, px / 2, px / 2, false); } finally { ctx = keep; }
+    return c;
+  }
+  function fitPlaces(list) {
+    if (!list.length) return;
+    if (list.length === 1) { flyTo(list[0].lat, list[0].lon, placeWidth(list[0])); return; }
+    let la0 = 90, la1 = -90, lo0 = 180, lo1 = -180; for (const q of list) { la0 = Math.min(la0, q.lat); la1 = Math.max(la1, q.lat); lo0 = Math.min(lo0, q.lon); lo1 = Math.max(lo1, q.lon); }
+    flyTo((la0 + la1) / 2, (lo0 + lo1) / 2, Math.max(gcAngle([la0, lo0], [la1, lo1]) * T.RM / T.MI * 1.35, 10));
+  }
   function placeVisible(p, widthMi, cll) {
+    if ((S.ui.layers.hide || {})[placeGroup(p)]) return false;
     const ty = PTYPES[p.type] || PTYPES.other;
     if (!p.always && widthMi > ty.max) return false;
     if (cam.mode === 'local' && gcAngle(cll, [p.lat, p.lon]) > 0.6) return false;
@@ -2949,7 +3034,7 @@ const MapView = (() => {
     ctx.stroke(); ctx.fill();
     if (ty.glyph === 'anchor') { ctx.strokeStyle = fill === '#fff' ? '#111' : '#fff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, y - r * 0.5); ctx.lineTo(x, y + r * 0.5); ctx.moveTo(x - r * 0.45, y + r * 0.15); ctx.lineTo(x + r * 0.45, y + r * 0.15); ctx.stroke(); }
   }
-  const symR = p => (p.type === 'capital' || p.type === 'city' ? 11 : p.type === 'village' || p.type === 'camp' ? 8 : 9.5);
+  const symR = p => (p.type === 'capital' || p.type === 'city' ? 11 : p.type === 'village' || p.type === 'camp' ? 8 : 9.5) * (+p.symSize || 1) * lsc();
   function mark(p, x, y, topo) {
     if (p.sym && SYMBOLS.get(p.sym)) SYMBOLS.draw(ctx, p.sym, x, y, symR(p), topo); else glyph(p.type, x, y, topo);
   }
@@ -2965,11 +3050,12 @@ const MapView = (() => {
       const ty = PTYPES[p.type] || PTYPES.other;
       const isLabel = ty.glyph === 'none';
       const big = p.type === 'capital' || p.type === 'city' || p.type === 'region';
-      const fontSize = p.type === 'region' ? 15 : big ? 13.5 : p.type === 'water' ? 13 : 12;
+      const fontSize = (p.type === 'region' ? 15 : big ? 13.5 : p.type === 'water' ? 13 : 12) * lsc();
       const font = (p.type === 'water' ? 'italic 600 ' : p.type === 'region' ? '700 ' : '650 ') + fontSize + 'px ' + (p.type === 'water' || p.type === 'region' ? 'Georgia, "Times New Roman", serif' : '-apple-system, system-ui, sans-serif');
       const text = p.type === 'region' ? p.name.toUpperCase() : p.name;
       ctx.font = font; const tw = ctx.measureText(text).width;
       const gs = p.sym && SYMBOLS.get(p.sym) ? symR(p) : ty.size;
+      if (!isLabel && (p.noLabel || (S.ui.layers.symNoLabels && p.sym && SYMBOLS.get(p.sym) && SYMBOLS.get(p.sym).cat !== 'defaults'))) { mark(p, s[0], s[1], topo); placeHits.push({ x: s[0], y: s[1], p }); continue; }
       const lx = isLabel ? s[0] : s[0] + gs + 5, align = isLabel ? 'center' : 'left';
       const bx = isLabel ? [s[0] - tw / 2, s[1] - 9, s[0] + tw / 2, s[1] + 9] : [s[0] - gs - 2, s[1] - Math.max(9, gs), lx + tw + 2, s[1] + Math.max(9, gs)];
       if (!boxFree(boxes, bx) && !p.always) { if (!isLabel) { mark(p, s[0], s[1], topo); placeHits.push({ x: s[0], y: s[1], p }); } continue; }
@@ -3074,9 +3160,15 @@ const MapView = (() => {
       for (const r of runs) { polyline(r); ctx.strokeStyle = topo ? '#262626' : 'rgba(250,240,224,.95)'; ctx.lineWidth = 1.5; ctx.stroke(); }
       ctx.setLineDash([]);
     } else if (k === 'border') {
+      const col = safeColor(f.color, '#8e44ad');
+      if (f.fill && f.pts) {
+        const sc = []; let ok = true;
+        for (let q = 0; q < f.pts.length && ok; q += 2) { const p2 = llToScreen(f.pts[q], f.pts[q + 1]); if (!p2 || !isFinite(p2[0]) || (sc.length && cam.mode === 'world' && Math.abs(p2[0] - sc[sc.length - 1][0]) > W * 0.5)) ok = false; else sc.push(p2); }
+        if (ok && sc.length > 2) { ctx.save(); ctx.globalAlpha = 0.17; ctx.fillStyle = col; ctx.beginPath(); sc.forEach((p2, i) => (i ? ctx.lineTo(p2[0], p2[1]) : ctx.moveTo(p2[0], p2[1]))); ctx.closePath(); ctx.fill(); ctx.restore(); }
+      }
       ctx.setLineDash([12, 5, 3, 5]);
       for (const r of runs) { polyline(r); ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 4.6; ctx.stroke(); }
-      for (const r of runs) { polyline(r); ctx.strokeStyle = '#8e44ad'; ctx.lineWidth = 2.2; ctx.stroke(); }
+      for (const r of runs) { polyline(r); ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.stroke(); }
       ctx.setLineDash([]);
     }
   }
@@ -3087,7 +3179,7 @@ const MapView = (() => {
       for (const r of scr) { let L = 0; for (let i = 3; i < r.length; i += 3) L += Math.hypot(r[i] - r[i - 3], r[i + 1] - r[i - 2]); if (L > bestLen) { bestLen = L; best = r; } }
       const water = f.kind === 'river' || f.kind === 'canyon';
       const text = f.kind === 'border' ? f.name.toUpperCase() : f.name;
-      const font = water ? 'italic 600 12.5px Georgia, "Times New Roman", serif' : f.kind === 'border' ? '700 10.5px -apple-system, system-ui, sans-serif' : '650 11.5px -apple-system, system-ui, sans-serif';
+      const z = lsc(), font = water ? `italic 600 ${12.5 * z}px Georgia, "Times New Roman", serif` : f.kind === 'border' ? `700 ${10.5 * z}px -apple-system, system-ui, sans-serif` : `650 ${11.5 * z}px -apple-system, system-ui, sans-serif`;
       ctx.font = font;
       const tw = ctx.measureText(text).width;
       if (!best || bestLen < tw + 40) continue;
@@ -3139,13 +3231,98 @@ const MapView = (() => {
   }
   function drawMeasure() {
     if (!measure.length) return;
-    const pts = []; for (let k = 1; k < measure.length; k++) gcPath(measure[k - 1], measure[k], pts);
+    const legs = []; for (let k = 1; k < measure.length; k++) legs.push([measure[k - 1], measure[k]]);
+    if (mClosed && measure.length > 2) legs.push([measure[measure.length - 1], measure[0]]);
+    const pts = []; for (const [a, b] of legs) gcPath(a, b, pts);
+    if (mClosed && measure.length > 2) {
+      ctx.save(); ctx.fillStyle = 'rgba(255,209,102,.18)'; ctx.beginPath();
+      pts.forEach((ll, i) => { const s = llToScreen(ll[0], ll[1]); i ? ctx.lineTo(s[0], s[1]) : ctx.moveTo(s[0], s[1]); });
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    for (const [a, b] of legs) {
+      const sa = llToScreen(a[0], a[1]), sb = llToScreen(b[0], b[1]); if (!sa || !sb || Math.hypot(sb[0] - sa[0], sb[1] - sa[1]) < 70) continue;
+      if (cam.mode === 'world' && Math.abs(sb[0] - sa[0]) > W * 0.5) continue;
+      measureLabels.push([fmtDist(gcAngle(a, b) * T.RM), (sa[0] + sb[0]) / 2, (sa[1] + sb[1]) / 2 - 11]);
+    }
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 5; strokeLL(pts);
     ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 6]); strokeLL(pts); ctx.setLineDash([]);
     for (const ll of measure) { const s = llToScreen(ll[0], ll[1]); ctx.fillStyle = '#ffd166'; ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(s[0], s[1], 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    for (const [t, x, y] of measureLabels.splice(0)) haloText(t, x, y, '#ffd166', 'rgba(0,0,0,.78)', '700 11px -apple-system, system-ui, sans-serif', 'center');
+  }
+  const measureLabels = [];
+  function polyArea(lls) {   // spherical polygon area, m²
+    let a = 0;
+    for (let i = 0; i < lls.length; i++) { const p1 = lls[i], p2 = lls[(i + 1) % lls.length]; a += wrapDeg(p2[1] - p1[1]) * D2R * (2 + Math.sin(p1[0] * D2R) + Math.sin(p2[0] * D2R)); }
+    return Math.abs(a * T.RM * T.RM / 2);
+  }
+  const fmtArea = m2 => (S.meta.units === 'metric' ? (m2 < 1e6 ? fmtInt(m2 / 1e4) + ' ha' : fmtNum(m2 / 1e6, m2 < 1e8 ? 1 : 0) + ' km²') : (m2 < 2.59e6 ? fmtInt(m2 / 4046.86) + ' acres' : fmtNum(m2 / 2.59e6, m2 < 2.59e8 ? 1 : 0) + ' sq mi'));
+  function slerpLL(a, b, t) {
+    const va = llVec(a), vb = llVec(b), ang = gcAngle(a, b);
+    if (ang < 1e-9) return a;
+    const s0 = Math.sin((1 - t) * ang) / Math.sin(ang), s1 = Math.sin(t * ang) / Math.sin(ang);
+    return vecLL([va[0] * s0 + vb[0] * s1, va[1] * s0 + vb[1] * s1, va[2] * s0 + vb[2] * s1]);
+  }
+  const ptsLL = f => { const o = []; for (let k = 0; k < f.pts.length; k += 2) o.push([f.pts[k], f.pts[k + 1]]); return o; };
+  function routeLLs(r) {
+    const out = [];
+    for (const l of r.legs) { let q = ptsLL(l.e.f); if (l.e.a !== l.from) q = q.reverse(); out.push(...(out.length ? q.slice(1) : q)); }
+    return out;
+  }
+  // elevation along a path: a chart plus climb, descent, high and low points
+  function profileSheet(lls0, closed, title) {
+    const lls = closed && lls0.length > 2 ? [...lls0, lls0[0]] : lls0;
+    if (lls.length < 2) return;
+    const cum = [0]; for (let k = 1; k < lls.length; k++) cum.push(cum[k - 1] + gcAngle(lls[k - 1], lls[k]));
+    const total = cum[cum.length - 1] || 1e-12, N = 200, xs = [], es = [];
+    for (let i = 0; i <= N; i++) {
+      const t = total * i / N; let k = 1; while (k < cum.length - 1 && cum[k] < t) k++;
+      const ll = slerpLL(lls[k - 1], lls[k], clamp((t - cum[k - 1]) / ((cum[k] - cum[k - 1]) || 1), 0, 1));
+      xs.push(t * T.RM); es.push(T.sample(ll[0], wrapDeg(ll[1])).elev);
+    }
+    let up = 0, down = 0, steep = 0, wet = 0, hi = 0, lo = 0;
+    for (let i = 0; i <= N; i++) {
+      if (es[i] > es[hi]) hi = i; if (es[i] < es[lo]) lo = i; if (es[i] <= 0) wet++;
+      if (i) { const d = Math.max(0, es[i]) - Math.max(0, es[i - 1]); if (d > 0) up += d; else down -= d; steep = Math.max(steep, Math.abs(d) / Math.max(1, xs[i] - xs[i - 1])); }
+    }
+    const Wd = 640, Hd = 220, P = { l: 52, r: 12, t: 14, b: 26 };
+    const eMin = Math.min(0, es[lo]), eMax = Math.max(es[hi], eMin + 10), sx = x => P.l + (x / (xs[N] || 1)) * (Wd - P.l - P.r), sy = e => Hd - P.b - (e - eMin) / (eMax - eMin) * (Hd - P.t - P.b);
+    const line = es.map((e, i) => `${i ? 'L' : 'M'}${sx(xs[i]).toFixed(1)} ${sy(e).toFixed(1)}`).join('');
+    const area = `${line}L${sx(xs[N]).toFixed(1)} ${Hd - P.b}L${sx(0).toFixed(1)} ${Hd - P.b}Z`;
+    const sea = eMin < 0 ? `<rect x="${P.l}" y="${sy(0).toFixed(1)}" width="${Wd - P.l - P.r}" height="${(Hd - P.b - sy(0)).toFixed(1)}" fill="#3a7cc2" opacity=".3"/><line x1="${P.l}" x2="${Wd - P.r}" y1="${sy(0).toFixed(1)}" y2="${sy(0).toFixed(1)}" stroke="#3a7cc2" stroke-width="1.2"/>` : '';
+    const stops = cum.slice(1, -1).map(c => `<line x1="${sx(c * T.RM).toFixed(1)}" x2="${sx(c * T.RM).toFixed(1)}" y1="${P.t}" y2="${Hd - P.b}" stroke="currentColor" stroke-opacity=".25" stroke-dasharray="3 3"/>`).join('');
+    const tx = (x, y, t, a = 'middle') => `<text x="${x}" y="${y}" text-anchor="${a}" font-size="11" fill="currentColor" fill-opacity=".75">${t}</text>`;
+    const svg = `<svg viewBox="0 0 ${Wd} ${Hd}" style="color:var(--text)"><defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b98a52"/><stop offset="1" stop-color="#6f8f4e"/></linearGradient></defs>
+      <path d="${area}" fill="url(#pg)" opacity=".85"/>${sea}<path d="${line}" fill="none" stroke="currentColor" stroke-width="1.6"/>${stops}
+      <circle cx="${sx(xs[hi]).toFixed(1)}" cy="${sy(es[hi]).toFixed(1)}" r="3.5" fill="#e9a23b"/>
+      ${tx(P.l - 6, sy(eMax) + 4, fmtElev(eMax), 'end')}${tx(P.l - 6, sy(eMin) + 4, fmtElev(eMin), 'end')}${tx(P.l, Hd - 8, '0', 'start')}${tx(Wd - P.r, Hd - 8, fmtDist(xs[N]), 'end')}${tx((P.l + Wd - P.r) / 2, Hd - 8, fmtDist(xs[N] / 2))}</svg>`;
+    const chart = h('div', { class: 'prof' }); chart.innerHTML = svg;
+    const st = (k, v) => h('span', null, k + ' ', h('b', null, v));
+    openSheet({ title: title || 'Elevation profile', wide: true, body: h('div', null, chart,
+      h('div', { class: 'stat-line' }, st('Distance', fmtDist(xs[N])), st('Highest', fmtElev(es[hi])), st('Lowest', fmtElev(es[lo])), st('Climb', fmtElev(up)), st('Descent', fmtElev(down)),
+        st('Steepest', Math.round(steep * 100) + '%'), wet ? st('Over water', Math.round(wet / (N + 1) * 100) + '%') : null),
+      h('p', { class: 'tiny muted' }, 'Dashed lines mark the points along the way. Climb and descent count land only.')) });
+  }
+  function measureToLine(kind) {
+    const lls = [...measure]; if (mClosed && lls.length > 2) lls.push(lls[0]);
+    const dense = [];
+    for (let k = 1; k < lls.length; k++) { const n = Math.max(3, Math.ceil(gcAngle(lls[k - 1], lls[k]) / 0.002)); for (let i = dense.length ? 1 : 0; i <= n; i++) dense.push(slerpLL(lls[k - 1], lls[k], i / n)); }
+    const f = createLineFeature(kind, dense);
+    if (kind === 'road' || kind === 'trail') snapEnds(f);
+    if (kind === 'border' && mClosed) f.fill = true;
+    addFeature(f); emit('data');
+    measure = []; mClosed = false; setTool('pan');
+    toast(`${STAMPS[kind].name} created`, 5000, { label: 'Edit', fn: () => openFeature(f) });
   }
   function drawSelection() {
+    if (selPlace && S.world.places.includes(selPlace)) {
+      const s = llToScreen(selPlace.lat, selPlace.lon);
+      if (s && isFinite(s[0])) {
+        const r = (selPlace.sym && SYMBOLS.get(selPlace.sym) ? symR(selPlace) : (PTYPES[selPlace.type] || PTYPES.other).size) + 7;
+        ctx.save(); ctx.beginPath(); ctx.arc(s[0], s[1], r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 5; ctx.stroke(); ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.restore();
+      }
+    }
     if (!selPt) return;
     const s = llToScreen(selPt[0], selPt[1]);
     ctx.strokeStyle = '#111'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(s[0], s[1], 9, 0, Math.PI * 2); ctx.stroke();
@@ -3153,6 +3330,7 @@ const MapView = (() => {
     ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(s[0], s[1], 2.2, 0, Math.PI * 2); ctx.fill();
   }
   function drawBrush() {
+    if (tool === 'war') { drawWarBrush(); return; }
     if (tool === 'stamp') {
       const st = STAMPS[stamp.kind];
       if (st.line) {
@@ -3219,18 +3397,19 @@ const MapView = (() => {
   /* ---------- gestures ---------- */
   const ptrs = new Map(); let gest = null;
   const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-  const editing = () => tool === 'sculpt' || tool === 'paint' || (tool === 'stamp' && STAMPS[stamp.kind].line);
+  const editing = () => tool === 'sculpt' || tool === 'paint' || (tool === 'stamp' && STAMPS[stamp.kind].line) || (tool === 'war' && ['terr', 'cont', 'arrow', 'front'].includes(war.mode));
   cv.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     try { cv.setPointerCapture(e.pointerId); } catch (_) {}
     const [x, y] = pos(e); ptrs.set(e.pointerId, { x, y });
+    hideTip();
     if (ptrs.size === 1) {
       const g = grabAt(x, y);
       if (g) { gest = g; return; }
       gest = { type: editing() ? 'stroke' : 'pan', x0: x, y0: y, lx: x, ly: y, t0: performance.now(), moved: false };
       if (gest.type === 'stroke') { hover = [x, y]; beginStroke(x, y); }
     } else if (ptrs.size === 2) {
-      if (gest && (gest.type === 'shape' || gest.type === 'place')) endGrab(gest, false);
+      if (gest && (isGrab(gest))) endGrab(gest, false);
       if (gest && gest.type === 'stroke') { if (stroke && stroke.n <= 2 && performance.now() - gest.t0 < 350) { stroke = null; dirty = true; } else commitStroke(); }
       const [a, b] = [...ptrs.values()];
       gest = { type: 'pinch', d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
@@ -3238,7 +3417,7 @@ const MapView = (() => {
   });
   cv.addEventListener('pointermove', e => {
     const [x, y] = pos(e);
-    if (!ptrs.has(e.pointerId)) { if (e.pointerType === 'mouse' && (editing() || tool === 'stamp')) { hover = [x, y]; dirty = true; } return; }
+    if (!ptrs.has(e.pointerId)) { if (e.pointerType === 'mouse') { hoverTip(x, y); if (editing() || tool === 'stamp') { hover = [x, y]; dirty = true; } } return; }
     ptrs.set(e.pointerId, { x, y });
     if (!gest) return;
     if (gest.type === 'pan') {
@@ -3246,7 +3425,7 @@ const MapView = (() => {
       if (!gest.moved && Math.hypot(x - gest.x0, y - gest.y0) > 6) gest.moved = true;
       if (gest.moved) panBy(dx, dy);
     } else if (gest.type === 'stroke') { hover = [x, y]; moveStroke(x, y); dirty = true; }
-    else if (gest.type === 'shape' || gest.type === 'place') {
+    else if (isGrab(gest)) {
       if (!gest.moved && Math.hypot(x - gest.x0, y - gest.y0) > 5) gest.moved = true;
       if (gest.moved) dragGrab(gest, x, y);
     }
@@ -3261,7 +3440,7 @@ const MapView = (() => {
     if (!ptrs.has(e.pointerId)) return;
     ptrs.delete(e.pointerId);
     if (!gest) return;
-    if (gest.type === 'shape' || gest.type === 'place') { endGrab(gest, cancel); gest = null; return; }
+    if (isGrab(gest)) { endGrab(gest, cancel); gest = null; return; }
     if (gest.type === 'stroke') { if (cancel) { stroke = null; dirty = true; } else commitStroke(); gest = null; if (e.pointerType !== 'mouse') hover = null; }
     else if (gest.type === 'pan') { if (!cancel && !gest.moved && performance.now() - gest.t0 < 500) onTap(gest.x0, gest.y0); gest = null; }
     else if (gest.type === 'pinch') {
@@ -3271,7 +3450,7 @@ const MapView = (() => {
   }
   cv.addEventListener('pointerup', e => endPtr(e, false));
   cv.addEventListener('pointercancel', e => endPtr(e, true));
-  cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !ptrs.size) { hover = null; dirty = true; } });
+  cv.addEventListener('pointerleave', e => { hideTip(); if (e.pointerType === 'mouse' && !ptrs.size) { hover = null; dirty = true; } });
   cv.addEventListener('wheel', e => {
     e.preventDefault();
     const [x, y] = pos(e), dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
@@ -3297,6 +3476,11 @@ const MapView = (() => {
       else if (STAMPS[stamp.kind].line) toast(`Drag across the map to draw a ${STAMPS[stamp.kind].name.toLowerCase()}`); else placeStamp(ll);
       return;
     }
+    if (tool === 'war' && (war.mode === 'unit' || war.mode === 'battle')) {
+      const hit = milAt(x, y); if (hit) { milSheet(hit); return; }
+      const ll = screenToLL(x, y); if (ll) placeMil(ll); return;
+    }
+    if (tool === 'pan' || tool === 'war') { const mh = milAt(x, y); if (mh) { milSheet(mh); return; } }
     if (tool === 'pan' && hereHit && Math.hypot(hereHit[0] - x, hereHit[1] - y) < 22) { hereSheet(); return; }
     if (tool !== 'measure') {
       let best = null, bd = 24;
@@ -3314,7 +3498,10 @@ const MapView = (() => {
     const ll = screenToLL(x, y);
     if (!ll) { hideChip(); return; }
     if (tool === 'place') { editPlace(null, ll); return; }
-    if (tool === 'measure') { measure.push(ll); dirty = true; renderPanel(); return; }
+    if (tool === 'measure') {
+      let sn = null, bd = 18; for (const hp of placeHits) { const d = Math.hypot(hp.x - x, hp.y - y); if (d < bd) { bd = d; sn = hp.p; } }
+      measure.push(sn ? [sn.lat, sn.lon] : ll); dirty = true; renderPanel(); return;
+    }
     showPointInfo(ll);
   }
 
@@ -3344,10 +3531,13 @@ const MapView = (() => {
       water ? null : h('div', { class: 'small muted' }, `Mean temperature ${fmtTemp(smp.temp)} · moisture ${Math.round(clamp(smp.moist, 0, 1) * 100)}%`),
       h('div', { class: 'tiny muted num', style: 'margin-top:2px' }, gridRef(ll)),
       (() => { const n = nearby(ll, 1)[0]; return n ? h('div', { class: 'small', style: 'margin-top:3px' }, `${fmtDist(n.d)} ${bearingName([n.p.lat, n.p.lon], ll)} of `, h('a', { class: 'wl', role: 'button', onclick: () => openPlace(n.p) }, n.p.name), ` · ≈ ${footDays(n.d)} on foot`) : null; })(),
-      h('div', { class: 'row', style: 'margin-top:8px' },
+      S.world.here ? (() => { const y = S.world.here, d = gcAngle([y.lat, y.lon], ll) * T.RM; return d > 50 ? h('div', { class: 'small muted' }, `${fmtDist(d)} ${bearingName([y.lat, y.lon], ll)} of you · ≈ ${footDays(d)} on foot`) : null; })() : null,
+      h('div', { class: 'row wrap', style: 'margin-top:8px;gap:6px' },
         h('button', { class: 'btn small primary', onclick: () => { editPlace(null, ll); } }, icon('pin', 16), 'Add place here'),
         h('button', { class: 'btn small', onclick: () => { measure = [ll]; setTool('measure'); hideChip(); } }, icon('ruler', 16), 'Measure'),
-        h('button', { class: 'btn small', onclick: () => { setHere(ll); hideChip(); toast('Marked: you are here', 3500, { label: 'Heading', fn: hereSheet }); } }, icon('target', 16), "I'm here"))].filter(Boolean));
+        h('button', { class: 'btn small', onclick: () => { setHere(ll); hideChip(); toast('Marked: you are here', 3500, { label: 'Heading', fn: hereSheet }); } }, icon('target', 16), "I'm here"),
+        h('button', { class: 'btn small', onclick: () => { hideChip(); let ps; ps = openSheet({ title: 'Put a symbol here', wide: true, body: SYMBOLS.picker(stamp.sym, s2 => { ps.close(); stamp.sym = s2.key; placeSymbol(ll); }) }); } }, icon('flag', 16), 'Symbol'),
+        h('button', { class: 'btn small', onclick: () => { const t = `${fmtLL(ll)} (${ll[0].toFixed(5)}, ${ll[1].toFixed(5)})`; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Coordinates copied'), () => toast(t, 6000)); } }, 'Copy'))].filter(Boolean));
     chip.classList.add('show');
   }
 
@@ -3370,7 +3560,7 @@ const MapView = (() => {
   const hdgName = d => COMPASS16[Math.round((((d % 360) + 360) % 360) / 22.5) % 16];
 
   /* ---------- you are here: a marker with a heading arrow ---------- */
-  let hereHit = null, aim = null;   // aim: the next map tap moves the marker ('move') or points it ('heading')
+  let hereHit = null, aim = null, selPlace = null, mClosed = false;   // aim: the next map tap moves the marker ('move') or points it ('heading')
   function setHere(ll, hdg) {
     const o = S.world.here, v = hdg ?? (o ? o.hdg : 0);
     S.world.here = { lat: +ll[0].toFixed(6), lon: +ll[1].toFixed(6), hdg: Math.round(((v % 360) + 360) % 360) % 360 };
@@ -3449,6 +3639,7 @@ const MapView = (() => {
   const daysOnFoot = m => m / T.MI / TRAVEL.foot[1];
   const footDays = m => { const v = fmtNum(daysOnFoot(m), 1); return v === '1' ? '1 day' : v + ' days'; };
   function openPlace(p) {
+    selPlace = p; dirty = true;
     const smp = T.sample(p.lat, p.lon);
     const chars = S.chars.filter(c => c.at === p.id || c.home === p.id);
     const evs = S.events.filter(e => e.place === p.id).sort((a, b) => a.start - b.start);
@@ -3456,8 +3647,13 @@ const MapView = (() => {
     let sh;
     const party = S.chars.filter(c => c.role === 'PC' && c.status !== 'dead');
     const body = h('div', null,
-      h('div', { class: 'muted small' }, (PTYPES[p.type] || PTYPES.other).name + (p.pop ? ' · population ' + fmtInt(p.pop) : '') + ' · ' + fmtLL([p.lat, p.lon])),
+      h('div', { class: 'muted small' }, (p.sym && SYMBOLS.get(p.sym) ? SYMBOLS.get(p.sym).name + ' · ' : '') + (PTYPES[p.type] || PTYPES.other).name + (p.pop ? ' · population ' + fmtInt(p.pop) : '') + ' · ' + fmtLL([p.lat, p.lon])),
       h('div', { class: 'small', style: 'margin:4px 0 8px' }, smp.elev > 0 ? 'Elevation ' + fmtElev(smp.elev) + ' · ' + T.BIOMES[smp.biome][2] + ' · ' + fmtTemp(smp.temp) + ' on average' : 'At sea'),
+      h('div', { class: 'row wrap', style: 'gap:6px;margin:0 0 8px' },
+        h('button', { class: 'btn small', onclick: () => { sh.close(); routeSheet(p); } }, icon('map', 14), 'Route'),
+        h('button', { class: 'btn small', onclick: () => { sh.close(); setTab('map'); setHere([p.lat, p.lon]); toast(`You are here: ${p.name}`); } }, icon('target', 14), "I'm here"),
+        h('button', { class: 'btn small', onclick: () => { sh.close(); setTab('map'); measure = [[p.lat, p.lon]]; mClosed = false; setTool('measure'); } }, icon('ruler', 14), 'Measure'),
+        S.world.here ? h('span', { class: 'small muted', style: 'align-self:center' }, (() => { const y = S.world.here, d = gcAngle([y.lat, y.lon], [p.lat, p.lon]) * T.RM; return d < 50 ? 'You are here' : `${fmtDist(d)} ${bearingName([y.lat, y.lon], [p.lat, p.lon])} of you · ≈ ${footDays(d)} on foot`; })()) : null),
       p.notes ? h('div', { class: 'card' }, md(p.notes, { onToggle: (i, on) => { p.notes = mdToggle(p.notes, i, on); save(); } })) : null,
       twin ? h('button', { class: 'btn small', style: 'margin:2px 0 6px', onclick: () => { sh.close(); Codex.open(twin.id); } }, icon('book', 14), 'Codex: ' + twin.title) : null,
       h('div', { class: 'card' }, h('h3', null, icon('users', 15), 'Characters', h('span', { class: 'grow' }),
@@ -3470,7 +3666,7 @@ const MapView = (() => {
       near.length ? h('div', { class: 'card' }, h('h3', null, icon('pin', 15), 'Nearby'), near.map(n => h('div', { class: 'list-row tap', onclick: () => { sh.close(); openPlace(n.p); } },
         h('div', { class: 'main' }, h('div', { class: 'title' }, n.p.name), h('div', { class: 'sub' }, `${fmtDist(n.d)} ${bearingName([p.lat, p.lon], [n.p.lat, n.p.lon])} · ≈ ${footDays(n.d)} on foot · ${(PTYPES[n.p.type] || PTYPES.other).name}`)), icon('chev', 16)))) : null,
       backlinksCard(p.name, p));
-    sh = openSheet({ title: p.name, body, foot: [
+    sh = openSheet({ title: p.name, body, onClose: () => { if (selPlace === p) { selPlace = null; dirty = true; } }, foot: [
       h('button', { class: 'btn', onclick: () => { sh.close(); editPlace(p); } }, icon('edit', 16), 'Edit'),
       h('button', { class: 'btn', onclick: () => { sh.close(); Timeline.editEvent(null, S.meta.today, { place: p.id }); } }, icon('plus', 16), 'Event'),
       h('div', { class: 'spacer' }),
@@ -3495,11 +3691,15 @@ const MapView = (() => {
         sy ? h('button', { class: 'btn small', type: 'button', onclick: () => { symV = null; drawSymBox(); } }, 'None') : null].filter(Boolean));
     };
     drawSymBox();
+    let symSizeV = +d.symSize || 1;
+    const symSize = seg([[0.75, 'Small'], [1, 'Normal'], [1.4, 'Large'], [1.9, 'Huge']], symSizeV, v => { symSizeV = v; });
+    const noLabel = h('input', { type: 'checkbox', checked: !!d.noLabel });
     let sh;
     const doSave = () => {
       const old = p && p.name;
       d.name = name.value.trim() || 'Unnamed place'; d.type = type.value; d.always = always.checked; d.notes = notesV;
       const pv = Math.round(numOr(pop.value, NaN)); d.pop = isFinite(pv) && pv >= 0 ? pv : null;
+      d.symSize = symSizeV === 1 ? undefined : symSizeV; d.noLabel = noLabel.checked || undefined;
       if (symV) d.sym = symV; else delete d.sym;
       if (isNew) S.world.places.push(d); else { Object.assign(p, d); if (!symV) delete p.sym; }
       if (old) renameLinks(old, d.name);
@@ -3509,6 +3709,8 @@ const MapView = (() => {
       field('Name', Names.field(name, () => type.value)),
       h('div', { class: 'cols2' }, field('Type', type), field('Population', pop)),
       field('Map symbol', symBox),
+      field('Symbol size', symSize),
+      h('label', { class: 'check' }, noLabel, 'Hide the name on the map (the marker still shows)'),
       h('label', { class: 'check' }, always, 'Always show this label (at every zoom level)'),
       field('Notes', notes),
       h('div', { class: 'tiny muted num' }, fmtLL([d.lat, d.lon]))),
@@ -3526,7 +3728,7 @@ const MapView = (() => {
     setTimeout(() => { if (isNew) name.focus(); }, 60);
   }
   function placesSheet(startTab) {
-    let tab = startTab || 'places', sh;
+    let tab = startTab || 'places', sh, grp = 'all', sort = S.ui.placeSort || 'name', shown = [];
     const q = h('input', { type: 'search', placeholder: 'Search places', autocomplete: 'off', style: 'margin-top:8px' });
     const list = h('div');
     const render = () => {
@@ -3541,16 +3743,28 @@ const MapView = (() => {
           h('button', { class: 'icon-btn', 'aria-label': 'Delete view', onclick: e => { e.stopPropagation(); const u = undoable(['world.views']); S.world.views = S.world.views.filter(x => x !== v); save(); render(); u('View deleted', render); } }, icon('trash', 18))));
         return;
       }
-      const s = lc(q.value), cll = centerLL();
-      const items = S.world.places.filter(p => !s || lc(p.name).includes(s) || lc(p.notes).includes(s) || lc((PTYPES[p.type] || PTYPES.other).name).includes(s)).sort((a, b) => a.name.localeCompare(b.name));
+      const s = lc(q.value), here = S.world.here, ref = here ? [here.lat, here.lon] : centerLL();
+      const counts = groupCounts();
+      if (!counts[grp]) grp = 'all';
+      list.append(h('div', { class: 'tog-chips' }, [['all', `All · ${S.world.places.length}`], ...sortGroups(Object.keys(counts)).map(k => [k, `${groupName(k)} · ${counts[k]}`])].map(([k, t]) =>
+        h('button', { type: 'button', class: grp === k ? 'on' : '', onclick: () => { grp = k; render(); } }, t))),
+        seg([['name', 'A–Z'], ['near', here ? 'Nearest you' : 'Nearest'], ['pop', 'Largest'], ['type', 'Type']], sort, v => { sort = v; S.ui.placeSort = v; save(); render(); }), h('div', { style: 'height:6px' }));
+      const dist = p => gcAngle(ref, [p.lat, p.lon]) * T.RM, tn = p => (PTYPES[p.type] || PTYPES.other).name, sn = p => (p.sym && SYMBOLS.get(p.sym) ? SYMBOLS.get(p.sym).name : '');
+      const items = S.world.places.filter(p => (grp === 'all' || placeGroup(p) === grp) && (!s || lc(p.name).includes(s) || lc(p.notes).includes(s) || lc(tn(p)).includes(s) || lc(sn(p)).includes(s)));
+      items.sort(sort === 'near' ? (a, b) => dist(a) - dist(b) : sort === 'pop' ? (a, b) => (b.pop || 0) - (a.pop || 0) || a.name.localeCompare(b.name)
+        : sort === 'type' ? (a, b) => (sn(a) || tn(a)).localeCompare(sn(b) || tn(b)) || a.name.localeCompare(b.name) : (a, b) => a.name.localeCompare(b.name));
+      shown = items;
       if (!items.length) list.append(h('div', { class: 'empty' }, S.world.places.length ? 'No matches' : 'No places yet. Use the pin tool, tap the map and choose "Add place here", or try Auto settlements in the pin tool.'));
-      for (const p of items) list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); flyTo(p.lat, p.lon, placeWidth(p)); } },
-        h('div', { class: 'main' }, h('div', { class: 'title' }, p.name), h('div', { class: 'sub' }, [(PTYPES[p.type] || PTYPES.other).name, p.pop ? 'pop. ' + fmtInt(p.pop) : null, fmtDist(gcAngle(cll, [p.lat, p.lon]) * T.RM) + ' from the map centre'].filter(Boolean).join(' · '))),
+      for (const p of items.slice(0, 400)) list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); flyTo(p.lat, p.lon, placeWidth(p)); } },
+        placeIcon(p, 26),
+        h('div', { class: 'main' }, h('div', { class: 'title' }, p.name), h('div', { class: 'sub' }, [sn(p) || null, tn(p), p.pop ? 'pop. ' + fmtInt(p.pop) : null, `${fmtDist(dist(p))} ${bearingName(ref, [p.lat, p.lon])} of ${here ? 'you' : 'the map centre'}`].filter(Boolean).join(' · '))),
         h('button', { class: 'icon-btn', 'aria-label': 'Details', onclick: e => { e.stopPropagation(); sh.close(); openPlace(p); } }, icon('info', 18))));
+      if (items.length > 400) list.append(h('div', { class: 'tiny muted', style: 'padding:8px' }, `Showing 400 of ${items.length}. Search or filter to narrow it down.`));
     };
     q.addEventListener('input', render);
     sh = openSheet({ title: 'Places', body: h('div', null, seg([['places', `Places (${S.world.places.length})`, 'pin'], ['views', 'Saved views', 'bookmark']], tab, v => { tab = v; render(); }), q, list), foot: [
       h('button', { class: 'btn', onclick: () => { sh.close(); editPlace(null, centerLL()); } }, icon('plus', 16), 'Add at map centre'),
+      h('button', { class: 'btn', onclick: () => { if (tab !== 'places' || !shown.length) return; sh.close(); setTab('map'); fitPlaces(shown); } }, icon('target', 16), 'Show these'),
       h('div', { class: 'spacer' }), h('button', { class: 'btn', onclick: () => sh.close() }, 'Done')] });
     render();
   }
@@ -3791,6 +4005,9 @@ const MapView = (() => {
         line('<path d="M1 7h32" stroke="rgba(255,255,255,.6)" stroke-width="4.6" stroke-dasharray="12 5 3 5"/><path d="M1 7h32" stroke="#8e44ad" stroke-width="2.2" stroke-dasharray="12 5 3 5"/>', 'Border')),
       h('div', { class: 'lbl' }, 'PLACES'),
       h('div', { class: 'legend-sw', style: 'margin:6px 0 6px' }, Object.entries(PTYPES).filter(([, v]) => v.glyph !== 'none').map(([k, v]) => h('div', null, glyphCanvas(k), v.name))),
+      ...(S.world.factions.length ? [h('div', { class: 'lbl', style: 'margin-top:10px' }, 'FACTIONS'), h('div', { class: 'legend-sw', style: 'margin:6px 0 6px' }, S.world.factions.map(f => h('div', null, h('i', { style: `background:${safeColor(f.color)}` }), f.name)))] : []),
+      h('div', { class: 'lbl', style: 'margin-top:10px' }, 'MILITARY'),
+      h('div', { class: 'legend-sw', style: 'margin:6px 0 6px' }, Object.entries(UNITS).map(([k, v]) => h('div', null, milSwatch(k, 30), v[0])), h('div', null, milSwatch('battle', 30), 'Battle')),
       ...(() => { const used = [...new Set(S.world.places.map(p => p.sym).filter(k => k && SYMBOLS.get(k)))]; return used.length ? [h('div', { class: 'lbl', style: 'margin-top:10px' }, 'SYMBOLS ON THIS MAP'), h('div', { class: 'legend-sw', style: 'margin:6px 0 6px' }, used.map(k => h('div', null, SYMBOLS.swatch(k, 22), SYMBOLS.get(k).name)))] : []; })(),
       h('p', { class: 'tiny muted' }, 'An orange number beside a place name counts the characters there. Map sheets give the contour interval at the bottom left.'));
     openSheet({ title: 'Map legend', body, wide: true });
@@ -3799,6 +4016,7 @@ const MapView = (() => {
   /* ---------- tools: sculpt, paint, stamps, measure ---------- */
   function setTool(t) {
     tool = t; shape = null; routeHL = null;
+    if (t === 'war' && !S.world.factions.length) { addFaction('#c0392b'); addFaction('#1f6feb'); toast('Two starter factions made. Rename them under Factions…', 4500); }
     for (const b of $$('#map-tools button')) b.classList.toggle('on', b.dataset.tool === t);
     if (t !== 'measure' && t !== 'pan') hideChip();
     if (t === 'sculpt' || t === 'paint' || t === 'stamp') hover = null;
@@ -3812,18 +4030,19 @@ const MapView = (() => {
     const r = groundR();
     if (tool === 'stamp') stroke = { kind: 'line', fk: stamp.kind, raw: [ll], lx: x, ly: y, n: 1 };
     else if (tool === 'sculpt') stroke = { kind: 'sculpt', op: brush.op, r, h: maxHeight() * brush.strength / 100, str: brush.strength / 100, tgt: brush.op === 'flatten' ? T.sample(ll[0], ll[1]).base : 0, pts: [], lx: x, ly: y, n: 0 };
+    else if (tool === 'war') stroke = war.mode === 'arrow' || war.mode === 'front' ? { kind: 'wline', raw: [ll], lx: x, ly: y, n: 1 } : { kind: 'terr', r: war.size * mpp() / T.RM, pts: [], lx: x, ly: y, n: 0 };
     else stroke = { kind: 'paint', b: brush.biome, r, pts: [], lx: x, ly: y, n: 0 };
     if (stroke.pts) { stroke.pts.push(+ll[0].toFixed(6), +ll[1].toFixed(6)); stroke.n = 1; }
     dirty = true;
   }
   function moveStroke(x, y) {
     if (!stroke) return;
-    if (stroke.kind === 'line') {
+    if (stroke.kind === 'line' || stroke.kind === 'wline') {
       if (Math.hypot(x - stroke.lx, y - stroke.ly) < 7) return;
       const ll = screenToLL(x, y); if (ll) { stroke.raw.push(ll); stroke.n++; }
       stroke.lx = x; stroke.ly = y; return;
     }
-    const step = Math.max(2, brush.size * 0.45);
+    const step = Math.max(2, (stroke.kind === 'terr' ? war.size : brush.size) * 0.45);
     let d = Math.hypot(x - stroke.lx, y - stroke.ly);
     while (d >= step) {
       const t = step / d, nx = stroke.lx + (x - stroke.lx) * t, ny = stroke.ly + (y - stroke.ly) * t;
@@ -3833,6 +4052,7 @@ const MapView = (() => {
   }
   function commitStroke() {
     const s = stroke; stroke = null; if (!s) return;
+    if (s.kind === 'terr' || s.kind === 'wline') { commitWar(s); return; }
     if (s.kind === 'line') {
       if (s.raw.length < 3) { toast(`Drag across the map to draw a ${STAMPS[s.fk].name.toLowerCase()}`); dirty = true; return; }
       const f = createLineFeature(s.fk, s.raw);
@@ -3853,6 +4073,7 @@ const MapView = (() => {
   }
   // history entries carry the area they changed (null for overlay-only features such as roads)
   function afterEdit(a) {
+    terrVer++;
     if (a.cap) applyWorld(false, a.cap);
     else { T.setEdits(S.world.sculpt, S.world.paint, S.world.features); dirty = true; }
     save(); renderPanel();
@@ -4317,6 +4538,411 @@ const MapView = (() => {
         : h('div', { class: 'small muted' }, 'No roads here yet.'));
   }
 
+  /* ---------- factions, territory, contested zones and the military layer ---------- */
+  const FAC_COLORS = ['#c0392b', '#1f6feb', '#2e7d32', '#e9a23b', '#8e44ad', '#16a085', '#d35400', '#e84393', '#2c3e50', '#7f8c8d'];
+  const UNITS = { inf: ['Infantry', 'Infantry'], mech: ['Mechanised', 'Mechanised'], armor: ['Armour', 'Armoured'], cav: ['Cavalry / recon', 'Cavalry'], art: ['Artillery', 'Artillery'],
+    siege: ['Siege engines', 'Siege'], air: ['Air', 'Air Wing'], navy: ['Naval', 'Fleet'], hq: ['Headquarters', 'Command'], sup: ['Supply', 'Supply'], eng: ['Engineers', 'Engineers'],
+    med: ['Medical', 'Medical'], sf: ['Special forces', 'Special'], mil: ['Militia', 'Militia'], mag: ['Mages', 'Arcane'], bea: ['War beasts', 'Beast'] };
+  const ECH = [['team', 'Team', 'Ø'], ['squad', 'Squad', '●'], ['sec', 'Section', '●●'], ['plt', 'Platoon', '●●●'], ['coy', 'Company', 'I'], ['bn', 'Battalion', 'II'],
+    ['rgt', 'Regiment', 'III'], ['bde', 'Brigade', 'X'], ['div', 'Division', 'XX'], ['corps', 'Corps', 'XXX'], ['army', 'Army', 'XXXX']];
+  const war = { mode: 'terr', op: 'paint', size: 40, fac: null, a: null, b: null, unit: 'inf', ech: 'bn', arrow: 'advance' };
+  let terrVer = 0, terrCache = null, milHits = [], milLines = [];
+  const facOf = id => S.world.factions.find(f => f.id === id) || null;
+  const facColor = id => { const f = facOf(id); return f ? safeColor(f.color) : '#7f8c8d'; };
+  const hexRgb = c => { let x = String(c).replace('#', ''); if (x.length === 3) x = x.split('').map(q => q + q).join(''); const n = parseInt(x.slice(0, 6), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const mixWhite = (c, t) => { const [r, g, b] = hexRgb(c); return `rgb(${Math.round(r + (255 - r) * t)},${Math.round(g + (255 - g) * t)},${Math.round(b + (255 - b) * t)})`; };
+  const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+  function addFaction(color) {
+    const used = S.world.factions.map(f => f.color);
+    const f = { id: uid(), name: `${['Kingdom of', 'Republic of', 'Empire of', 'Free Cities of', 'Dominion of', 'Commonwealth of'][Math.floor(Math.random() * 6)]} ${Names.make('town')}`,
+      color: color || FAC_COLORS.find(c => !used.includes(c)) || FAC_COLORS[S.world.factions.length % FAC_COLORS.length] };
+    S.world.factions.push(f); save(); terrVer++; dirty = true;
+    return f;
+  }
+  // territory is rasterised for the current view: one coverage mask per faction (later strokes win), read back,
+  // then filled, outlined where owners change, and striped where zones are contested
+  function rasterTerr(sc) {
+    const w = Math.max(2, Math.ceil(W / sc)), hh = Math.max(2, Math.ceil(H / sc)), N = w * hh;
+    const facs = S.world.factions, idx = new Map(facs.map((f, i) => [f.id, i]));
+    const mk = () => { const c = document.createElement('canvas'); c.width = w; c.height = hh; const g = c.getContext('2d', { willReadFrequently: true }); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#000'; return g; };
+    const fm = facs.map(mk), pairs = new Map(), cll = centerLL(), m = mpp();
+    const proj = st => {
+      const runs = []; let cur = null;
+      for (let k = 0; k < st.pts.length; k += 2) {
+        const la = st.pts[k], lo = st.pts[k + 1];
+        if (cam.mode === 'local' && gcAngle(cll, [la, lo]) > 1) { cur = null; continue; }
+        const q = llToScreen(la, lo); if (!q || !isFinite(q[0])) { cur = null; continue; }
+        const x = q[0] / sc, y = q[1] / sc;
+        if (cur && cam.mode === 'world' && Math.abs(x - cur[cur.length - 2]) > w * 0.5) cur = null;
+        if (!cur) { cur = []; runs.push(cur); }
+        cur.push(x, y);
+      }
+      return runs;
+    };
+    const paint = (g, runs, lw, op) => {
+      g.globalCompositeOperation = op; g.lineWidth = lw; g.beginPath();
+      for (const r of runs) { g.moveTo(r[0], r[1]); if (r.length === 2) g.lineTo(r[0] + 0.01, r[1]); for (let i = 2; i < r.length; i += 2) g.lineTo(r[i], r[i + 1]); }
+      g.stroke();
+    };
+    for (const st of S.world.terr) {
+      if (!st.pts || !st.pts.length) continue;
+      const runs = proj(st); if (!runs.length) continue;
+      const lw = Math.max(1.2, 2 * st.r * T.RM / m / sc);
+      if (st.c) {
+        if (st.erase) { for (const g of pairs.values()) paint(g, runs, lw, 'destination-out'); continue; }
+        const key = st.c.join('|'); if (!idx.has(st.c[0]) || !idx.has(st.c[1])) continue;
+        if (!pairs.has(key)) pairs.set(key, mk());
+        paint(pairs.get(key), runs, lw, 'source-over'); continue;
+      }
+      const fi = st.f == null ? -1 : idx.get(st.f); if (fi === undefined) continue;
+      fm.forEach((g, i) => paint(g, runs, lw, i === fi ? 'source-over' : 'destination-out'));
+      if (fi < 0) for (const g of pairs.values()) paint(g, runs, lw, 'destination-out');
+    }
+    const cls = new Int16Array(N).fill(-1), best = new Uint8Array(N), con = new Int16Array(N).fill(-1), pairList = [];
+    fm.forEach((g, i) => { const d = g.getImageData(0, 0, w, hh).data; for (let q = 0; q < N; q++) { const a = d[q * 4 + 3]; if (a > 110 && a > best[q]) { best[q] = a; cls[q] = i; } } });
+    const pairIdx = (ia, ib) => { const k = Math.min(ia, ib) + '|' + Math.max(ia, ib); let i = pairList.findIndex(x => x.k === k); if (i < 0) { pairList.push({ k, a: ia, b: ib }); i = pairList.length - 1; } return i; };
+    for (const [key, g] of pairs) { const [a, b] = key.split('|').map(id => idx.get(id)); const pi = pairIdx(a, b), d = g.getImageData(0, 0, w, hh).data; for (let q = 0; q < N; q++) if (d[q * 4 + 3] > 110) con[q] = pi; }
+    // frontier bands: land of one side within the band width of the other side's land
+    const dt = target => {
+      const D = new Float32Array(N); for (let q = 0; q < N; q++) D[q] = cls[q] === target ? 0 : 1e9;
+      for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) { const q = y * w + x; let v = D[q]; if (x) v = Math.min(v, D[q - 1] + 1); if (y) { v = Math.min(v, D[q - w] + 1); if (x) v = Math.min(v, D[q - w - 1] + 1.414); if (x < w - 1) v = Math.min(v, D[q - w + 1] + 1.414); } D[q] = v; }
+      for (let y = hh - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) { const q = y * w + x; let v = D[q]; if (x < w - 1) v = Math.min(v, D[q + 1] + 1); if (y < hh - 1) { v = Math.min(v, D[q + w] + 1); if (x < w - 1) v = Math.min(v, D[q + w + 1] + 1.414); if (x) v = Math.min(v, D[q + w - 1] + 1.414); } D[q] = v; }
+      return D;
+    };
+    for (const fr of S.world.fronts) {
+      const ia = idx.get(fr.a), ib = idx.get(fr.b); if (ia === undefined || ib === undefined || !(fr.w > 0)) continue;
+      const wpx = fr.w * T.MI / (m * sc); if (wpx < 0.5) continue;
+      const Da = dt(ia), Db = dt(ib), pi = pairIdx(ia, ib);
+      for (let q = 0; q < N; q++) if ((cls[q] === ia && Db[q] <= wpx) || (cls[q] === ib && Da[q] <= wpx)) con[q] = pi;
+    }
+    const img = new ImageData(w, hh), o = img.data, fillA = Math.round(255 * (+S.ui.layers.terrA || 0.2));
+    const cols = facs.map(f => hexRgb(safeColor(f.color))), sx = new Float64Array(facs.length), sy = new Float64Array(facs.length), cnt = new Float64Array(facs.length);
+    const stripe = Math.max(2, Math.round(7 / sc));
+    for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) {
+      const q = y * w + x, c = cls[q], k = con[q];
+      if (c < 0 && k < 0) continue;
+      let col, a;
+      const edge = c >= 0 && ((x > 0 && cls[q - 1] !== c) || (x < w - 1 && cls[q + 1] !== c) || (y > 0 && cls[q - w] !== c) || (y < hh - 1 && cls[q + w] !== c));
+      if (edge) { col = cols[c].map(v => v * 0.6); a = 240; }
+      else if (k >= 0) { const pr = pairList[k]; col = cols[Math.floor((x + y) / stripe) % 2 ? pr.b : pr.a]; a = Math.min(255, fillA + 110); }
+      else { col = cols[c]; a = fillA; }
+      o[q * 4] = col[0]; o[q * 4 + 1] = col[1]; o[q * 4 + 2] = col[2]; o[q * 4 + 3] = a;
+      if (c >= 0) { sx[c] += x; sy[c] += y; cnt[c]++; }
+    }
+    const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = hh; canvas.getContext('2d').putImageData(img, 0, 0);
+    const labels = facs.map((f, i) => (cnt[i] > 600 / sc ? { f, x: sx[i] / cnt[i] * sc, y: sy[i] / cnt[i] * sc, n: cnt[i] } : null)).filter(Boolean);
+    return { canvas, labels };
+  }
+  function drawTerritory(topo) {
+    const lay = S.ui.layers;
+    if (lay.noTerr || !S.world.factions.length || (!S.world.terr.length && !S.world.fronts.length)) return;
+    const sc = W * H > 1200000 ? 3 : 2;
+    const key = [cam.x, cam.y, cam.s, cam.mode, cam.zone, cam.rot, W, H, sc, terrVer].join(',');
+    if (!terrCache || terrCache.key !== key) terrCache = { key, ...rasterTerr(sc) };
+    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.drawImage(terrCache.canvas, 0, 0, terrCache.canvas.width * sc, terrCache.canvas.height * sc); ctx.restore();
+    if (!lay.noTerrNames) for (const l of terrCache.labels) {
+      const z = lsc() * clamp(Math.sqrt(l.n * sc * sc) / 160, 0.9, 1.7);
+      ctx.letterSpacing = '3px';
+      haloText(l.f.name.toUpperCase(), l.x, l.y, mixWhite(safeColor(l.f.color), topo ? 0 : 0.15), topo ? 'rgba(255,255,255,.8)' : 'rgba(10,14,20,.55)', `800 ${(13 * z).toFixed(1)}px Georgia, "Times New Roman", serif`, 'center');
+      ctx.letterSpacing = '0px';
+    }
+  }
+  // NATO-style unit frame with a type glyph and the echelon above it
+  function milGlyph(g, kind, x, y, sz, col, ech) {
+    if (kind === 'battle') { drawBattle(g, x, y, sz * 0.7); return; }
+    const w = sz * 1.5, hh = sz, x0 = x - w / 2, y0 = y - hh / 2, k = sz / 16;
+    g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
+    g.fillStyle = mixWhite(col, 0.45); g.strokeStyle = '#111'; g.lineWidth = 1.7 * k;
+    g.fillRect(x0, y0, w, hh); g.strokeRect(x0, y0, w, hh);
+    g.lineWidth = 1.4 * k; g.beginPath();
+    const L = (a, b, c, d) => { g.moveTo(a, b); g.lineTo(c, d); };
+    const TXT = { sf: 'SF', mil: 'M', mag: '✶', bea: 'B', hq: 'HQ' };
+    switch (kind) {
+      case 'inf': L(x0, y0, x0 + w, y0 + hh); L(x0, y0 + hh, x0 + w, y0); break;
+      case 'mech': L(x0, y0, x0 + w, y0 + hh); L(x0, y0 + hh, x0 + w, y0); g.moveTo(x + w * 0.3, y); g.ellipse(x, y, w * 0.3, hh * 0.27, 0, 0, Math.PI * 2); break;
+      case 'armor': g.ellipse(x, y, w * 0.3, hh * 0.27, 0, 0, Math.PI * 2); break;
+      case 'cav': L(x0, y0 + hh, x0 + w, y0); break;
+      case 'art': g.arc(x, y, hh * 0.17, 0, Math.PI * 2); g.fillStyle = '#111'; g.fill(); break;
+      case 'siege': g.arc(x, y, hh * 0.3, 0, Math.PI * 2); g.moveTo(x + hh * 0.13, y); g.arc(x, y, hh * 0.13, 0, Math.PI * 2); g.fillStyle = '#111'; g.fill(); break;
+      case 'air': g.moveTo(x - w * 0.11 + hh * 0.16, y); g.arc(x - w * 0.11, y, hh * 0.16, 0, Math.PI * 2); g.moveTo(x + w * 0.11 + hh * 0.16, y); g.arc(x + w * 0.11, y, hh * 0.16, 0, Math.PI * 2); break;
+      case 'navy': L(x, y - hh * 0.32, x, y + hh * 0.3); L(x - w * 0.12, y - hh * 0.18, x + w * 0.12, y - hh * 0.18); g.moveTo(x - w * 0.18, y + hh * 0.08); g.quadraticCurveTo(x, y + hh * 0.5, x + w * 0.18, y + hh * 0.08); break;
+      case 'hq': L(x0, y0 + hh, x0, y0 + hh * 1.7); break;
+      case 'sup': L(x0, y0 + hh * 0.72, x0 + w, y0 + hh * 0.72); break;
+      case 'eng': g.moveTo(x - w * 0.24, y + hh * 0.2); g.lineTo(x - w * 0.24, y - hh * 0.15); g.lineTo(x + w * 0.24, y - hh * 0.15); g.lineTo(x + w * 0.24, y + hh * 0.2); L(x, y - hh * 0.15, x, y + hh * 0.2); break;
+      case 'med': g.lineWidth = 2.6 * k; L(x, y - hh * 0.28, x, y + hh * 0.28); L(x - hh * 0.28, y, x + hh * 0.28, y); break;
+    }
+    g.stroke();
+    if (TXT[kind]) { g.fillStyle = '#111'; g.font = `800 ${(hh * (kind === 'mag' ? 0.62 : 0.5)).toFixed(1)}px -apple-system, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(TXT[kind], x, y + hh * 0.04); }
+    const e = ECH.find(q => q[0] === ech);
+    if (e) { g.font = `800 ${(hh * 0.44).toFixed(1)}px -apple-system, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 3 * k; g.strokeText(e[2], x, y0 - 1); g.fillStyle = '#111'; g.fillText(e[2], x, y0 - 1); }
+    g.restore();
+  }
+  function drawBattle(g, x, y, r) {
+    g.save(); g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = '#8b1a1a'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#fff'; g.stroke();
+    g.strokeStyle = '#fff'; g.lineWidth = Math.max(1.4, r * 0.17); g.lineCap = 'round';
+    const a = r * 0.55, gd = r * 0.22, L = (p, q, u, v) => { g.beginPath(); g.moveTo(p, q); g.lineTo(u, v); g.stroke(); };
+    L(x - a, y + a, x + a, y - a); L(x - a, y - a, x + a, y + a);
+    L(x - a * 0.45 - gd, y + a * 0.45 - gd, x - a * 0.45 + gd, y + a * 0.45 + gd); L(x + a * 0.45 - gd, y + a * 0.45 + gd, x + a * 0.45 + gd, y + a * 0.45 - gd);
+    g.restore();
+  }
+  function milSwatch(kind, px = 30) {
+    const c = document.createElement('canvas'), k = 2; c.width = c.height = px * k; c.style.width = c.style.height = px + 'px';
+    const g = c.getContext('2d'); g.scale(k, k); milGlyph(g, kind, px / 2, px / 2 + 3, px * 0.5, kind === 'battle' ? '#8b1a1a' : '#58a6ff', kind === 'battle' ? null : 'coy');
+    return c;
+  }
+  function pathScr(sc) { ctx.beginPath(); sc.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); }
+  function drawFront(sc, col, flip) {
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    pathScr(sc); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 6.5; ctx.stroke(); ctx.strokeStyle = col; ctx.lineWidth = 3.6; ctx.stroke();
+    ctx.fillStyle = col; ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.2; const side = flip ? -1 : 1; let acc = 10;
+    for (let i = 1; i < sc.length; i++) {
+      const [ax, ay] = sc[i - 1], [bx, by] = sc[i], L = Math.hypot(bx - ax, by - ay); if (!L) continue;
+      const ux = (bx - ax) / L, uy = (by - ay) / L, nx = -uy * side, ny = ux * side;
+      while (acc < L) { const px = ax + ux * acc, py = ay + uy * acc; ctx.beginPath(); ctx.moveTo(px - ux * 6, py - uy * 6); ctx.lineTo(px + nx * 11, py + ny * 11); ctx.lineTo(px + ux * 6, py + uy * 6); ctx.closePath(); ctx.fill(); ctx.stroke(); acc += 22; }
+      acc -= L;
+    }
+    ctx.restore();
+  }
+  function drawArrowLine(sc, col, style) {
+    const wd = style === 'attack' ? 7.5 : style === 'supply' ? 2.6 : 5, head = style === 'supply' ? 10 : wd * 2.7;
+    let pts = sc.slice(); const end = pts[pts.length - 1]; let back = null, acc = 0;
+    for (let i = pts.length - 2; i >= 0; i--) { acc += Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); if (acc >= head) { back = pts[i]; pts = pts.slice(0, i + 1); break; } }
+    if (!back) { back = pts[0]; pts = [pts[0]]; }
+    const ang = Math.atan2(end[1] - back[1], end[0] - back[0]), base = [end[0] - Math.cos(ang) * head, end[1] - Math.sin(ang) * head];
+    pts.push(base);
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = style === 'supply' ? 'round' : 'butt';
+    if (style === 'retreat') ctx.setLineDash([10, 6]); else if (style === 'supply') ctx.setLineDash([1, 6]);
+    pathScr(pts); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = wd + 3; ctx.stroke(); ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.stroke();
+    ctx.setLineDash([]);
+    const px = Math.cos(ang + Math.PI / 2) * head * 0.62, py = Math.sin(ang + Math.PI / 2) * head * 0.62;
+    ctx.beginPath(); ctx.moveTo(end[0], end[1]); ctx.lineTo(base[0] + px, base[1] + py); ctx.lineTo(base[0] - px, base[1] - py); ctx.closePath();
+    ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.stroke(); ctx.fillStyle = style === 'retreat' ? mixWhite(col, 0.35) : col; ctx.fill();
+    ctx.restore();
+  }
+  function drawMil(topo) {
+    milHits = []; milLines = [];
+    if (S.ui.layers.noMil || !S.world.mil.length) return;
+    const cll = centerLL(), z = lsc();
+    const toScr = pts => { const o = []; for (let k = 0; k < pts.length; k += 2) { if (cam.mode === 'local' && gcAngle(cll, [pts[k], pts[k + 1]]) > 1) continue; const q = llToScreen(pts[k], pts[k + 1]); if (!q || !isFinite(q[0])) continue; if (o.length && cam.mode === 'world' && Math.abs(q[0] - o[o.length - 1][0]) > W * 0.5) break; o.push(q); } return o; };
+    for (const t of ['front', 'arrow']) for (const m of S.world.mil) if (m.t === t && m.pts) {
+      const sc = toScr(m.pts); if (sc.length < 2) continue;
+      if (t === 'front') drawFront(sc, facColor(m.fac), m.flip); else drawArrowLine(sc, facColor(m.fac), m.style || 'advance');
+      milLines.push({ m, sc });
+    }
+    for (const m of S.world.mil) if (m.t === 'battle' || m.t === 'unit') {
+      if (cam.mode === 'local' && gcAngle(cll, [m.lat, m.lon]) > 0.6) continue;
+      if (cam.mode === 'world' && Math.abs(wrapRad((m.lon - cm()) * D2R)) > Math.PI - 1e-9) continue;
+      const q = llToScreen(m.lat, m.lon); if (!q || q[0] < -40 || q[0] > W + 40 || q[1] < -40 || q[1] > H + 40) continue;
+      if (m.t === 'battle') drawBattle(ctx, q[0], q[1], 11 * z); else milGlyph(ctx, m.kind, q[0], q[1], 16 * z, facColor(m.fac), m.ech);
+      if (m.name && (m.t === 'battle' || !S.ui.layers.noMilNames)) haloText(m.name, q[0], q[1] + 19 * z, topo ? '#111' : '#fff', topo ? 'rgba(255,255,255,.9)' : 'rgba(10,14,20,.78)', `650 ${(10.5 * z).toFixed(1)}px -apple-system, system-ui, sans-serif`, 'center');
+      milHits.push({ x: q[0], y: q[1], m });
+    }
+  }
+  function milPointAt(x, y) { let b = null, bd = 18; for (const hp of milHits) { const d = Math.hypot(hp.x - x, hp.y - y); if (d < bd) { bd = d; b = hp.m; } } return b; }
+  function milAt(x, y) {
+    const pm = milPointAt(x, y); if (pm) return pm;
+    let b = null, bd = 10;
+    for (const { m, sc } of milLines) for (let i = 1; i < sc.length; i++) {
+      const [ax, ay] = sc[i - 1], dx = sc[i][0] - ax, dy = sc[i][1] - ay, L2 = dx * dx + dy * dy || 1, t = clamp(((x - ax) * dx + (y - ay) * dy) / L2, 0, 1), d = Math.hypot(ax + dx * t - x, ay + dy * t - y);
+      if (d < bd) { bd = d; b = m; }
+    }
+    return b;
+  }
+  function drawWarBrush() {
+    const col = war.mode === 'cont' ? '#ffd166' : war.op === 'erase' && war.mode === 'terr' ? '#ffffff' : facColor(war.fac);
+    if (stroke && stroke.kind === 'terr' && stroke.pts.length) {
+      ctx.save(); ctx.fillStyle = col; ctx.globalAlpha = 0.35; ctx.beginPath();
+      const rpx = stroke.r * T.RM / mpp();
+      for (let k = 0; k < stroke.pts.length; k += 2) { const q = llToScreen(stroke.pts[k], stroke.pts[k + 1]); ctx.moveTo(q[0] + rpx, q[1]); ctx.arc(q[0], q[1], rpx, 0, Math.PI * 2); }
+      ctx.fill(); ctx.restore();
+    }
+    if (stroke && stroke.kind === 'wline' && stroke.raw.length > 1) {
+      ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+      stroke.raw.forEach((ll, i) => { const q = llToScreen(ll[0], ll[1]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); });
+      ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 7; ctx.stroke(); ctx.strokeStyle = facColor(war.fac); ctx.lineWidth = 4; ctx.stroke(); ctx.restore();
+    }
+    if ((war.mode === 'terr' || war.mode === 'cont') && hover) {
+      ctx.save(); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(hover[0], hover[1], war.size + 1, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = col; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.arc(hover[0], hover[1], war.size, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
+  }
+  function commitWar(s) {
+    if (s.kind === 'terr') {
+      if (!s.pts.length) return;
+      let rec;
+      if (war.mode === 'cont') {
+        if (war.op !== 'erase' && (!war.a || !war.b || war.a === war.b)) { toast('Pick two different sides first'); dirty = true; return; }
+        rec = war.op === 'erase' ? { c: ['*', '*'], erase: true } : { c: [war.a, war.b].sort() };
+      } else {
+        if (war.op !== 'erase' && !facOf(war.fac)) { toast('Add a faction first'); dirty = true; return; }
+        rec = { f: war.op === 'erase' ? null : war.fac };
+      }
+      rec.r = +s.r.toPrecision(5); rec.pts = s.pts;
+      S.world.terr.push(rec); history.push({ kind: 'terr', rec, cap: null }); redo.length = 0; afterEdit({ cap: null }); return;
+    }
+    if (s.raw.length < 3) { toast(war.mode === 'arrow' ? 'Drag across the map to draw an arrow' : 'Drag across the map to draw a front line'); dirty = true; return; }
+    const rec = { id: uid(), t: war.mode, fac: war.fac, pts: createLineFeature('trail', s.raw).pts };
+    if (war.mode === 'arrow') rec.style = war.arrow;
+    S.world.mil.push(rec); history.push({ kind: 'mil', rec, cap: null }); redo.length = 0; afterEdit({ cap: null });
+  }
+  function placeMil(ll) {
+    const near = nearby(ll, 1)[0];
+    let rec;
+    if (war.mode === 'battle') rec = { id: uid(), t: 'battle', lat: +ll[0].toFixed(6), lon: +ll[1].toFixed(6), fac: null, day: S.meta.today, name: near && near.d < 80 * T.MI ? `Battle of ${near.p.name}` : 'Battle' };
+    else {
+      const n = S.world.mil.filter(m => m.t === 'unit' && m.fac === war.fac && m.kind === war.unit).length + 1, e = ECH.find(q => q[0] === war.ech);
+      rec = { id: uid(), t: 'unit', lat: +ll[0].toFixed(6), lon: +ll[1].toFixed(6), fac: war.fac, kind: war.unit, ech: war.ech, name: `${ordinal(n)} ${UNITS[war.unit][1]}${e && ['team', 'squad', 'sec'].indexOf(e[0]) < 0 ? ' ' + e[1] : ''}` };
+    }
+    S.world.mil.push(rec); history.push({ kind: 'mil', rec, cap: null }); redo.length = 0; afterEdit({ cap: null });
+    toast(`Placed ${rec.name}`, 4000, { label: 'Edit', fn: () => milSheet(rec) });
+  }
+  function milLabel(m) {
+    const f = facOf(m.fac);
+    if (m.t === 'battle') return ['Battle', m.day != null ? Cal.fmt(m.day) : null, m.outcome || null].filter(Boolean).join(' · ');
+    if (m.t === 'unit') { const e = ECH.find(q => q[0] === m.ech); return [UNITS[m.kind] ? UNITS[m.kind][0] : 'Unit', e ? e[1] : null, m.str || null, f ? f.name : null].filter(Boolean).join(' · '); }
+    return [m.t === 'front' ? 'Front line' : `${(m.style || 'advance')[0].toUpperCase() + (m.style || 'advance').slice(1)} arrow`, f ? f.name : null].filter(Boolean).join(' · ');
+  }
+  function showMil(m) {
+    if (m.lat != null) flyTo(m.lat, m.lon, 60);
+    else if (m.pts) { const k = (m.pts.length / 2 | 0) & ~1; flyTo(m.pts[k], m.pts[k + 1], 150); }
+    setTimeout(() => milSheet(m), 450);
+  }
+  function facSelect(cur, allowNone = true) {
+    const s2 = h('select', null, allowNone ? h('option', { value: '' }, 'No side') : null, S.world.factions.map(f => h('option', { value: f.id }, f.name)));
+    s2.value = cur || ''; return s2;
+  }
+  function milSheet(m) {
+    let sh;
+    const name = h('input', { value: m.name || '', placeholder: 'Name', autocomplete: 'off' }), fac = facSelect(m.fac);
+    const notes = h('textarea', { rows: 3, placeholder: 'Orders, strength, commander, what happened…' }); notes.value = m.notes || '';
+    const parts = [field('Name', name), field('Side', fac)];
+    let kind, ech, str, style = m.style || 'advance', flip, outcome;
+    if (m.t === 'unit') {
+      kind = h('select', null, Object.entries(UNITS).map(([k, v]) => h('option', { value: k }, v[0]))); kind.value = m.kind;
+      ech = h('select', null, ECH.map(([k, v, t]) => h('option', { value: k }, `${v} (${t})`))); ech.value = m.ech || 'bn';
+      str = h('input', { value: m.str || '', placeholder: 'e.g. 1,200 men or 80%', autocomplete: 'off' });
+      parts.push(h('div', { class: 'cols2' }, field('Type', kind), field('Size', ech)), field('Strength', str));
+    } else if (m.t === 'arrow') parts.push(field('Kind of movement', seg([['advance', 'Advance'], ['attack', 'Attack'], ['retreat', 'Retreat'], ['supply', 'Supply']], style, v => { style = v; })));
+    else if (m.t === 'front') { flip = h('input', { type: 'checkbox', checked: !!m.flip }); parts.push(h('label', { class: 'check' }, flip, 'Flip the teeth to the other side')); }
+    else if (m.t === 'battle') {
+      outcome = h('input', { value: m.outcome || '', placeholder: 'e.g. Decisive victory for the Republic', autocomplete: 'off' });
+      parts.push(h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Fought ' + (m.day != null ? Cal.fmt(m.day) : 'on an unknown date'),
+        h('button', { class: 'btn small', style: 'margin-left:8px', onclick: () => { m.day = S.meta.today; save(); sh.close(); milSheet(m); } }, 'Set to today')), field('Outcome', outcome));
+    }
+    parts.push(field('Notes', notes));
+    sh = openSheet({ title: m.name || milLabel(m), body: h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:8px' }, milLabel(m)), ...parts), foot: [
+      h('button', { class: 'btn danger', onclick: () => { const i = S.world.mil.indexOf(m); if (i < 0) return; S.world.mil.splice(i, 1); afterEdit({ cap: null }); sh.close(); toast(`Removed ${m.name || 'it'}`, 6000, { label: 'Undo', fn: () => { S.world.mil.splice(Math.min(i, S.world.mil.length), 0, m); afterEdit({ cap: null }); } }); } }, icon('trash', 16), 'Remove'),
+      h('div', { class: 'spacer' }),
+      h('button', { class: 'btn primary', onclick: () => {
+        m.name = name.value.trim(); m.fac = fac.value || null; m.notes = notes.value.trim() || undefined;
+        if (kind) { m.kind = kind.value; m.ech = ech.value; m.str = str.value.trim() || undefined; }
+        if (m.t === 'arrow') m.style = style;
+        if (flip) m.flip = flip.checked || undefined;
+        if (outcome) m.outcome = outcome.value.trim() || undefined;
+        save(); dirty = true; sh.close();
+      } }, 'Save')] });
+  }
+  function milListSheet() {
+    let sh; const list = h('div');
+    const groups = [['unit', 'Units'], ['battle', 'Battles'], ['front', 'Front lines'], ['arrow', 'Movements']];
+    for (const [t, label] of groups) {
+      const items = S.world.mil.filter(m => m.t === t); if (!items.length) continue;
+      list.append(h('div', { class: 'lbl', style: 'margin:10px 0 4px' }, `${label.toUpperCase()} · ${items.length}`));
+      for (const m of items) list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); showMil(m); } },
+        t === 'unit' ? (() => { const c = document.createElement('canvas'), k = 2; c.width = 64; c.height = 56; c.style.width = '32px'; c.style.height = '28px'; const g = c.getContext('2d'); g.scale(k, k); milGlyph(g, m.kind, 16, 16, 13, facColor(m.fac), m.ech); return c; })() : t === 'battle' ? milSwatch('battle', 28) : h('i', { style: `display:block;width:22px;height:6px;border-radius:3px;background:${facColor(m.fac)};flex:none` }),
+        h('div', { class: 'main' }, h('div', { class: 'title' }, m.name || (t === 'front' ? 'Front line' : t === 'arrow' ? 'Movement' : 'Unnamed')), h('div', { class: 'sub' }, milLabel(m))), icon('chev', 16)));
+    }
+    if (!S.world.mil.length) list.append(h('div', { class: 'empty' }, 'Nothing yet. Use the flag tool to deploy units, draw arrows and front lines, and mark battles.'));
+    sh = openSheet({ title: 'Military', body: list });
+  }
+  function factionsSheet() {
+    let sh; const list = h('div');
+    const render = () => {
+      list.innerHTML = '';
+      for (const f of S.world.factions) {
+        const nm = h('input', { value: f.name, autocomplete: 'off' });
+        nm.addEventListener('change', () => { f.name = nm.value.trim() || f.name; save(); terrVer++; dirty = true; });
+        const twin = S.codex.find(e => lc(e.title) === lc(f.name));
+        const units = S.world.mil.filter(m => m.fac === f.id && m.t === 'unit').length, strokes = S.world.terr.filter(t => t.f === f.id).length;
+        list.append(h('div', { class: 'card' },
+          h('div', { class: 'row' }, h('span', { style: `width:18px;height:18px;border-radius:5px;background:${safeColor(f.color)};flex:none` }), h('div', { class: 'grow' }, nm),
+            h('button', { class: 'icon-btn', 'aria-label': 'Delete faction', onclick: async () => {
+              if (!await confirmDlg(`Delete ${f.name}? Its painted land goes, and its units, arrows and fronts lose their side.`, { ok: 'Delete' })) return;
+              const u = undoable(['world.factions', 'world.terr', 'world.mil', 'world.fronts']);
+              S.world.factions = S.world.factions.filter(x => x !== f);
+              S.world.terr = S.world.terr.filter(t => t.f !== f.id && !(t.c && t.c.includes(f.id)));
+              S.world.fronts = S.world.fronts.filter(fr => fr.a !== f.id && fr.b !== f.id);
+              for (const m of S.world.mil) if (m.fac === f.id) m.fac = null;
+              save(); terrVer++; dirty = true; render(); u(`Deleted ${f.name}`, render);
+            } }, icon('trash', 18))),
+          colorSwatches(f.color, c => { f.color = c; save(); terrVer++; dirty = true; render(); }, FAC_COLORS),
+          h('div', { class: 'row wrap', style: 'gap:6px;margin-top:8px' },
+            h('span', { class: 'small muted grow' }, `${plural(strokes, 'territory stroke')} · ${plural(units, 'unit')}`),
+            h('button', { class: 'btn small', onclick: () => { sh.close(); war.mode = 'terr'; war.fac = f.id; war.op = 'paint'; setTab('map'); setTool('war'); } }, icon('brush', 14), 'Paint land'),
+            twin ? h('button', { class: 'btn small', onclick: () => { sh.close(); Codex.open(twin.id); } }, icon('book', 14), 'Codex')
+              : h('button', { class: 'btn small', onclick: () => { sh.close(); Codex.create({ kind: 'faction', title: f.name }); } }, icon('book', 14), 'Codex page'))));
+      }
+      if (!S.world.factions.length) list.append(h('div', { class: 'empty' }, 'No factions yet. Add nations, houses, companies or warbands, then paint their land with the flag tool.'));
+    };
+    render();
+    sh = openSheet({ title: 'Factions', body: list, foot: [
+      h('button', { class: 'btn', onclick: () => { addFaction(); render(); } }, icon('plus', 16), 'Add faction'),
+      h('button', { class: 'btn', onclick: () => { sh.close(); milListSheet(); } }, icon('list', 16), 'Military'),
+      h('div', { class: 'spacer' }), h('button', { class: 'btn', onclick: () => sh.close() }, 'Done')] });
+  }
+  function setFront(a, b, w) {
+    const i = S.world.fronts.findIndex(x => (x.a === a && x.b === b) || (x.a === b && x.b === a));
+    if (!w) { if (i >= 0) S.world.fronts.splice(i, 1); } else if (i >= 0) S.world.fronts[i].w = w; else S.world.fronts.push({ a, b, w });
+    save(); terrVer++; dirty = true;
+  }
+  function facChips(cur, onPick) {
+    return h('div', { class: 'tog-chips', style: 'margin:6px 0' }, S.world.factions.map(f => { const c = safeColor(f.color), on = f.id === cur;
+      return h('button', { type: 'button', class: on ? 'on' : '', style: on ? `background:${c};border-color:${c};color:#fff` : `border-color:${c}`, onclick: () => onPick(f.id) }, f.name); }),
+      h('button', { type: 'button', onclick: () => { const f = addFaction(); onPick(f.id); } }, '+ Faction'));
+  }
+  function warPanel() {
+    const facs = S.world.factions;
+    if (!facOf(war.fac)) war.fac = facs[0] ? facs[0].id : null;
+    const pick = id => { war.fac = id; renderPanel(); dirty = true; };
+    const brushRow = () => slider('Brush', 8, 160, war.size, v => { war.size = v; dirty = true; }, v => fmtDist(v * 2 * mpp()));
+    panel.append(seg([['terr', 'Land'], ['cont', 'Contest'], ['unit', 'Units'], ['arrow', 'Arrows'], ['front', 'Front'], ['battle', 'Battle']], war.mode, v => { war.mode = v; renderPanel(); dirty = true; }));
+    if (war.mode === 'terr') {
+      panel.append(facChips(war.fac, pick), seg([['paint', 'Claim land'], ['erase', 'Unclaim']], war.op, v => { war.op = v; renderPanel(); }), h('div', { style: 'height:6px' }), brushRow(),
+        undoRow('Drag to grow a nation. Claiming takes land from others.'));
+    } else if (war.mode === 'cont') {
+      if (!facOf(war.a)) war.a = facs[0] ? facs[0].id : null;
+      if (!facOf(war.b) || war.b === war.a) { const o = facs.find(f => f.id !== war.a); war.b = o ? o.id : null; }
+      const sel = (cur, on) => { const s2 = facSelect(cur, false); s2.style.flex = '1'; s2.addEventListener('change', () => { on(s2.value); renderPanel(); dirty = true; }); return s2; };
+      const fr = S.world.fronts.find(x => (x.a === war.a && x.b === war.b) || (x.a === war.b && x.b === war.a));
+      panel.append(h('div', { class: 'row', style: 'gap:6px;margin:6px 0' }, sel(war.a, v => { war.a = v; }), h('span', { class: 'small muted' }, 'vs'), sel(war.b, v => { war.b = v; })),
+        seg([['paint', 'Paint contested'], ['erase', 'Clear']], war.op, v => { war.op = v; renderPanel(); }), h('div', { style: 'height:6px' }), brushRow(),
+        war.a && war.b && war.a !== war.b ? slider('Frontier', 0, 150, fr ? fr.w : 0, v => setFront(war.a, war.b, v), v => (v ? fmtDist(v * T.MI) + ' band' : 'Off')) : h('div', { class: 'tiny muted' }, 'Add a second faction to contest land.'),
+        undoRow('Paint a disputed zone, or slide Frontier to contest their whole shared border'));
+    } else if (war.mode === 'unit') {
+      const grid = h('div', { class: 'biome-grid' });
+      for (const [k, v] of Object.entries(UNITS)) {
+        const c = document.createElement('canvas'), z = 2; c.width = 68; c.height = 60; c.style.width = '34px'; c.style.height = '30px';
+        const g = c.getContext('2d'); g.scale(z, z); milGlyph(g, k, 17, 17, 13, facColor(war.fac), null);
+        grid.append(h('button', { class: 'biome-sw' + (war.unit === k ? ' on' : ''), type: 'button', onclick: () => { war.unit = k; renderPanel(); } }, c, v[0]));
+      }
+      const ech = h('select', null, ECH.map(([k, v, t]) => h('option', { value: k }, `${v} (${t})`))); ech.value = war.ech; ech.addEventListener('change', () => { war.ech = ech.value; });
+      panel.append(facChips(war.fac, pick), grid, h('div', { class: 'row', style: 'gap:8px' }, h('span', { class: 'small muted' }, 'Size'), ech),
+        h('div', { class: 'tiny muted', style: 'margin-top:4px' }, 'Tap the map to deploy. Drag a unit to move it, tap it to edit.'));
+      requestAnimationFrame(() => { const on = grid.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' }); });
+    } else if (war.mode === 'arrow') {
+      panel.append(facChips(war.fac, pick), seg([['advance', 'Advance'], ['attack', 'Attack'], ['retreat', 'Retreat'], ['supply', 'Supply']], war.arrow, v => { war.arrow = v; }), h('div', { style: 'height:6px' }),
+        undoRow('Drag to draw a movement arrow'));
+    } else if (war.mode === 'front') {
+      panel.append(facChips(war.fac, pick), undoRow('Drag to draw a front line. Teeth face the enemy; flip them from its sheet.'));
+    } else {
+      panel.append(h('div', { class: 'small', style: 'margin:8px 0' }, 'Tap where a battle was fought. It is dated today and named after the nearest place.'),
+        h('div', { class: 'tiny muted' }, `${plural(S.world.mil.filter(m => m.t === 'battle').length, 'battle')} on the map`));
+    }
+    panel.append(h('div', { class: 'row', style: 'margin-top:6px;gap:6px' },
+      h('button', { class: 'btn small', onclick: factionsSheet }, icon('flag', 16), 'Factions…'),
+      h('button', { class: 'btn small', onclick: milListSheet }, icon('list', 16), 'Military list')));
+  }
+
   /* ---------- reshaping lines by dragging, and moving places with their roads ---------- */
   const SHAPEABLE = new Set(['road', 'trail', 'border']);
   let shape = null;   // { f }: the line being reshaped
@@ -4342,7 +4968,12 @@ const MapView = (() => {
     }
     L.f.pts = out;
   }
+  const isGrab = g => !!g && (g.type === 'shape' || g.type === 'place' || g.type === 'mil');
   function grabAt(x, y) {
+    if (tool === 'war' && (war.mode === 'unit' || war.mode === 'battle')) {
+      const pm = milPointAt(x, y);
+      if (pm) return { type: 'mil', m: pm, x0: x, y0: y, moved: false, before: [pm.lat, pm.lon], lines: [] };
+    }
     if (shape && S.world.features.includes(shape.f)) {
       const { scr } = lineScreen(shape.f);
       let bi = -1, bd = 22; scr.forEach((sc, k) => { if (sc) { const d = Math.hypot(sc[0] - x, sc[1] - y); if (d < bd) { bd = d; bi = k; } } });
@@ -4367,6 +4998,7 @@ const MapView = (() => {
     return null;
   }
   function dragGrab(g, x, y) {
+    if (g.type === 'mil') { const ll = screenToLL(x, y); if (ll) { g.m.lat = +ll[0].toFixed(6); g.m.lon = +ll[1].toFixed(6); } dirty = true; return; }
     const dx = x - g.x0, dy = y - g.y0;
     if (g.type === 'place') { const ll = screenToLL(x + g.px, y + g.py); if (ll) { g.p.lat = +ll[0].toFixed(6); g.p.lon = +ll[1].toFixed(6); } }
     for (const L of g.lines) pullLine(L, dx, dy);
@@ -4374,6 +5006,11 @@ const MapView = (() => {
   }
   function endGrab(g, cancel) {
     if (!g.moved) { if (!cancel) onTap(g.x0, g.y0); return; }
+    if (g.type === 'mil') {
+      const m = g.m, b = g.before, back = () => { m.lat = b[0]; m.lon = b[1]; save(); dirty = true; };
+      if (cancel) { back(); return; }
+      save(); toast(`Moved ${m.name || 'it'}`, 4000, { label: 'Undo', fn: back }); return;
+    }
     const restore = () => {
       for (const L of g.lines) L.f.pts = L.before;
       if (g.type === 'place') { g.p.lat = g.before[0]; g.p.lon = g.before[1]; }
@@ -4410,6 +5047,10 @@ const MapView = (() => {
     sh = openSheet({ title: f.name || st.name, body: h('div', null,
       h('div', { class: 'row', style: 'gap:10px;margin-bottom:6px' }, icon(st.icon, 22), h('div', { class: 'small muted' }, featureSummary(f))),
       field('Name', Names.field(name, () => f.kind), f.pts ? 'Named rivers, roads and borders are labelled along their line.' : null),
+      f.pts ? h('button', { class: 'btn small', style: 'margin:2px 0 8px', onclick: () => profileSheet(ptsLL(f), false, f.name || st.name) }, icon('mountain', 16), 'Elevation profile') : null,
+      f.kind === 'border' ? h('div', null,
+        field('Colour', colorSwatches(f.color || '#8e44ad', c => { f.color = c; save(); dirty = true; }, ['#8e44ad', '#c0392b', '#1f6feb', '#2e7d32', '#111111'])),
+        (() => { const c = h('input', { type: 'checkbox', checked: !!f.fill }); c.addEventListener('change', () => { f.fill = c.checked; save(); dirty = true; }); return h('label', { class: 'check' }, c, h('div', null, 'Shade the territory inside', h('div', { class: 'tiny muted' }, 'Joins the two ends and tints the area: kingdoms, claims, zones'))); })()) : null,
       f.kind === 'road' ? (() => {
         const [A, B] = roadEnds(f);
         return h('div', null,
@@ -4466,6 +5107,7 @@ const MapView = (() => {
       panel.append(h('div', { class: 'row' }, icon('road', 18), h('div', { class: 'grow small' }, h('b', null, `${a.name} → ${b.name}`), h('div', { class: 'tiny muted' }, `${fmtDist(r.len)} · ≈ ${daysTxt(r.days)} ${TRAVEL[travelMode()][0].toLowerCase()} · ${plural(r.legs.length, 'leg')}`))),
         h('div', { class: 'row', style: 'margin-top:8px' },
           h('button', { class: 'btn small', onclick: () => routeSheet(a, b) }, icon('list', 16), 'Details'),
+          h('button', { class: 'btn small', onclick: () => profileSheet(routeLLs(r), false, `${a.name} → ${b.name}`) }, icon('mountain', 16), 'Profile'),
           h('button', { class: 'btn small', onclick: () => { routeHL = null; renderPanel(); dirty = true; } }, 'Clear'),
           h('div', { class: 'grow' }),
           h('button', { class: 'btn small primary', onclick: () => { const rr = planRoute(a, b); routeHL = null; renderPanel(); if (rr) travelRoute(rr, a, b); } }, icon('calendar', 16), 'Travel')));
@@ -4541,6 +5183,7 @@ const MapView = (() => {
           h('button', { class: 'btn primary share-go', disabled: share.busy, onclick: makeImage }, icon('share', 16), share.busy ? 'Rendering…' : 'Create image')));
     } else if (tool === 'measure') {
       let tot = 0; for (let k = 1; k < measure.length; k++) tot += gcAngle(measure[k - 1], measure[k]) * T.RM;
+      if (mClosed && measure.length > 2) tot += gcAngle(measure[measure.length - 1], measure[0]) * T.RM;
       const mode = TRAVEL[S.ui.travel] ? S.ui.travel : 'foot', days = tot / T.MI / TRAVEL[mode][1], whole = Math.max(1, Math.ceil(days - 0.05));
       panel.append(
         h('div', { class: 'row' }, h('div', { class: 'grow' }, h('b', { class: 'num', style: 'font-size:18px' }, measure.length > 1 ? fmtDist(tot) : 'Tap points on the map'),
@@ -4548,9 +5191,16 @@ const MapView = (() => {
         measure.length > 1 ? h('div', { style: 'margin-top:8px' }, seg(Object.entries(TRAVEL).map(([k, v]) => [k, v[0]]), mode, v => { S.ui.travel = v; save(); renderPanel(); })) : null,
         h('div', { class: 'row', style: 'margin-top:8px' },
           h('button', { class: 'btn small', disabled: !measure.length, onclick: () => { measure.pop(); dirty = true; renderPanel(); } }, icon('undo', 16), 'Remove last'),
-          h('button', { class: 'btn small', disabled: !measure.length, onclick: () => { measure = []; dirty = true; renderPanel(); } }, 'Clear'),
+          h('button', { class: 'btn small', disabled: !measure.length, onclick: () => { measure = []; mClosed = false; dirty = true; renderPanel(); } }, 'Clear'),
           h('div', { class: 'grow' }),
           measure.length > 1 ? h('button', { class: 'btn small primary', onclick: () => journey(whole) }, icon('calendar', 16), `Travel ${plural(whole, 'day')}`) : null));
+      if (measure.length > 1) panel.append(h('div', { class: 'row wrap', style: 'margin-top:6px;gap:6px' },
+        h('button', { class: 'btn small', onclick: () => profileSheet(measure.slice(), mClosed) }, icon('mountain', 16), 'Profile'),
+        measure.length > 2 ? h('button', { class: 'btn small' + (mClosed ? ' primary' : ''), onclick: () => { mClosed = !mClosed; dirty = true; renderPanel(); } }, mClosed ? `Area ${fmtArea(polyArea(measure))}` : 'Close loop · area') : null,
+        h('button', { class: 'btn small', onclick: () => measureToLine('road') }, icon('road', 16), 'Make road'),
+        h('button', { class: 'btn small', onclick: () => measureToLine('trail') }, icon('trail', 16), 'Trail'),
+        h('button', { class: 'btn small', onclick: () => measureToLine('border') }, icon('border', 16), 'Border')));
+      else panel.append(h('div', { class: 'tiny muted', style: 'margin-top:6px' }, 'Taps near a place snap to it. Two or more points unlock the elevation profile, area, and turning the line into a road, trail or border.'));
     } else if (tool === 'place') {
       panel.append(h('div', { class: 'row' }, icon('pin', 18), h('div', { class: 'grow small' }, 'Tap the map to add a place. Tap a marker to open it, or drag it to move it (its roads follow).'),
         h('button', { class: 'btn small', onclick: () => placesSheet() }, 'List')),
@@ -4559,7 +5209,8 @@ const MapView = (() => {
           h('button', { class: 'btn small', style: 'flex:1', onclick: () => { toast('Surveying roads…', 1200); setTimeout(autoRoads, 60); } }, icon('road', 16), 'Auto roads'),
           h('button', { class: 'btn small', style: 'flex:1', onclick: roadsSheet }, icon('list', 16), 'Roads…')),
         undoRow('Settlements and roads for the area in view'));
-    } else show = false;
+    } else if (tool === 'war') warPanel();
+    else show = false;
     panel.classList.toggle('show', show);
   }
 
@@ -4644,7 +5295,8 @@ const MapView = (() => {
     g.fillStyle = ink; g.beginPath(); g.moveTo(x, y - s); g.lineTo(x + s * 0.42, y + s * 0.5); g.lineTo(x, y + s * 0.22); g.lineTo(x - s * 0.42, y + s * 0.5); g.closePath(); g.fill();
     g.font = `700 ${Math.round(15 * u)}px -apple-system, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.fillText('N', x, y - s - 3 * u);
   }
-  function composeImage(map, fr, k) {
+  function composeImage(map0, fr, k) {
+    const map = tinted(map0);
     const out = document.createElement('canvas'); out.width = fr.ow; out.height = fr.oh;
     const g = out.getContext('2d'), L = fr.lay, u = Math.min(fr.ow, fr.oh) / 1080;
     const st = lastStyle, topo = !!(st && st.topo), mPx = mpp() / k;
@@ -4722,8 +5374,26 @@ const MapView = (() => {
   function layersSheet() {
     const lay = S.ui.layers;
     const tog = (key, label, sub) => { const c = h('input', { type: 'checkbox', checked: !!lay[key] }); c.addEventListener('change', () => { lay[key] = c.checked; save(); dirty = true; }); return h('label', { class: 'check' }, c, h('div', null, label, sub ? h('div', { class: 'tiny muted' }, sub) : null)); };
+    const inv = (key, label, sub) => { const c = h('input', { type: 'checkbox', checked: !lay[key] }); c.addEventListener('change', () => { lay[key] = !c.checked; save(); terrVer++; dirty = true; }); return h('label', { class: 'check' }, c, h('div', null, label, sub ? h('div', { class: 'tiny muted' }, sub) : null)); };
     const body = h('div', null,
       field('Map style', seg([['auto', 'Auto'], ['atlas', 'Atlas'], ['topo', 'Topographic']], lay.style, v => { lay.style = v; save(); dirty = true; }), 'Auto keeps the coloured atlas at every zoom unless you turn on USGS sheets below.'),
+      field('Tint', seg(Object.entries(TINTS).map(([k, v]) => [k, v[0]]), lay.tint || 'natural', v => { lay.tint = v; save(); applyTint(); dirty = true; }), 'A colour grade over the whole map. Shared images use it too.'),
+      field('Label size', seg([[0.85, 'Small'], [1, 'Normal'], [1.2, 'Large'], [1.45, 'Huge']], +lay.labelScale || 1, v => { lay.labelScale = v; save(); dirty = true; })),
+      field('Show on the map', (() => {
+        const box = h('div', { class: 'tog-chips' }), counts = groupCounts(), keys = sortGroups(Object.keys(counts));
+        const draw = () => {
+          box.innerHTML = '';
+          if (!keys.length) box.append(h('span', { class: 'tiny muted' }, 'No places yet.'));
+          for (const k of keys) { const hid = !!(lay.hide || {})[k]; box.append(h('button', { type: 'button', class: hid ? 'off' : '', onclick: () => { lay.hide = { ...(lay.hide || {}) }; if (hid) delete lay.hide[k]; else lay.hide[k] = true; save(); dirty = true; draw(); } }, `${groupName(k)} · ${counts[k]}`)); }
+        };
+        draw(); return box;
+      })(), 'Tap a group to hide or show it.'),
+      tog('symNoLabels', 'Hide names beside land-use and other symbols', 'Just the symbol, for farm, herd, hazard and similar markers'),
+      h('div', { class: 'lbl', style: 'margin-top:10px' }, 'FACTIONS & WAR'),
+      inv('noTerr', 'Territories and contested zones'), inv('noTerrNames', 'Faction names across their land'),
+      field('Territory fill', seg([[0.1, 'Faint'], [0.2, 'Medium'], [0.34, 'Strong']], +lay.terrA || 0.2, v => { lay.terrA = v; save(); terrVer++; dirty = true; })),
+      inv('noMil', 'Military: units, arrows, front lines and battles'), inv('noMilNames', 'Unit names'),
+      h('button', { class: 'btn small', style: 'margin:4px 0 10px', onclick: () => { lay.tint = 'antique'; lay.noTerr = false; lay.noMil = false; lay.symNoLabels = true; lay.hide = { ...(lay.hide || {}), 'sym:eco': true, 'sym:leisure': true, 'sym:farm': true, 'sym:food': true }; save(); applyTint(); terrVer++; dirty = true; sh.close(); toast('War-room view: antique tint, military and territory on, civilian symbols hidden'); } }, icon('flag', 16), 'War-room view'),
       tog('usgsClose', 'Switch to USGS sheets when zoomed in', 'Auto style only: map sheets with contours below about 40 miles across'),
       (() => { const c = h('input', { type: 'checkbox', checked: !!lay.zoomLock }); c.addEventListener('change', () => { lay.zoomLock = c.checked; save(); if (cam.mode === 'local') postCam(); dirty = true; toast(c.checked ? 'Zoom stops at 10 miles across' : 'Zoom lock off'); }); return h('label', { class: 'check' }, c, h('div', null, 'Lock zoom at 10 miles across', h('div', { class: 'tiny muted' }, 'Stops close-ups from zooming in any further'))); })(),
       tog('hill', 'Shaded relief'), tog('contours', 'Contour lines', 'Topographic style only, labelled every fifth line'),
@@ -4786,6 +5456,7 @@ const MapView = (() => {
     if (a === 'zin') animateZoom(W / 2, H / 2, 2); else if (a === 'zout') animateZoom(W / 2, H / 2, 0.5);
     else if (a === 'home') home(); else if (a === 'layers') layersSheet(); else if (a === 'world') worldSheet(); else if (a === 'places') placesSheet();
     else if (a === 'share') setTool('share');
+    else if (a === 'back') viewBack();
   });
   new ResizeObserver(() => { resize(); }).observe(view);
   document.addEventListener('keydown', e => {
@@ -4797,6 +5468,7 @@ const MapView = (() => {
     if (k === '+' || k === '=') animateZoom(W / 2, H / 2, 2);
     else if (k === '-' || k === '_') animateZoom(W / 2, H / 2, 0.5);
     else if (k === 'h' || k === 'H') home();
+    else if (k === 'b' || k === 'B' || k === 'Backspace') viewBack();
     else if (k === 'Escape' && tool !== 'pan') setTool('pan');
   });
 
@@ -4808,12 +5480,12 @@ const MapView = (() => {
     const c = S.ui.cam;
     if (c && isFinite(c.x) && isFinite(c.y) && isFinite(c.s) && c.s > 0) { Object.assign(cam, c); if (cam.mode === 'local') updateRot(); else clampWorld(); }
     else home();
-    renderPanel();
-    on('data', () => { dirty = true; });
+    renderPanel(); applyTint();
+    on('data', () => { dirty = true; terrVer++; });
     requestAnimationFrame(frame);
   }
   return {
-    init, flyTo, openPlace, editPlace, placesSheet, goHere, hereSheet, roadsSheet, routeSheet, worldSheet, layersSheet, legendSheet, home, zoomToFeature, openFeature, placeWidth, nearby,
+    init, flyTo, openPlace, editPlace, placesSheet, goHere, hereSheet, roadsSheet, routeSheet, factionsSheet, milSheet, milLabel, showMil, worldSheet, layersSheet, legendSheet, home, zoomToFeature, openFeature, placeWidth, nearby,
     stampName: k => (STAMPS[k] || { name: k }).name,
     centerLL,
     show() { visible = true; resize(); dirty = true; },
@@ -7103,6 +7775,15 @@ const Settings = (() => {
 })();
 
 /* ===================== search everything, commands and shortcuts ===================== */
+// "12.5, -40.25" or "12.5N 40.25W" → [lat, lon]
+function parseCoords(q) {
+  const m = String(q).trim().match(/^(-?\d+(?:\.\d+)?)\s*°?\s*([nsNS])?\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*°?\s*([ewEW])?$/);
+  if (!m) return null;
+  let la = +m[1], lo = +m[3];
+  if (m[2] && /s/i.test(m[2])) la = -Math.abs(la);
+  if (m[4] && /w/i.test(m[4])) lo = -Math.abs(lo);
+  return Math.abs(la) > 90 || Math.abs(lo) > 180 ? null : [la, lo];
+}
 function commands() {
   return [
     ['Roll dice', 'dice', () => Dice.sheet(), 'random d20 r'],
@@ -7119,6 +7800,7 @@ function commands() {
     ['Relationship web', 'web', () => Chars.webSheet(), 'relations graph'],
     ['Places on the map', 'pin', () => { setTab('map'); MapView.placesSheet(); }, 'locations towns'],
     ['Saved map views', 'bookmark', () => { setTab('map'); MapView.placesSheet('views'); }, 'bookmark'],
+    ['Factions & territory…', 'flag', () => { setTab('map'); MapView.setTool('war'); MapView.factionsSheet(); }, 'nation kingdom borders war army faction'],
     ['Roads…', 'road', () => { setTab('map'); MapView.roadsSheet(); }, 'highway network connect duplicates'],
     ['Route planner', 'map', () => { setTab('map'); MapView.routeSheet(); }, 'journey travel path directions road'],
     ['You are here', 'target', () => { setTab('map'); MapView.goHere(); }, 'location position heading me party'],
@@ -7158,7 +7840,11 @@ function openSearch(initial = '') {
     for (const c of S.chars) add('Characters', null, c.name, [c.role !== 'PC' ? c.role : null, c.species, c.status !== 'alive' ? STATUSES[c.status][0] : null, ...c.tags.map(t => '#' + t)].filter(Boolean).join(' · '),
       () => Chars.open(c.id), Math.max(score(c.name, q) * 2, ...c.tags.map(t => score(t, q)), score(c.species, q) * 0.5), c);
     for (const c of S.chars) for (const it of c.inv.items) add('Items', 'bag', it.name + (+it.qty !== 1 ? ' ×' + fmtNum(+it.qty || 0, 2) : ''), 'Carried by ' + c.name, () => Chars.open(c.id, 'items'), score(it.name, q));
-    for (const p of S.world.places) add('Places', 'pin', p.name, (PTYPES[p.type] || PTYPES.other).name + (p.pop ? ' · pop. ' + fmtInt(p.pop) : ''), () => { setTab('map'); MapView.flyTo(p.lat, p.lon, MapView.placeWidth(p)); }, Math.max(score(p.name, q) * 2, q.length > 2 ? score(p.notes, q) * 0.5 : 0));
+    const cq = parseCoords(q); if (cq) add('Map', 'target', `Go to ${fmtLL(cq)}`, 'Coordinates', () => { setTab('map'); MapView.flyTo(cq[0], cq[1], 60); }, 9);
+    for (const p of S.world.places) { const sy = p.sym && SYMBOLS.get(p.sym); add('Places', 'pin', p.name, (sy ? sy.name + ' · ' : '') + (PTYPES[p.type] || PTYPES.other).name + (p.pop ? ' · pop. ' + fmtInt(p.pop) : ''), () => { setTab('map'); MapView.flyTo(p.lat, p.lon, MapView.placeWidth(p)); },
+      Math.max(score(p.name, q) * 2, q.length > 2 ? score(p.notes, q) * 0.5 : 0, q.length > 2 ? score((PTYPES[p.type] || PTYPES.other).name, q) * 0.6 : 0, q.length > 2 && sy ? score(sy.name, q) * 0.8 : 0)); }
+    for (const f of S.world.factions) add('Factions', 'flag', f.name, 'Faction', () => { setTab('map'); MapView.factionsSheet(); }, score(f.name, q) * 1.5);
+    for (const m of S.world.mil) if (m.name) add('Military', 'flag', m.name, MapView.milLabel(m), () => { setTab('map'); MapView.showMil(m); }, score(m.name, q));
     for (const f of S.world.features) if (f.name) add('Map features', 'river', f.name, MapView.stampName(f.kind), () => { setTab('map'); MapView.zoomToFeature(f); }, score(f.name, q) * 2);
     for (const e of S.events) add('Events', 'timeline', e.title, Cal.fmt(e.start) + ' · ' + (e.cat || 'General'), () => Timeline.focusEvent(e.id), Math.max(score(e.title, q) * 2, q.length > 2 ? score(e.desc, q) * 0.5 : 0, score(e.cat, q) * 0.4));
     for (const e of S.codex) { const k = CODEX_KINDS[e.kind] || CODEX_KINDS.note; add(e.kind === 'session' ? 'Journal' : 'Codex', k[1], e.title, k[0] + (e.kind === 'session' ? ' · ' + Cal.fmt(e.day) : ''), () => Codex.open(e.id), Math.max(score(e.title, q) * 2, ...e.tags.map(t => score(t, q)), q.length > 2 ? score(e.body, q) * 0.6 : 0)); }
