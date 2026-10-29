@@ -817,7 +817,7 @@ const Terrain = (function () {
   // ---------- edits: sculpt & paint dabs ----------
   const OPS = { raise: 1, lower: 2, flatten: 3, smooth: 4, roughen: 5 };
   let SC_N = 0, SX, SY, SZ, SC2, SR, SOP, SAMT, SSTR, STGT;
-  let PA_N = 0, AX, AY, AZ, AC2, AR, AB;
+  let PA_N = 0, AX, AY, AZ, AC2, AR, AB, AS, PA_X = false, PSB, PSS, PSA, PST, PSF, PSO;
   function setEdits(sculpt, paint, features) {
     setFeatures(features);
     sculpt = sculpt || []; paint = paint || [];
@@ -834,13 +834,23 @@ const Terrain = (function () {
       }
     }
     n = 0; for (const s of paint) n += s.pts.length >> 1;
-    PA_N = n; AX = new Float64Array(n); AY = new Float64Array(n); AZ = new Float64Array(n); AC2 = new Float64Array(n); AR = new Float64Array(n); AB = new Int16Array(n);
-    k = 0;
-    for (const s of paint) {
-      const sh = Math.sin(s.r / 2), c2 = 4 * sh * sh, b = s.b == null || s.b < 0 ? -2 : s.b;
+    PA_N = n; AX = new Float64Array(n); AY = new Float64Array(n); AZ = new Float64Array(n); AC2 = new Float64Array(n); AR = new Float64Array(n); AB = new Int16Array(n); AS = new Int32Array(n);
+    // per stroke: biome, softness, strength, mixing width, patch-noise frequency and offset
+    const np = paint.length;
+    PSB = new Int16Array(np); PSS = new Float64Array(np); PSA = new Float64Array(np); PST = new Float64Array(np); PSF = new Float64Array(np); PSO = new Float64Array(np * 3);
+    k = 0; PA_X = false;
+    for (let si = 0; si < np; si++) {
+      const s = paint[si], sh = Math.sin(s.r / 2), c2 = 4 * sh * sh, b = s.b == null || s.b < 0 ? -2 : s.b;
+      const soft = clamp(+s.soft || 0, 0, 1), mx = s.mx == null ? 0.35 : clamp(+s.mx, 0, 1);
+      PSB[si] = b; PSS[si] = soft; PSA[si] = soft > 0 && s.str != null ? clamp(+s.str, 0.02, 1) : 1;
+      PST[si] = soft > 0 ? 0.02 + 0.42 * mx * Math.sqrt(mx) : 0;
+      PSF[si] = 1 / (0.8 * Math.max(s.r, 1e-7));
+      const ha = Math.round((s.pts[0] || 0) * 1e5), hb = Math.round((s.pts[1] || 0) * 1e5);
+      PSO[si * 3] = 256 * ihash(ha, hb); PSO[si * 3 + 1] = 256 * ihash(hb, ha + 7); PSO[si * 3 + 2] = 256 * ihash(ha ^ 0x5bd1, hb + 77);
+      if (soft > 0 || b === 20) PA_X = true;
       for (let i = 0; i + 1 < s.pts.length; i += 2) {
         const la = s.pts[i] * D2R, lo = s.pts[i + 1] * D2R, cl = Math.cos(la);
-        AX[k] = cl * Math.cos(lo); AY[k] = cl * Math.sin(lo); AZ[k] = Math.sin(la); AC2[k] = c2; AR[k] = s.r; AB[k] = b; k++;
+        AX[k] = cl * Math.cos(lo); AY[k] = cl * Math.sin(lo); AZ[k] = Math.sin(la); AC2[k] = c2; AR[k] = s.r; AB[k] = b; AS[k] = si; k++;
       }
     }
   }
@@ -919,7 +929,7 @@ const Terrain = (function () {
   const FKIND = { mountain: 1, volcano: 2, crater: 3, mesa: 4, hill: 5, lake: 6, island: 7 };
   let FP_N = 0, FPX, FPY, FPZ, FPU, FPV, FPR, FPE, FPK, FPH, FPL, FPS;
   let FS_N = 0, FSA, FSB, FSN, FSCX, FSCY, FSCZ, FSR, FSL2, FSLC, FSLM, FSS0, FSW0, FSW1, FSB0, FSB1, FSV, FSHV, FSG, FSLAM, FSSEED, FSWMIN;
-  let curFP = null, curFPn = 0, curFS = null, curFSn = 0, MEANDER_MIN = 5, oLake = NaN, oVolc = false;
+  let curFP = null, curFPn = 0, curFS = null, curFSn = 0, MEANDER_MIN = 5, oLake = NaN, oLakeH = 0, oVolc = false;
   function llv(lat, lon) { const la = lat * D2R, lo = lon * D2R, c = Math.cos(la); return [c * Math.cos(lo), c * Math.sin(lo), Math.sin(la)]; }
   const isWaterLine = k => k === 'river' || k === 'canyon';
   // river half-width (m) at fraction u of the way from source to mouth
@@ -950,13 +960,13 @@ const Terrain = (function () {
       if (en < 1e-9) { ex = 1; ey = 0; } else { ex /= en; ey /= en; }
       const nx = -c[2] * ey, ny = c[2] * ex, nz = c[0] * ey - c[1] * ex;   // north = centre × east
       const r = rng(hashStr('stamp' + (f.seed || 1)));
-      const th = r() * PI, el = f.kind === 'mountain' ? 1 + r() * 0.8 : f.kind === 'mesa' || f.kind === 'island' ? 1 + r() * 0.5 : f.kind === 'hill' ? 1 + r() * 0.3 : 1 + r() * 0.1;
+      const th = r() * PI, el = f.kind === 'mountain' ? 1 + r() * 0.8 : f.kind === 'mesa' || f.kind === 'island' ? 1 + r() * 0.5 : f.kind === 'hill' ? 1 + r() * 0.3 : f.kind === 'lake' ? 1 + r() * 0.35 : 1 + r() * 0.1;
       const sx = Math.sqrt(el), sy = 1 / sx, chr = 2 * Math.sin(f.r / 2), ct = Math.cos(th), st = Math.sin(th), k3 = k * 3;
       FPX[k] = c[0]; FPY[k] = c[1]; FPZ[k] = c[2];
       FPU[k3] = (ct * ex + st * nx) / (chr * sx); FPU[k3 + 1] = (ct * ey + st * ny) / (chr * sx); FPU[k3 + 2] = st * nz / (chr * sx);
       FPV[k3] = (-st * ex + ct * nx) / (chr * sy); FPV[k3 + 1] = (-st * ey + ct * ny) / (chr * sy); FPV[k3 + 2] = ct * nz / (chr * sy);
       FPK[k] = FKIND[f.kind]; FPH[k] = +f.h || 0; FPL[k] = f.level == null ? NaN : +f.level; FPS[k] = ((+f.seed || 1) % 997) * 1.37;
-      FPE[k] = f.kind === 'crater' ? 1.75 : 1.08;
+      FPE[k] = f.kind === 'crater' ? 1.75 : f.kind === 'lake' ? 1.6 : 1.08;
       FPR[k] = f.r * Math.max(sx, sy) * FPE[k] * 1.25 + 1e-6;
     });
     const lines = features.filter(f => isWaterLine(f.kind) && f.pts && f.pts.length >= 4 && Array.isArray(f.bed) && f.bed.length * 2 === f.pts.length);
@@ -1057,7 +1067,7 @@ const Terrain = (function () {
       }
     }
     // stamped landforms; footprints are stretched, rotated and edge-jittered so no two look alike
-    oLake = NaN; oVolc = false;
+    oLake = NaN; oLakeH = 0; oVolc = false;
     const fpn = curFP ? curFPn : FP_N;
     if (fpn) {
       const jn = clamp(ch[CH_J] + DJ_GAIN * ch[CH_DJ], -1.5, 1.5);
@@ -1085,7 +1095,7 @@ const Terrain = (function () {
           }
           case 4: H += h * (1 - smoothstep(0.84, 1.02, tj)); m *= 0.3 + 0.7 * smoothstep(0.72, 0.98, tj); break;  // mesa
           case 5: if (tj < 1) { const c = 1 - tj * tj; H += h * c * c; } break;                                // hill
-          case 6: if (t < 1) { const c = 1 - t * t; H -= h * c * c; if (!(FPL[k] <= oLake)) oLake = FPL[k]; m *= 0.4 + 0.6 * t; } break; // lake basin
+          case 6: { const tl = t / shape * (1 + 0.06 * jn); if (tl < 1) { const c = 1 - tl * tl; H -= h * c * c; if (!(FPL[k] <= oLake)) { oLake = FPL[k]; oLakeH = h; } m *= 0.4 + 0.6 * tl; } } break; // lake basin, lobed shoreline
           case 7: if (tj < 1) H += h * Math.pow(1 - tj * tj, 1.3); break;                                      // island
         }
       }
@@ -1141,15 +1151,78 @@ const Terrain = (function () {
     if (t < 18) { if (m < 0.2) return 9; if (m < 0.36) return 6; if (m < 0.46) return 7; if (m < 0.8) return 4; return 5; }
     if (m < 0.18) return 8; if (m < 0.4) return 10; if (m < 0.64) return 11; return 12;
   }
-  // painted biome at a point: id, -2 for "erase back to generated", -1 when unpainted
-  function paintAt(px, py, pz, j, pl, pn) {
-    const n = pl ? pn : PA_N, thr = 1 + 0.55 * j;
-    for (let q = n - 1; q >= 0; q--) {
-      const k = pl ? pl[q] : q;
-      const dx = px - AX[k], dy = py - AY[k], dz = pz - AZ[k];
-      if (dx * dx + dy * dy + dz * dz < AC2[k] * thr) return AB[k];
+  // ---------- painted biomes ----------
+  // Solid strokes cover their discs outright (the newest wins). Soft strokes take a share of the ground that grows
+  // towards their middle; which spots they take comes from a clumpy noise pattern sized to the brush, so biomes
+  // interfinger like real ecotones instead of meeting in circles, and going over an area again fills it in.
+  // A land brush never covers water: painted lakes and rivers stay put (the ocean and generated lakes never take paint).
+  // Sets oPB (the biome shown, -1 = not painted) and oPB2/oPBW (a second biome and how much of its colour blends in)
+  let oPB = -1, oPB2 = -1, oPBW = 0, PATCH_MIN = 0, N3SD = 0;
+  // 0..1, spread evenly; octaves finer than a few pixels are left out, so every zoom shows the same clumps
+  function patchNoise(s, px, py, pz) {
+    if (!N3SD) { const r = rng(99); let a = 0; for (let i = 0; i < 4096; i++) { const v = noise3(r() * 256, r() * 256, r() * 256); a += v * v; } N3SD = Math.sqrt(a / 4096) || 0.2; }
+    const o = s * 3;
+    let f = PSF[s], amp = 1, sum = 0, vr = 0;
+    for (let oc = 0; oc < 6; oc++, f *= 2, amp *= 0.6) {
+      let w = 1;
+      if (PATCH_MIN > 0) { const lp = 1 / (f * PATCH_MIN); if (lp < 1) break; if (lp < 2) w = smoothstep(1, 2, lp); }
+      sum += w * amp * noise3(px * f + PSO[o] + oc * 17.3, py * f + PSO[o + 1] - oc * 9.1, pz * f + PSO[o + 2] + oc * 5.7);
+      vr += w * w * amp * amp;
     }
-    return -1;
+    return vr > 0 ? 1 / (1 + Math.exp(-1.702 * sum / (N3SD * Math.sqrt(vr)))) : 0.5;
+  }
+  function paintMix(px, py, pz, j, base, pl, pn) {
+    const n = pl ? pn : PA_N, thr = 1 + 0.55 * j;
+    oPB2 = -1; oPBW = 0;
+    if (!PA_X) {
+      for (let q = n - 1; q >= 0; q--) {
+        const k = pl ? pl[q] : q, dx = px - AX[k], dy = py - AY[k], dz = pz - AZ[k];
+        if (dx * dx + dy * dy + dz * dz < AC2[k] * thr) return (oPB = AB[k]);
+      }
+      return (oPB = -1);
+    }
+    let cb = base, cb2 = -1, cw = 0, s = -1, cov = 0, hit = false;
+    for (let q = 0; ; q++) {
+      const k = q < n ? (pl ? pl[q] : q) : -1, sk = k < 0 ? -1 : AS[k];
+      if (sk !== s && s >= 0 && cov > 0) {
+        // lay stroke s down with coverage cov
+        let B = PSB[s]; const er = B === -2; if (er) B = base;
+        if (!(cb === 20 && B !== 20 && !er)) {
+          let al = 1;
+          const tau = PST[s];
+          if (tau > 0) { const nn = tau + patchNoise(s, px, py, pz) * (1 - 2 * tau); al = smoothstep(-tau, tau, cov * PSA[s] - nn); }
+          if (al > 0) {
+            hit = true;
+            if (B === 20 || cb === 20) { if (al >= 0.5) { cb = B; cb2 = -1; cw = 0; } }
+            else if (B === cb) cw *= 1 - al;
+            else if (al >= 0.5) { cb2 = cb; cw = 1 - al; cb = B; }
+            else if (B === cb2) cw = Math.min(0.5, cw + (1 - cw) * al);
+            else if (al > cw) { cb2 = B; cw = al; }
+          }
+        }
+      }
+      if (k < 0) break;
+      if (sk !== s) { s = sk; cov = 0; }
+      if (cov >= 1) continue;
+      const dx = px - AX[k], dy = py - AY[k], dz = pz - AZ[k];
+      let d2 = dx * dx + dy * dy + dz * dz;
+      const soft = PSS[sk];
+      if (soft <= 0) { if (d2 < AC2[k] * thr) cov = 1; continue; }
+      // soft strokes measure to the line joining their dabs, so the stroke is even along its length
+      if (k + 1 < PA_N && AS[k + 1] === sk) {
+        const ex = AX[k + 1] - AX[k], ey = AY[k + 1] - AY[k], ez = AZ[k + 1] - AZ[k], e2 = ex * ex + ey * ey + ez * ez;
+        if (e2 > 0) {
+          let t = (dx * ex + dy * ey + dz * ez) / e2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+          const qx = dx - t * ex, qy = dy - t * ey, qz = dz - t * ez; d2 = qx * qx + qy * qy + qz * qz;
+        }
+      }
+      if (d2 >= AC2[k]) continue;
+      const c = 1 - smoothstep(1 - soft, 1, Math.sqrt(d2 / AC2[k]));
+      if (c > cov) cov = c;
+    }
+    if (!hit || (cb === base && cw <= 0.004)) return (oPB = -1);
+    if (cw > 0.004 && cb2 >= 0 && cb2 !== cb) { oPB2 = cb2; oPBW = cw; }
+    return (oPB = cb);
   }
 
   const CHB = new Float64Array(NCH);
@@ -1162,8 +1235,8 @@ const Terrain = (function () {
     const T = oT - LAPSE * (E > 0 ? E : 0), j = CHB[CH_J] + DJ_GAIN * CHB[CH_DJ];
     let b = genBiome(E, T, oMo, j), painted = false;
     if (oVolc && E > 0 && b !== 1) b = 18;
-    const lake = oLake === oLake && E < oLake && E > 0;
-    if (E > 0) { const pb = paintAt(px, py, pz, j, null, 0); if (pb >= 0) { b = pb; painted = true; } }
+    const lake = oLake > 0 && E < oLake;
+    if (E > 0) { const pb = paintMix(px, py, pz, j, b, null, 0); if (pb >= 0) { b = pb; painted = true; } }
     if (lake) b = 20;
     return { elev: E, base: H, biome: b, painted, temp: T, moist: oMo, lakeLevel: lake ? oLake : null };
   }
@@ -1183,6 +1256,7 @@ const Terrain = (function () {
     const st = q.style, lw = st.rs || 1, minPx = st.minPx || 2.5, topo = !!st.topo;
     const nG = G * G, ok = new Uint8Array(nG);
     MEANDER_MIN = Math.max(2, p * RM * 2.5);   // river meanders finer than ~2.5 px are left out at this scale
+    PATCH_MIN = p * minPx;                       // and so are paint clumps
 
     // which noise terms are visible at this scale, and which are smooth enough to interpolate from a coarse grid;
     // relief finer than 16 px shades the hills (topo style) but is left out of contours,
@@ -1309,6 +1383,8 @@ const Terrain = (function () {
 
     // ---- per-sample elevation & biome ----
     const E = new Float32Array(nG), EC = new Float32Array(nG), BI = new Uint8Array(nG);
+    let B2 = null, BW = null;   // soft paint: a second biome whose colour blends in, and how much
+    let LV = null, LH = null;   // stamped lakes: water level and basin depth wherever a lake's footprint reaches
     const ch = new Float64Array(NCH), iv = new Float64Array(NV);
     let ICH = null, nI = 0, RV = null;
     const wxs = new Float64Array(G * 4), cxs = new Int32Array(G);
@@ -1360,8 +1436,18 @@ const Terrain = (function () {
         const j = ch[CH_J] + DJ_GAIN * ch[CH_DJ];
         let bio = genBiome(e, T, Mo, j);
         if (oVolc && e > 0 && bio !== 1) bio = 18;
-        const lakeHere = oLake === oLake && e < oLake && e > 0;
-        if (e > 0) { const pl = blkPa[bk]; if (pl) { const pb = paintAt(px, py, pz, j, pl, pl.length); if (pb >= 0) bio = pb; } }
+        const lakeHere = oLake > 0 && e < oLake;
+        if (oLake > 0) { if (!LV) { LV = new Float32Array(nG).fill(NaN); LH = new Float32Array(nG); } LV[idx] = oLake; LH[idx] = oLakeH; }
+        if (e > 0) {
+          const pl = blkPa[bk];
+          if (pl) {
+            const pb = paintMix(px, py, pz, j, bio, pl, pl.length);
+            if (pb >= 0) {
+              bio = pb;
+              if (oPBW > 0) { if (!B2) { B2 = new Uint8Array(nG); BW = new Float32Array(nG); } B2[idx] = oPB2; BW[idx] = oPBW; }
+            }
+          }
+        }
         if (lakeHere) bio = 20;
         E[idx] = e; BI[idx] = bio;
         if (TPX) { TPX[idx] = px; TPY[idx] = py; TPZ[idx] = pz; }
@@ -1370,6 +1456,7 @@ const Terrain = (function () {
 
     // ---- colour pass ----
     const img = new Uint8ClampedArray(O * O * 4);
+    const LB = new Uint8Array((O * O + 7) >> 3);   // dry land, one bit a pixel: brush previews show only there
     const I = st.I || 100, showC = !!st.contours;
     const ve = st.ve || 1, hsBase = st.hill ? (topo ? 0.42 : 0.62) : 0;
     const PAL = topo ? TOP : ATL;
@@ -1385,13 +1472,20 @@ const Terrain = (function () {
         const ec = EC[idx];
         const cL = ok[idx - 1] ? EC[idx - 1] : ec, cR = ok[idx + 1] ? EC[idx + 1] : ec, cU = ok[idx - G] ? EC[idx - G] : ec, cD = ok[idx + G] ? EC[idx + G] : ec;
         const b = BI[idx];
-        const ocean = e <= 0, lake = b === 20, water = ocean || lake;
+        const lake = b === 20, ocean = e <= 0 && !lake, water = ocean || lake;
+        const lv = LV ? LV[idx] : NaN;
         let r, g, bl;
-        if (ocean) {
+        if (lake && lv === lv) {
+          // stamped lake: pale shallows grading to deep water, so it reads as a basin rather than a flat cut-out
+          const k = smoothstep(0, Math.max(20, LH[idx] * 0.55), lv - e);
+          if (topo) { r = 176 - 22 * k; g = 214 - 16 * k; bl = 241 - 8 * k; }
+          else { r = 126 - 78 * k; g = 180 - 78 * k; bl = 212 - 50 * k; }
+        } else if (ocean) {
           if (topo) { const k = smoothstep(0, 250, -e); r = 166 - 26 * k; g = 206 - 18 * k; bl = 236 - 8 * k; }
           else { oceanAtlas(-e, oc); r = oc[0]; g = oc[1]; bl = oc[2]; }
         } else {
           r = PAL[b * 3]; g = PAL[b * 3 + 1]; bl = PAL[b * 3 + 2];
+          if (B2 && !lake && BW[idx] > 0) { const c2 = B2[idx] * 3, w2 = BW[idx]; r += (PAL[c2] - r) * w2; g += (PAL[c2 + 1] - g) * w2; bl += (PAL[c2 + 2] - bl) * w2; }
           if (!topo && !lake && b !== 1) {
             const hk = smoothstep(1500, 4800, e) * 0.5;
             r += (170 - r) * hk; g += (162 - g) * hk; bl += (152 - bl) * hk;
@@ -1488,16 +1582,27 @@ const Terrain = (function () {
             }
           }
         }
+        // lakeshores: damp ground just above the water greens up, and a soft anti-aliased waterline like the coast's
+        if (lv === lv) {
+          const gp = Math.sqrt((eR - eL) * (eR - eL) + (eD - eU) * (eD - eU)) * 0.5 + 1e-9, dE = e - lv;
+          if (!water && dE > 0) {
+            const fr = (1 - smoothstep(0, Math.max(4, LH[idx] * 0.12), dE)) * 0.38;
+            if (fr > 0) { const cr = topo ? 214 : 92, cg = topo ? 236 : 132, cb = topo ? 222 : 98; r += (cr - r) * fr; g += (cg - g) * fr; bl += (cb - bl) * fr; }
+          }
+          let a = 0.6 * lw + 0.5 - Math.abs(dE) / gp; a = a < 0 ? 0 : a > 1 ? 1 : a;
+          if (a > 0) { const cr = topo ? 52 : 74, cg = topo ? 120 : 124, cb = topo ? 184 : 168; a *= topo ? 0.9 : 0.75; r += (cr - r) * a; g += (cg - g) * a; bl += (cb - bl) * a; }
+        }
         // shorelines
-        if (Math.min(e, eL, eR, eU, eD) <= 0 && Math.max(e, eL, eR, eU, eD) > 0) {
+        if (!(lv > 0) && Math.min(e, eL, eR, eU, eD) <= 0 && Math.max(e, eL, eR, eU, eD) > 0) {
           const gp = Math.sqrt((eR - eL) * (eR - eL) + (eD - eU) * (eD - eU)) * 0.5 + 1e-9;
           let a = 0.75 * lw + 0.5 - Math.abs(e) / gp; a = a < 0 ? 0 : a > 1 ? 1 : a;
           if (a > 0) { const cr = topo ? 52 : 34, cg = topo ? 120 : 64, cb = topo ? 184 : 98; a *= topo ? 1 : 0.75; r += (cr - r) * a; g += (cg - g) * a; bl += (cb - bl) * a; }
         }
-        if (lake && (BI[idx - 1] !== 20 && E[idx - 1] > 0 || BI[idx + 1] !== 20 && E[idx + 1] > 0 || BI[idx - G] !== 20 && E[idx - G] > 0 || BI[idx + G] !== 20 && E[idx + G] > 0)) {
+        if (lake && lv !== lv && (BI[idx - 1] !== 20 && E[idx - 1] > 0 || BI[idx + 1] !== 20 && E[idx + 1] > 0 || BI[idx - G] !== 20 && E[idx - G] > 0 || BI[idx + G] !== 20 && E[idx + G] > 0)) {
           const cr = topo ? 52 : 40, cg = topo ? 120 : 84, cb = topo ? 184 : 140; r += (cr - r) * 0.8; g += (cg - g) * 0.8; bl += (cb - bl) * 0.8;
         }
         img[o4] = r; img[o4 + 1] = g; img[o4 + 2] = bl; img[o4 + 3] = 255;
+        if (!water) { const li = ov * O + ou; LB[li >> 3] |= 1 << (li & 7); }
       }
     }
 
@@ -1542,8 +1647,8 @@ const Terrain = (function () {
       cands.sort((m, n) => n.pr - m.pr);
       for (const c of cands) { if (spots.length >= 3) break; if (spots.every(s => (s.x - c.x) ** 2 + (s.y - c.y) ** 2 > (60 * lw) ** 2)) spots.push(c); }
     }
-    curFP = null; curFS = null; MEANDER_MIN = 5;   // single-point queries see every feature again
-    return { img, w: O, h: O, cap, labels, spots, terr: TS ? Array.from(TS) : null };
+    curFP = null; curFS = null; MEANDER_MIN = 5; PATCH_MIN = 0;   // single-point queries see every feature again
+    return { img, w: O, h: O, cap, labels, spots, terr: TS ? Array.from(TS) : null, land: LB };
   }
 
   return {
@@ -1568,12 +1673,12 @@ self.onmessage = function (e) {
   let r;
   try { r = Terrain.renderTile(m); }
   catch (err) { self.postMessage({ rid: m.rid, error: String((err && err.stack) || err) }); return; }
-  const out = { rid: m.rid, cap: r.cap, labels: r.labels, spots: r.spots, terr: r.terr, w: r.w, h: r.h, ms: Date.now() - t0 };
-  const sendBuf = () => { out.buf = r.img.buffer; self.postMessage(out, [out.buf]); };
+  const out = { rid: m.rid, cap: r.cap, labels: r.labels, spots: r.spots, terr: r.terr, land: r.land, w: r.w, h: r.h, ms: Date.now() - t0 };
+  const sendBuf = () => { out.buf = r.img.buffer; self.postMessage(out, [out.buf, r.land.buffer]); };
   if (typeof createImageBitmap === 'function' && typeof ImageData === 'function') {
     let id;
     try { id = new ImageData(r.img, r.w, r.h); } catch (_) { sendBuf(); return; }
-    createImageBitmap(id).then(bmp => { out.bmp = bmp; self.postMessage(out, [bmp]); }, sendBuf);
+    createImageBitmap(id).then(bmp => { out.bmp = bmp; self.postMessage(out, [bmp, r.land.buffer]); }, sendBuf);
   } else sendBuf();
 };
 </script>
@@ -1978,7 +2083,78 @@ const Names = (() => {
   const root = () => cap(rand() < 0.45 ? pick(ON) + pick(MID) + pick(ON) : pick(ON) + pick(MID));
   const place = () => cap(rand() < 0.65 ? pick(ON) + pick(END) : pick(ON) + pick(MID) + pick(END));
   const person = () => `${cap(pick(ON) + pick(FIRST_END))} ${place()}`;
+
+  // Hebrew style (Settings → Random names): real towns of the Land of Israel, Hebrew place words (Kfar, Be'er, Har,
+  // Nahal…) and roots shaped like Hebrew words (CaCaC, CeCeC, miCCaC…)
+  const HE_TOWNS = ['Ashdod', 'Ashkelon', 'Akko', 'Arad', 'Afula', "Be'er Sheva", 'Beit Shemesh', "Beit She'an", 'Dimona', 'Eilat', 'Hadera', 'Haifa', 'Herzliya',
+    'Karmiel', 'Kfar Saba', 'Lod', "Ma'alot", "Modi'in", 'Nahariya', 'Netanya', 'Ofakim', "Ra'anana", 'Ramla', 'Rehovot', 'Tzfat', 'Tveria', 'Yavne', "Yokne'am",
+    'Yeruham', "Zichron Ya'akov", 'Rosh Pina', 'Metula', 'Mitzpe Ramon', 'Kiryat Shmona', 'Kiryat Gat', 'Sderot', 'Netivot', 'Ness Ziona', 'Rishon LeZion',
+    'Petah Tikva', 'Givatayim', 'Holon', 'Bat Yam', 'Or Akiva', 'Keisarya', 'Atlit', 'Megiddo', 'Hatzor', 'Gezer', 'Lachish', 'Shiloh', 'Beit El', 'Shechem',
+    'Hevron', 'Yericho', 'Ein Gedi', 'Masada', 'Arbel', 'Gamla', 'Tzippori', 'Yodfat', 'Kedesh', 'Dor', 'Yafo', 'Gat', 'Ekron', 'Ziklag', 'Timna', 'Yotvata',
+    'Beit Lehem', 'Anatot', 'Givon', 'Mitzpa', 'Beit Horon', "Yizre'el", 'Shunem', 'Ein Dor', 'Kinneret', 'Kfar Nahum', "Be'erot", 'Ramah', 'Ofra', 'Tirtza',
+    'Shomron', 'Dotan', 'Gilgal', 'Mamre', 'Yotapata', 'Bnei Brak', 'Nahalal', 'Degania', 'Kfar Tavor', "Ma'agan", 'Sde Boker', 'Ein Hod', 'Yesud HaMa\'ala'];
+  const HE_PRE = ['Beit', "Be'er", 'Ein', 'Kfar', 'Kiryat', 'Ramat', 'Givat', 'Tel', 'Neve', 'Migdal', "Ma'ale", 'Mitzpe', 'Rosh', 'Sde', 'Gan', 'Nahalat',
+    'Even', 'Mevo', 'Tzur', 'Ginat', 'Nir', 'Ir', 'Kerem', 'Moshav', 'Nof'];
+  const HE_WORDS = ['Oren', 'Tamar', 'Zayit', 'Shaked', 'Rimon', 'Gefen', 'Erez', 'Alon', 'Dekel', 'Arava', 'Carmel', 'Sharon', 'Gilad', 'Galil', 'Tavor', 'Hermon',
+    'Meron', 'Shemesh', 'Zohar', 'Sela', 'Tzur', 'Zahav', 'Kesef', 'Melach', 'Dvash', 'Tal', 'Geshem', 'Ruach', 'Arazim', 'Brosh', 'Ela', 'Hadas', 'Shikma',
+    'Tidhar', 'Lotem', 'Rotem', 'Nurit', 'Kalanit', 'Tzvi', 'Ayala', 'Dolev', 'Ofer', 'Yona', 'Nesher', 'Gazit', 'Shoham', 'Leshem', 'Bareket', 'Yahalom', 'Sapir',
+    'Tarshish', 'Kochav', 'Levana', 'Shachar', 'Tikva', 'Shalom', 'Hadar', 'Yarden', 'Ephraim', 'Yehuda', 'Binyamin', 'Menashe', 'Asher', 'Naftali', 'Zevulun',
+    'Shimon', 'Gad', 'Reuven', 'Yissachar', 'Yosef', 'David', 'Shlomo', 'Eliav', 'Amitai', 'Orot', 'Nitzan', 'Snir', 'Dafna', 'Hagoshrim', 'Ganim', 'Tirosh'];
+  const HE_FIRST = ['Avraham', 'Yitzhak', 'Yaakov', 'Moshe', 'Aharon', 'David', 'Shlomo', 'Eliyahu', 'Yonatan', 'Noa', 'Tamar', 'Miriam', 'Rivka', 'Sarah', 'Leah',
+    'Rachel', 'Devorah', 'Yael', 'Rut', 'Naomi', 'Ester', 'Hadas', 'Shira', 'Ayelet', 'Tal', 'Gal', 'Omer', 'Itai', 'Noam', 'Ariel', 'Eitan', 'Yoav', 'Amit',
+    'Liora', 'Michal', 'Maya', 'Talia', 'Avital', 'Elior', 'Neta', 'Ori', 'Ilan', 'Amos', 'Boaz', 'Gidon', 'Yehuda', 'Shimon', 'Levi', 'Asher', 'Natan', 'Ezra',
+    'Nechemya', 'Elisheva', 'Batya', 'Dina', 'Hila', 'Keren', 'Orly', 'Sivan', 'Yarden', 'Zohar', 'Yehoshua', 'Kalev', 'Shmuel', 'Hana', 'Avigail', 'Yosef'];
+  const HE_SONS = ['Avraham', 'Yitzhak', 'Yaakov', 'Moshe', 'Aharon', 'David', 'Shlomo', 'Eliyahu', 'Yonatan', 'Amos', 'Boaz', 'Gidon', 'Yehuda', 'Shimon', 'Levi',
+    'Asher', 'Natan', 'Ezra', 'Yosef', 'Shmuel', 'Kalev', 'Ami', 'Tzvi', 'Yishai', 'Yoel', 'Menachem'];
+  const HE_LAST = ['Golan', 'Shamir', 'Barak', 'Peled', 'Harel', 'Navon', 'Tamir', 'Carmeli', 'Sharon', 'Galili', 'Ben-Ami', 'Ben-David', 'Ben-Tzvi', 'Avidan',
+    'Oren', 'Alon', 'Erez', 'Shaked', 'Rimon', 'Dekel', 'Zohar', 'Segal', 'Cohen', 'Levi', 'Mizrahi', 'Peretz', 'Dahan', 'Amir', 'Yaron', 'Gilboa', 'Hadar',
+    'Bar-Lev', 'Bar-On', 'Ben-Shahar', 'Eshel', 'Arbel', 'Tabor', 'Sela', 'Azoulay', 'Ben-Yosef', 'Nachmani', 'Ophir', 'Ashkenazi', 'Ben-Natan'];
+  const HE_C = ['b', 'v', 'g', 'd', 'h', 'z', 'ch', 't', 'y', 'k', 'l', 'm', 'n', 's', 'p', 'tz', 'r', 'sh', 'b', 'd', 'l', 'm', 'n', 'r', 'sh', 't', 'g'];
+  // a Hebrew-shaped root from three consonants, or a real Hebrew word half the time
+  function heRoot(plain) {
+    if (rand() < 0.5) return pick(HE_WORDS);
+    let a, b, c;
+    do { a = pick(HE_C); b = pick(HE_C); c = pick(HE_C); } while (a === b || b === c || (a === 'y' && b === 'y'));
+    const pats = [() => a + 'a' + b + 'a' + c, () => a + 'e' + b + 'e' + c, () => a + 'a' + b + 'i' + c, () => a + 'o' + b + 'e' + c,
+      () => a + 'i' + b + 'o' + c, () => a + 'a' + b + 'o' + c, () => a + 'e' + b + 'a' + c,
+      () => 'mi' + pick(['g', 'sh', 'k', 't', 'd', 'z', 's']) + pick(['d', 'l', 'r', 'n', 'k', 'm']) + 'a' + c];
+    let w = pick(pats)();
+    if (!plain && rand() < 0.35) w += pick(['on', 'it', 'a', 'iya', 'el', 'im', 'ot']);
+    return cap(w);
+  }
+  const hePlace = () => { const r = rand(); return r < 0.3 ? pick(HE_TOWNS) : r < 0.78 ? `${pick(HE_PRE)} ${heRoot()}` : heRoot(true) + pick(['iya', 'on', 'a', 'it', 'im', '']); };
+  function makeHe(kind) {
+    const R = heRoot;
+    switch (kind) {
+      case 'person': return `${pick(HE_FIRST)} ${rand() < 0.25 ? 'Ben-' + pick(HE_SONS) : pick(HE_LAST)}`;
+      case 'river': return rand() < 0.7 ? `Nahal ${R()}` : `Nahar ${R()}`;
+      case 'canyon': return `${pick(['Nahal', "Ma'ale", 'Gai'])} ${R()}`;
+      case 'lake': case 'water': return rand() < 0.6 ? `Agam ${R()}` : `Yam ${R()}`;
+      case 'mountain': case 'peak': case 'volcano': return `Har ${R()}`;
+      case 'crater': return `Machtesh ${R()}`;
+      case 'mesa': return `${pick(['Ramat', 'Har', 'Mitzpe'])} ${R()}`;
+      case 'hill': return `${pick(['Givat', 'Tel'])} ${R()}`;
+      case 'island': return `Iy ${R()}`;
+      case 'road': return `Derech ${R()}`;
+      case 'trail': return `Shvil ${R()}`;
+      case 'border': case 'region': return `${pick(['Eretz', 'Emek', 'Gelilot', 'Mishor', 'Harei', 'Midbar'])} ${R()}`;
+      case 'ruin': return `Horvat ${R()}`;
+      case 'fort': return `${pick(['Metzudat', 'Migdal', 'Mivtzar'])} ${R()}`;
+      case 'dungeon': return `Me'arat ${R()}`;
+      case 'port': return rand() < 0.45 ? `Namal ${R()}` : hePlace();
+      case 'era': return rand() < 0.5 ? `Tekufat ${R()}` : `The Age of ${R()}`;
+      case 'faction': return rand() < 0.55 ? `${pick(['Brit', 'Agudat', 'Misdar', "Tnu'at", 'Beit', 'Ihud'])} ${R()}` : `The ${R()} ${pick(['Compact', 'Order', 'Guild', 'League', 'Covenant', 'Company'])}`;
+      case 'holiday': return `${pick(['Yom', 'Chag', 'Leil'])} ${R()}`;
+      case 'item': return rand() < 0.5 ? `${pick(['Keter', 'Chotam', 'Sefer', 'Cherev', 'Menorat', "Mafte'ach", 'Shofar'])} ${R()}` : `${pick(['Blade', 'Crown', 'Lantern', 'Seal', 'Ring', 'Codex', 'Key'])} of ${R()}`;
+      case 'creature': return `${R()} ${pick(['Wyrm', 'Stalker', 'Hound', 'Drake', 'Crawler', 'Moth', 'Strider', 'Grazer'])}`;
+      case 'religion': return `The ${pick(['Faith', 'Path', 'Light', 'Way', 'Circle'])} of ${R()}`;
+      case 'quest': return null;
+      default: return hePlace();
+    }
+  }
+  const hebrew = () => !!(S.meta && S.meta.nameStyle === 'hebrew');
   function make(kind) {
+    if (hebrew()) { const v = makeHe(kind); if (v) return v; }
     switch (kind) {
       case 'person': return person();
       case 'river': return rand() < 0.5 ? `${root()} River` : `River ${root()}`;
@@ -2013,7 +2189,10 @@ const Names = (() => {
         input.value = make(kindFn()); input.dispatchEvent(new Event('input')); input.dispatchEvent(new Event('change'));
       } }, icon('dice', 18)));
   }
-  return { make, field };
+  // nations: "Kingdom of …" or, in Hebrew style, "Malchut …"
+  const nation = () => hebrew() ? `${pick(['Malchut', 'Medinat', 'Eretz', 'Brit Arei', 'Memshelet', 'Nesichut'])} ${hePlace()}`
+    : `${pick(['Kingdom of', 'Republic of', 'Empire of', 'Free Cities of', 'Dominion of', 'Commonwealth of'])} ${make('town')}`;
+  return { make, field, nation };
 })();
 
 /* ===================== dice: 2d6+3, 4d6kh3, d20 adv, 3d10!, d%, 4dF ===================== */
@@ -2688,6 +2867,12 @@ const MapView = (() => {
   const failed = new Map();
   let tool = 'pan';
   const brush = { size: 46, op: 'raise', strength: 45, biome: 4 };
+  // paint brush feel, remembered: solid or soft; softness, strength and mixing (soft only); stroke smoothing
+  const paintOpts = () => {
+    const o = S.ui.paintBrush || (S.ui.paintBrush = {});
+    if (!o.mode) Object.assign(o, { mode: 'soft', soft: 70, str: 70, mix: 35, smooth: 30 });
+    return o;
+  };
   let stroke = null, hover = null, selPt = null, fade = null, lastTap = null;
   const history = [], redo = [];
   let measure = [];
@@ -2769,7 +2954,7 @@ const MapView = (() => {
         mainBusy = true;
         setTimeout(() => {
           mainBusy = false; const req = queue.shift();
-          if (req) { try { const r = T.renderTile(req); onTile(req, { buf: r.img.buffer, w: r.w, h: r.h, cap: r.cap, labels: r.labels, spots: r.spots, terr: r.terr }); } catch (e) { console.error(e); markFailed(req); } }
+          if (req) { try { const r = T.renderTile(req); onTile(req, { buf: r.img.buffer, w: r.w, h: r.h, cap: r.cap, labels: r.labels, spots: r.spots, terr: r.terr, land: r.land }); } catch (e) { console.error(e); markFailed(req); } }
           pump();
         }, 0);
       }
@@ -2979,19 +3164,20 @@ const MapView = (() => {
     const old = cache.get(req.key);
     if (old && old.skey === req.skey && old.ver > req.ver) { if (img.close) img.close(); return; }
     if (old && old.img.close) old.img.close();
-    cache.set(req.key, { img, ver: req.ver, skey: req.skey, st: req.style, cap: m.cap, labels: m.labels || [], spots: m.spots || [], terr: m.terr || null, used: useTick });
+    cache.set(req.key, { img, ver: req.ver, skey: req.skey, st: req.style, cap: m.cap, labels: m.labels || [], spots: m.spots || [], terr: m.terr || null, land: m.land || null, mimg: null, used: useTick });
     if (cache.size > MAXT) {
       const arr = [...cache.entries()].sort((a, b) => a[1].used - b[1].used);
       for (let k = 0; k < arr.length - MAXT; k++) { const [key, t] = arr[k]; if (t.used >= useTick) break; if (t.img.close) t.img.close(); cache.delete(key); }
     }
     dirty = true;
   }
-  function setTileTransform(i, j, Sz) {
+  function setTileTransform(i, j, Sz, g = ctx) {
     const p = Sz / TILE, x0 = i * Sz, yT = (j + 1) * Sz, cr = Math.cos(cam.rot), sr = Math.sin(cam.rot), s = cam.s * dpr;
     const dx = x0 - cam.x, dy = yT - cam.y;
-    ctx.setTransform(s * cr * p, -s * sr * p, s * sr * p, s * cr * p, dpr * W / 2 + s * (cr * dx - sr * dy), dpr * H / 2 - s * (sr * dx + cr * dy));
+    g.setTransform(s * cr * p, -s * sr * p, s * sr * p, s * cr * p, dpr * W / 2 + s * (cr * dx - sr * dy), dpr * H / 2 - s * (sr * dx + cr * dy));
   }
-  function drawTile(t, i, j, Sz) { setTileTransform(i, j, Sz); ctx.drawImage(t.img, -1, -1); }
+  const drawn = [];   // tiles drawn this frame: [tile, i, j, Sz, source rect or null], for land masks
+  function drawTile(t, i, j, Sz) { setTileTransform(i, j, Sz); ctx.drawImage(t.img, -1, -1); drawn.push([t, i, j, Sz, null]); }
   function drawFallback(L, i, j, Sz) {
     for (let k = 1; k <= 8 && L - k >= 0; k++) {
       const f = 2 ** k, pi = Math.floor(i / f), pj = Math.floor(j / f), t = cache.get(baseKey(L - k, pi, pj));
@@ -2999,6 +3185,7 @@ const MapView = (() => {
       const sub = TILE / f, ox = (i - pi * f) * sub, oy = (f - 1 - (j - pj * f)) * sub;
       setTileTransform(i, j, Sz);
       ctx.drawImage(t.img, 1 + ox, 1 + oy, sub, sub, 0, 0, TILE, TILE);
+      drawn.push([t, i, j, Sz, [1 + ox, 1 + oy, sub, sub]]);
       t.used = useTick;
       return;
     }
@@ -3006,6 +3193,38 @@ const MapView = (() => {
       const t = cache.get(baseKey(L + 1, i * 2 + di, j * 2 + dj));
       if (t) { drawTile(t, i * 2 + di, j * 2 + dj, Sz / 2); t.used = useTick; }
     }
+  }
+
+  // draws fn(g) clipped to dry land, using the mask each tile carries (sea, lakes and painted water stay clear)
+  let lmC = null, lpC = null, lmTick = -1;
+  function tileMask(t) {
+    if (t.mimg) return t.mimg;
+    if (!t.land) return null;
+    const O = t.img.width, c = document.createElement('canvas'); c.width = c.height = O;
+    const g = c.getContext('2d'), id = g.createImageData(O, O), d = id.data, b = t.land;
+    for (let i = 0, n = O * O; i < n; i++) if (b[i >> 3] & (1 << (i & 7))) d[i * 4 + 3] = 255;
+    g.putImageData(id, 0, 0);
+    return (t.mimg = c);
+  }
+  function onLand(fn, alpha) {
+    const w = ctx.canvas.width, hh = ctx.canvas.height;
+    if (!lpC) { lpC = document.createElement('canvas'); lmC = document.createElement('canvas'); }
+    for (const c of [lpC, lmC]) if (c.width !== w || c.height !== hh) { c.width = w; c.height = hh; lmTick = -1; }
+    if (lmTick !== useTick) {
+      const mc = lmC.getContext('2d');
+      mc.setTransform(1, 0, 0, 1, 0, 0); mc.clearRect(0, 0, w, hh);
+      for (const [t, i, j, Sz, src] of drawn) {
+        const m = tileMask(t); if (!m) continue;
+        setTileTransform(i, j, Sz, mc);
+        if (src) mc.drawImage(m, src[0], src[1], src[2], src[3], 0, 0, TILE, TILE); else mc.drawImage(m, -1, -1);
+      }
+      lmTick = useTick;
+    }
+    const pc = lpC.getContext('2d');
+    pc.setTransform(1, 0, 0, 1, 0, 0); pc.globalCompositeOperation = 'source-over'; pc.globalAlpha = 1; pc.clearRect(0, 0, w, hh);
+    pc.setTransform(dpr, 0, 0, dpr, 0, 0); fn(pc);
+    pc.setTransform(1, 0, 0, 1, 0, 0); pc.globalAlpha = 1; pc.globalCompositeOperation = 'destination-in'; pc.drawImage(lmC, 0, 0); pc.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = alpha; ctx.drawImage(lpC, 0, 0); ctx.restore();
   }
 
   /* ---------- drawing ---------- */
@@ -3025,7 +3244,7 @@ const MapView = (() => {
   // draws the map into ctx; returns how many visible tiles are not final yet (an image export waits for zero)
   function draw(opts = {}) {
     const now = performance.now(), ex = !!opts.exporting;
-    useTick++;
+    useTick++; drawn.length = 0;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = cam.mode === 'world' ? (ex && opts.paper ? opts.paper : '#0b1016') : '#dcdfe0';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -3082,6 +3301,7 @@ const MapView = (() => {
     updateReadout(st);
     lastStyle = st;
     if (!missing && pendingTerr.length) { pendingTerr.length = 0; dirty = true; }
+    if (!missing && pendingPaint.length) { pendingPaint.length = 0; dirty = true; }
     return missing;
   }
   let lastStyle = null;
@@ -3591,7 +3811,42 @@ const MapView = (() => {
     ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(s[0], s[1], 9, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(s[0], s[1], 2.2, 0, Math.PI * 2); ctx.fill();
   }
+  // paint previews: strokes in progress, and just-finished ones until their tiles are redrawn; land only
+  const pendingPaint = [];
+  function paintPreview(g, pts, r, b, soft) {
+    const rpx = Math.max(1, r * T.RM / mpp()), col = b >= 0 && T.BIOMES[b] ? T.BIOMES[b][3].join(',') : '236,236,236';
+    if (!soft) {
+      g.fillStyle = `rgb(${col})`; g.beginPath();
+      for (let k = 0; k < pts.length; k += 2) { const q = llToScreen(pts[k], pts[k + 1]); if (!q) continue; g.moveTo(q[0] + rpx, q[1]); g.arc(q[0], q[1], rpx, 0, Math.PI * 2); }
+      g.fill(); return;
+    }
+    const c0 = `rgba(${col},1)`, c1 = `rgba(${col},0)`, in0 = clamp(1 - soft, 0, 0.98);
+    for (let k = 0; k < pts.length; k += 2) {
+      const q = llToScreen(pts[k], pts[k + 1]); if (!q) continue;
+      const gr = g.createRadialGradient(q[0], q[1], 0, q[0], q[1], rpx); gr.addColorStop(0, c0); gr.addColorStop(in0, c0); gr.addColorStop(1, c1);
+      g.fillStyle = gr; g.beginPath(); g.arc(q[0], q[1], rpx, 0, Math.PI * 2); g.fill();
+    }
+  }
+  function drawPendingPaint() {
+    for (const p of pendingPaint) onLand(g => paintPreview(g, p.pts, p.r, p.b, p.soft || 0), p.soft ? 0.28 + 0.3 * (p.str || 1) : 0.4);
+  }
+  function drawPaintBrush() {
+    if (stroke && stroke.kind === 'paint' && stroke.pts.length) onLand(g => paintPreview(g, stroke.pts, stroke.r, stroke.b, stroke.soft), stroke.soft ? 0.3 + 0.35 * stroke.str : 0.42);
+    const o = paintOpts(), soft = o.mode === 'soft';
+    let at = hover || (stroke ? null : [W / 2, H / 2]);
+    if (stroke && stroke.kind === 'paint' && stroke.lazy) {
+      // stroke smoothing: the brush trails the finger on a string, which irons out wobbles
+      at = [stroke.sx, stroke.sy];
+      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(at[0], at[1]); ctx.lineTo(stroke.cx, stroke.cy); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(stroke.cx, stroke.cy, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+    }
+    if (!at) return;
+    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(at[0], at[1], brush.size + 1, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.arc(at[0], at[1], brush.size, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    if (soft && o.soft < 98) { ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.setLineDash([2, 5]); ctx.beginPath(); ctx.arc(at[0], at[1], brush.size * (1 - o.soft / 100), 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
+  }
   function drawBrush() {
+    if (pendingPaint.length) drawPendingPaint();
     if (tool === 'war') { drawWarBrush(); return; }
     if (tool === 'stamp') {
       const st = STAMPS[stamp.kind];
@@ -3614,9 +3869,10 @@ const MapView = (() => {
       ctx.strokeStyle = 'rgba(255,209,102,.95)'; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.arc(at[0], at[1], stamp.size, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       return;
     }
-    if (tool !== 'sculpt' && tool !== 'paint') return;
+    if (tool === 'paint') { drawPaintBrush(); return; }
+    if (tool !== 'sculpt') return;
     if (stroke && stroke.pts && stroke.pts.length) {
-      ctx.fillStyle = tool === 'paint' ? biomeCss(brush.biome, 0.35) : stroke.op === 'lower' ? 'rgba(80,140,255,.22)' : 'rgba(255,170,60,.22)';
+      ctx.fillStyle = stroke.op === 'lower' ? 'rgba(80,140,255,.22)' : 'rgba(255,170,60,.22)';
       ctx.beginPath();
       for (let k = 0; k < stroke.pts.length; k += 2) { const s = llToScreen(stroke.pts[k], stroke.pts[k + 1]); ctx.moveTo(s[0] + brush.size, s[1]); ctx.arc(s[0], s[1], brush.size, 0, Math.PI * 2); }
       ctx.fill();
@@ -3807,13 +4063,13 @@ const MapView = (() => {
   function showPointInfo(ll) {
     selPt = ll; dirty = true;
     const smp = T.sample(ll[0], ll[1]);
-    const water = smp.elev <= 0;
+    const water = smp.elev <= 0 && smp.lakeLevel == null;
     const bName = T.BIOMES[smp.biome] ? T.BIOMES[smp.biome][2] : '?';
     chip.innerHTML = '';
     chip.append(...[
       h('div', { class: 'row' }, h('div', { class: 'grow' }, h('b', { class: 'num' }, fmtLL(ll))),
         h('button', { class: 'icon-btn', style: 'margin:-6px -6px 0 0', 'aria-label': 'Close', onclick: hideChip }, icon('close', 18))),
-      h('div', { class: 'num' }, water ? `Depth ${fmtElev(-smp.elev)} · Ocean` : `Elevation ${fmtElev(smp.elev)} · ${bName}${smp.painted ? ' (painted)' : ''}`),
+      h('div', { class: 'num' }, water ? `Depth ${fmtElev(-smp.elev)} · Ocean` : smp.lakeLevel != null ? `Lake · surface ${fmtElev(smp.lakeLevel)} · depth ${fmtElev(smp.lakeLevel - smp.elev)}` : `Elevation ${fmtElev(smp.elev)} · ${bName}${smp.painted ? ' (painted)' : ''}`),
       water ? null : h('div', { class: 'small muted' }, `Mean temperature ${fmtTemp(smp.temp)} · moisture ${Math.round(clamp(smp.moist, 0, 1) * 100)}%`),
       h('div', { class: 'tiny muted num', style: 'margin-top:2px' }, gridRef(ll)),
       (() => { const n = nearby(ll, 1)[0]; return n ? h('div', { class: 'small', style: 'margin-top:3px' }, `${fmtDist(n.d)} ${bearingName([n.p.lat, n.p.lon], ll)} of `, h('a', { class: 'wl', role: 'button', onclick: () => openPlace(n.p) }, n.p.name), ` · ≈ ${footDays(n.d)} on foot`) : null; })(),
@@ -4425,6 +4681,7 @@ const MapView = (() => {
     for (const b of $$('#map-tools button')) b.classList.toggle('on', b.dataset.tool === t);
     if (t !== 'measure' && t !== 'pan') hideChip();
     if (t === 'sculpt' || t === 'paint' || t === 'stamp') hover = null;
+    if (t !== 'paint' && t !== 'war' && !pendingPaint.length) for (const e of cache.values()) e.mimg = null;   // land masks are only for brush previews
     view.classList.toggle('framing', t === 'share');
     renderPanel(); dirty = true;
   }
@@ -4436,7 +4693,11 @@ const MapView = (() => {
     if (tool === 'stamp') stroke = { kind: 'line', fk: stamp.kind, raw: [ll], lx: x, ly: y, n: 1 };
     else if (tool === 'sculpt') stroke = { kind: 'sculpt', op: brush.op, r, h: maxHeight() * brush.strength / 100, str: brush.strength / 100, tgt: brush.op === 'flatten' ? T.sample(ll[0], ll[1]).base : 0, pts: [], lx: x, ly: y, n: 0 };
     else if (tool === 'war') stroke = war.mode === 'arrow' || war.mode === 'front' ? { kind: 'wline', raw: [ll], lx: x, ly: y, n: 1 } : { kind: 'terr', r: war.size * mpp() / T.RM, pts: [], lx: x, ly: y, n: 0 };
-    else stroke = { kind: 'paint', b: brush.biome, r, pts: [], lx: x, ly: y, n: 0 };
+    else {
+      const o = paintOpts(), soft = o.mode === 'soft';
+      stroke = { kind: 'paint', b: brush.biome, r, pts: [], lx: x, ly: y, n: 0, soft: soft ? o.soft / 100 : 0, str: soft ? o.str / 100 : 1, mx: o.mix / 100,
+        lazy: o.smooth ? o.smooth / 100 * 1.6 * brush.size : 0, sx: x, sy: y, cx: x, cy: y };
+    }
     if (stroke.pts) { stroke.pts.push(+ll[0].toFixed(6), +ll[1].toFixed(6)); stroke.n = 1; }
     dirty = true;
   }
@@ -4447,7 +4708,13 @@ const MapView = (() => {
       const ll = screenToLL(x, y); if (ll) { stroke.raw.push(ll); stroke.n++; }
       stroke.lx = x; stroke.ly = y; return;
     }
-    const step = Math.max(2, (stroke.kind === 'terr' ? war.size : brush.size) * 0.45);
+    if (stroke.lazy) {
+      stroke.cx = x; stroke.cy = y; dirty = true;
+      const dx = x - stroke.sx, dy = y - stroke.sy, dd = Math.hypot(dx, dy);
+      if (dd <= stroke.lazy) return;
+      const k = (dd - stroke.lazy) / dd; x = stroke.sx + dx * k; y = stroke.sy + dy * k; stroke.sx = x; stroke.sy = y;
+    }
+    const step = Math.max(2, (stroke.kind === 'terr' ? war.size : brush.size) * (stroke.soft ? 0.3 : 0.45));
     let d = Math.hypot(x - stroke.lx, y - stroke.ly);
     while (d >= step) {
       const t = step / d, nx = stroke.lx + (x - stroke.lx) * t, ny = stroke.ly + (y - stroke.ly) * t;
@@ -4465,15 +4732,43 @@ const MapView = (() => {
       addFeature(f); return;
     }
     if (!s.pts.length) return;
-    let rec, kind;
-    if (s.kind === 'sculpt') {
-      kind = 'sculpt'; rec = { op: s.op, r: s.r, pts: s.pts };
-      if (s.op === 'raise' || s.op === 'lower') rec.amt = +(s.h * (s.n === 1 ? 1 : 0.49)).toFixed(2); else rec.str = s.str;
-      if (s.op === 'flatten') rec.tgt = +s.tgt.toFixed(1);
-      S.world.sculpt.push(rec);
-    } else { kind = 'paint'; rec = { b: s.b, r: s.r, pts: s.pts }; S.world.paint.push(rec); }
+    if (s.kind === 'paint') { commitPaint(s); return; }
+    const rec = { op: s.op, r: s.r, pts: s.pts };
+    if (s.op === 'raise' || s.op === 'lower') rec.amt = +(s.h * (s.n === 1 ? 1 : 0.49)).toFixed(2); else rec.str = s.str;
+    if (s.op === 'flatten') rec.tgt = +s.tgt.toFixed(1);
+    S.world.sculpt.push(rec);
     const cap = capOf(rec.pts, rec.r);
-    history.push({ kind, rec, cap }); redo.length = 0;
+    history.push({ kind: 'sculpt', rec, cap }); redo.length = 0;
+    applyWorld(false, cap); save(); renderPanel();
+  }
+  // paint never lands on water: dabs whose whole disc is sea, lake or (for a land brush) painted water are dropped,
+  // and the stroke is split where it crossed, so it can't bridge a bay
+  function landRuns(s) {
+    const rd = s.r * 180 / Math.PI, runs = []; let cur = [];
+    const wet = (la, lo) => { const q = T.sample(clamp(la, -89.9, 89.9), lo); return q.elev <= 0 || q.lakeLevel != null || (s.b >= 0 && q.biome === 20); };
+    for (let k = 0; k < s.pts.length; k += 2) {
+      const la = s.pts[k], lo = s.pts[k + 1];
+      let dry = !wet(la, lo);
+      if (!dry) {
+        const cl = Math.max(0.05, Math.cos(la * Math.PI / 180));
+        for (let a = 0; a < 8 && !dry; a++) { const an = a * Math.PI / 4; dry = !wet(la + rd * 0.92 * Math.sin(an), lo + rd * 0.92 * Math.cos(an) / cl); }
+      }
+      if (dry) cur.push(la, lo); else if (cur.length) { runs.push(cur); cur = []; }
+    }
+    if (cur.length) runs.push(cur);
+    return runs;
+  }
+  function commitPaint(s) {
+    const runs = landRuns(s);
+    if (!runs.length) { toast('Water can\'t be painted over. The brush only colours land.'); dirty = true; return; }
+    const recs = runs.map(pts => {
+      const rec = { b: s.b, r: s.r, pts };
+      if (s.soft) { rec.soft = +s.soft.toFixed(2); rec.str = +s.str.toFixed(2); rec.mx = +s.mx.toFixed(2); }
+      return rec;
+    });
+    S.world.paint.push(...recs); pendingPaint.push(...recs);
+    const cap = capOf([].concat(...runs), s.r);
+    history.push(recs.length === 1 ? { kind: 'paint', rec: recs[0], cap } : { kind: 'paint', recs, cap }); redo.length = 0;
     applyWorld(false, cap); save(); renderPanel();
   }
   // history entries carry the area they changed (null for overlay-only features such as roads)
@@ -4539,7 +4834,8 @@ const MapView = (() => {
       // the water rises to the lowest point of the rim (the spill point), so lakes sit naturally in the land
       const hc = T.sample(f.lat, f.lon).elev;
       let spill = Infinity;
-      for (const rr of [0.9, 0.97, 1.02]) for (let k = 0; k < 48; k++) { const ll = destPoint(f.lat, f.lon, k / 48 * 2 * Math.PI, f.r * rr); spill = Math.min(spill, T.sample(ll[0], ll[1]).elev); }
+      // (rings out past the lobed, slightly stretched basin, so the water never runs up against the stamp's edge)
+      for (const rr of [0.85, 0.95, 1.05, 1.15, 1.3, 1.45, 1.6]) for (let k = 0; k < 40; k++) { const ll = destPoint(f.lat, f.lon, k / 40 * 2 * Math.PI, f.r * rr); spill = Math.min(spill, T.sample(ll[0], ll[1]).elev); }
       f.level = Math.round(Math.min(spill - 0.3, hc - f.h * 0.25) * 10) / 10;
     } else if (f.kind === 'island') {
       f.h = Math.round((Math.max(0, -T.sample(f.lat, f.lon).elev) + (+f.rise || 50)) * 10) / 10;
@@ -4960,7 +5256,7 @@ const MapView = (() => {
   const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
   function addFaction(color) {
     const used = S.world.factions.map(f => f.color);
-    const f = { id: uid(), name: `${['Kingdom of', 'Republic of', 'Empire of', 'Free Cities of', 'Dominion of', 'Commonwealth of'][Math.floor(Math.random() * 6)]} ${Names.make('town')}`,
+    const f = { id: uid(), name: Names.nation(),
       color: color || FAC_COLORS.find(c => !used.includes(c)) || FAC_COLORS[S.world.factions.length % FAC_COLORS.length] };
     S.world.factions.push(f); save(); terrSync();
     return f;
@@ -5157,8 +5453,10 @@ const MapView = (() => {
   }
   function drawWarBrush() {
     const col = brushColor();
-    for (const pt of pendingTerr) strokePreview(pt.pts, pt.r, pt.col, 0.3);
-    if (stroke && stroke.kind === 'terr' && stroke.pts.length) strokePreview(stroke.pts, stroke.r, col, 0.42);
+    if (pendingTerr.length || (stroke && stroke.kind === 'terr' && stroke.pts.length)) onLand(g => {
+      for (const pt of pendingTerr) strokePreview(pt.pts, pt.r, pt.col, 0.3, g);
+      if (stroke && stroke.kind === 'terr' && stroke.pts.length) strokePreview(stroke.pts, stroke.r, col, 0.42, g);
+    }, 1);
     if (stroke && stroke.kind === 'wline' && stroke.raw.length > 1) {
       ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
       stroke.raw.forEach((ll, i) => { const q = llToScreen(ll[0], ll[1]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); });
@@ -5171,11 +5469,11 @@ const MapView = (() => {
   }
   const pendingTerr = [];
   const brushColor = () => (war.mode === 'cont' ? '#ffd166' : war.op === 'erase' && war.mode === 'terr' ? '#ffffff' : facColor(war.fac));
-  function strokePreview(pts, r, col, a) {
+  function strokePreview(pts, r, col, a, g = ctx) {
     const rpx = Math.max(1, r * T.RM / mpp());
-    ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = rpx * 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
-    for (let k = 0; k < pts.length; k += 2) { const q = llToScreen(pts[k], pts[k + 1]); if (!q) continue; k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); if (pts.length === 2) ctx.lineTo(q[0] + 0.01, q[1]); }
-    ctx.stroke(); ctx.restore();
+    g.save(); g.globalAlpha = a; g.strokeStyle = col; g.lineWidth = rpx * 2; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath();
+    for (let k = 0; k < pts.length; k += 2) { const q = llToScreen(pts[k], pts[k + 1]); if (!q) continue; k ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); if (pts.length === 2) g.lineTo(q[0] + 0.01, q[1]); }
+    g.stroke(); g.restore();
   }
   function commitWar(s) {
     if (s.kind === 'terr') {
@@ -5566,7 +5864,20 @@ const MapView = (() => {
           h('i', { style: id < 0 ? 'background:repeating-linear-gradient(45deg,#ccc 0 5px,#fff 5px 10px)' : 'background:' + biomeCss(id) }), name);
         grid.append(sw);
       }
-      panel.append(grid, slider('Size', 10, 140, brush.size, v => { brush.size = v; dirty = true; }, v => fmtDist(v * mpp())), undoRow('Drag to paint land'));
+      const o = paintOpts(), soft = o.mode === 'soft';
+      const feel = h('details', { class: 'ed-grp', style: 'margin:6px 0' }, h('summary', null, soft ? 'Softness, strength, mixing & smoothing' : 'Stroke smoothing'),
+        soft ? slider('Softness', 10, 100, o.soft, v => { o.soft = v; dirty = true; }, v => v + '%') : null,
+        soft ? slider('Strength', 5, 100, o.str, v => { o.str = v; }, v => (v >= 100 ? 'Full' : v + '%')) : null,
+        soft ? slider('Mixing', 0, 100, o.mix, v => { o.mix = v; }, v => (v < 20 ? 'Clumpy' : v < 50 ? 'Natural' : v < 80 ? 'Soft' : 'Smooth')) : null,
+        slider('Smoothing', 0, 100, o.smooth, v => { o.smooth = v; }, v => (v ? v + '%' : 'Off')),
+        h('div', { class: 'tiny muted', style: 'margin:2px 0 8px' }, soft
+          ? 'Low strength builds up pass by pass. Mixing goes from clumps to smooth blends. Smoothing steadies wobbly lines.'
+          : 'Smoothing makes the brush trail your finger, steadying wobbly lines.'));
+      feel.open = !!o.open; feel.addEventListener('toggle', () => { o.open = feel.open; });
+      panel.append(grid, h('div', { style: 'height:4px' }), seg([['soft', 'Soft blend'], ['solid', 'Solid']], o.mode, v => { o.mode = v; save(); renderPanel(); dirty = true; }),
+        h('div', { style: 'height:4px' }),
+        slider('Size', 10, 140, brush.size, v => { brush.size = v; dirty = true; }, v => fmtDist(v * mpp())), feel,
+        undoRow('Water is left alone'));
       requestAnimationFrame(() => { const on = grid.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' }); });
     } else if (tool === 'stamp') {
       const grid = h('div', { class: 'biome-grid' });
@@ -8077,6 +8388,8 @@ const Settings = (() => {
       field('Campaign date', h('div', null, h('button', { class: 'btn', onclick: openDateSheet }, icon('calendar', 16), Cal.fmt(S.meta.today)))),
       field('Units', seg([['imperial', 'Miles & feet'], ['metric', 'Kilometres & metres']], S.meta.units, v => { S.meta.units = v; save(); MapView.redraw(); render(); })),
       field('Weight unit', seg([['lb', 'Pounds'], ['kg', 'Kilograms']], S.meta.weight, v => { S.meta.weight = v; save(); Chars.render(); })),
+      field('Random names', seg([['fantasy', 'Fantasy'], ['hebrew', 'Hebrew']], S.meta.nameStyle === 'hebrew' ? 'hebrew' : 'fantasy', v => { S.meta.nameStyle = v; save(); render(); toast(v === 'hebrew' ? `Hebrew names, e.g. ${Names.make('town')}, ${Names.make('river')}, ${Names.make('person')}` : `Fantasy names, e.g. ${Names.make('town')}`, 4200); }),
+        'Used by every dice button, and by auto settlements, rivers, roads and factions. Hebrew uses real towns, Hebrew place words (Kfar, Be\'er, Har, Nahal…) and Hebrew-shaped roots. Names you already have stay as they are.'),
       field('Currencies', cur, 'Comma-separated, e.g. Credits, Scrip'),
       h('label', { class: 'check' }, neg, 'Allow HP to go below zero'),
       field('Conception chance outside the fertile window (% of normal)', ow, 'Only applies to characters whose cycle is tracked.'),
