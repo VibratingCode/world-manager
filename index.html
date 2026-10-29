@@ -15,8 +15,8 @@
 <title>World Manager</title>
 <style>
 :root {
-  --bg: #0f151c; --bar: #121a22; --card: #18222d; --card2: #223040; --line: #283646;
-  --text: #e7edf3; --muted: #97a6b5; --faint: #62707f;
+  --bg: #0f151c; --bar: #121a22; --card: #18222d; --card2: #223040; --line: #263444;
+  --text: #ecf1f6; --muted: #aab7c4; --faint: #7d8b99; --lift: none;
   --accent: #e9a23b; --accent-ink: #1e1404; --teal: #4fb3bf;
   --danger: #ef6158; --good: #3fb950; --bless: #d9ae3c; --afflict: #ef6158; --magic: #a77bf3; --fert: #e06aa8;
   --glass: rgba(18, 26, 34, .78); --glass-strong: rgba(18, 26, 34, .94); --glass-line: rgba(255, 255, 255, .08);
@@ -25,8 +25,8 @@
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #f3f1ec; --bar: #fbfaf7; --card: #ffffff; --card2: #ece8e0; --line: #ddd7cc;
-    --text: #1d232a; --muted: #5d6874; --faint: #9aa3ad;
+    --bg: #f3f1ec; --bar: #fbfaf7; --card: #ffffff; --card2: #ece8e0; --line: #e0dacf;
+    --text: #1b2127; --muted: #535e6a; --faint: #838d98; --lift: 0 1px 2px rgba(40, 30, 10, .07), 0 0 0 1px rgba(40, 30, 10, .05);
     --accent: #c97b12; --accent-ink: #fff; --teal: #1f8a96;
     --glass: rgba(251, 250, 247, .82); --glass-strong: rgba(251, 250, 247, .96); --glass-line: rgba(0, 0, 0, .08);
     --shadow: 0 6px 24px rgba(40, 30, 10, .16);
@@ -34,8 +34,8 @@
   }
 }
 :root[data-theme="light"] {
-  --bg: #f3f1ec; --bar: #fbfaf7; --card: #ffffff; --card2: #ece8e0; --line: #ddd7cc;
-  --text: #1d232a; --muted: #5d6874; --faint: #9aa3ad;
+  --bg: #f3f1ec; --bar: #fbfaf7; --card: #ffffff; --card2: #ece8e0; --line: #e0dacf;
+  --text: #1b2127; --muted: #535e6a; --faint: #838d98; --lift: 0 1px 2px rgba(40, 30, 10, .07), 0 0 0 1px rgba(40, 30, 10, .05);
   --accent: #c97b12; --accent-ink: #fff; --teal: #1f8a96;
   --glass: rgba(251, 250, 247, .82); --glass-strong: rgba(251, 250, 247, .96); --glass-line: rgba(0, 0, 0, .08);
   --shadow: 0 6px 24px rgba(40, 30, 10, .16);
@@ -43,15 +43,15 @@
 }
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-  font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
 body { overflow: hidden; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 canvas { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer;
   -webkit-user-select: none; user-select: none; touch-action: manipulation; }
-button:disabled { opacity: .45; cursor: default; }
-input, select, textarea { font: inherit; font-size: 16px; color: var(--text); background: var(--card);
-  border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; width: 100%; min-width: 0; }
+button:disabled { opacity: .4; cursor: default; }
+input, select, textarea { font: inherit; font-size: 16px; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; width: 100%; min-width: 0; }
 textarea { resize: vertical; min-height: 84px; line-height: 1.4; }
 input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
 input[type="range"] { padding: 0; border: 0; background: none; accent-color: var(--accent); height: 28px; }
@@ -65,7 +65,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
   background: var(--bar); border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
 .brand .logo { color: var(--accent); }
-#campaign-name { font-weight: 680; font-size: 16.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#campaign-name { font-weight: 700; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .date-chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 999px;
   background: var(--card); border: 1px solid var(--line); font-size: 14px; font-weight: 600; white-space: nowrap; }
 .date-chip .ico { color: var(--accent); }
@@ -78,7 +78,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 .save-row .title { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .save-row .sub { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .save-row .acts { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
-#date-earth { font-size: 11px; font-weight: 650; color: var(--teal); }
+#date-earth { font-size: 11.5px; font-weight: 650; color: var(--teal); }
 #date-earth:empty { display: none; }
 .earth-hint { color: var(--teal); font-weight: 600; margin-top: 4px; }
 main { flex: 1; position: relative; min-height: 0; }
@@ -87,68 +87,72 @@ main { flex: 1; position: relative; min-height: 0; }
 #tabbar { flex: none; display: grid; grid-template-columns: repeat(5, 1fr); z-index: 6; background: var(--bar);
   border-top: 1px solid var(--line);
   padding: 3px env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 3px) env(safe-area-inset-left); }
-#tabbar button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0 3px; font-size: 11px;
-  color: var(--muted); font-weight: 560; }
+#tabbar button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0 4px; font-size: 11.5px;
+  color: var(--muted); font-weight: 600; }
 #tabbar button.active { color: var(--accent); }
 
 /* ---------- buttons, cards, forms ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 14px; border-radius: 10px;
-  background: var(--card2); color: var(--text); font-weight: 600; font-size: 14.5px; border: 1px solid var(--line); white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 15px; min-height: 42px; border-radius: 12px;
+  background: var(--card2); color: var(--text); font-weight: 600; font-size: 15px; border: 1px solid transparent; white-space: nowrap; }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
-.btn.danger { color: var(--danger); }
+.btn.danger { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--card2)); }
 .btn.ghost { background: transparent; }
 .btn.danger-fill { background: var(--danger); color: #fff; border-color: transparent; }
-.btn.small { padding: 6px 10px; font-size: 13px; border-radius: 9px; }
+.btn.small { padding: 6px 12px; min-height: 36px; font-size: 14px; border-radius: 10px; gap: 6px; }
 .btn.block { width: 100%; }
-.icon-btn { width: 38px; height: 38px; display: inline-grid; place-items: center; border-radius: 10px; color: var(--muted); flex: none; }
+.icon-btn { width: 40px; height: 40px; display: inline-grid; place-items: center; border-radius: 10px; color: var(--muted); flex: none; }
 .icon-btn:active, .btn:active { filter: brightness(1.15); }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 13px; margin: 10px 0; }
-.card h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 650;
+.card { background: var(--card); border: 1px solid transparent; border-radius: 16px; padding: 14px 16px; margin: 12px 0; box-shadow: var(--lift); }
+.card h3 { margin: 0 0 10px; font-size: 16px; color: var(--text); font-weight: 700; min-height: 32px;
   display: flex; align-items: center; gap: 8px; }
+.card h3 > .ico:first-child { color: var(--muted); }
 .card h3 .grow { flex: 1; }
-.field { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
-.field > span, .lbl { font-size: 12px; color: var(--muted); letter-spacing: .03em; font-weight: 600; }
+.field { display: flex; flex-direction: column; gap: 6px; margin: 14px 0; }
+.field > span, .lbl { font-size: 14px; color: var(--muted); font-weight: 600; }
+.field > .tiny.muted, .field > .small.muted { line-height: 1.4; }
+.grp-title { font-size: 13px; font-weight: 700; color: var(--muted); margin: 18px 0 2px; }
 .row { display: flex; gap: 8px; align-items: center; }
 .row > .grow { flex: 1; min-width: 0; }
 .row.wrap { flex-wrap: wrap; }
 .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .cols3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-.check { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.check { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 44px; }
 .muted { color: var(--muted); }
 .faint { color: var(--faint); }
-.small { font-size: 13px; }
-.tiny { font-size: 11.5px; }
-.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+.small { font-size: 14px; }
+.tiny { font-size: 12.5px; }
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
   background: var(--card2); color: var(--muted); white-space: nowrap; }
 .badge.fert { background: color-mix(in srgb, var(--fert) 22%, transparent); color: var(--fert); }
 .badge.afflict { background: color-mix(in srgb, var(--afflict) 20%, transparent); color: var(--afflict); }
 .badge.bless { background: color-mix(in srgb, var(--bless) 22%, transparent); color: var(--bless); }
 .badge.magic { background: color-mix(in srgb, var(--magic) 22%, transparent); color: var(--magic); }
 .badge.down { background: var(--danger); color: #fff; }
-.seg { display: flex; background: var(--card); border: 1px solid var(--line); border-radius: 11px; padding: 3px; gap: 2px; overflow-x: auto;
+.seg { display: flex; background: var(--bg); border: 0; border-radius: 12px; padding: 3px; gap: 2px; overflow-x: auto;
   scrollbar-width: none; }
 .seg::-webkit-scrollbar { display: none; }
-.seg button { flex: 1; padding: 7px 10px; border-radius: 8px; font-size: 13.5px; color: var(--muted); white-space: nowrap; font-weight: 600;
+.seg button { flex: 1; padding: 8px 10px; min-height: 36px; border-radius: 9px; font-size: 14px; color: var(--muted); white-space: nowrap; font-weight: 600;
   display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
-.seg button.on { background: var(--card2); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
-@media (max-width: 430px) { .seg button { padding: 7px 6px; font-size: 13px; } .seg button .ico { display: none; } }
+.seg button.on { background: var(--card2); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.22); }
+@media (max-width: 430px) { .seg button { padding: 8px 6px; font-size: 13.5px; } .seg button .ico { display: none; } }
 .empty { text-align: center; color: var(--muted); padding: 28px 12px; }
-.empty .big { font-size: 17px; color: var(--text); font-weight: 650; margin-bottom: 6px; }
-.list-row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); min-height: 46px; }
+.empty .big { font-size: 18px; color: var(--text); font-weight: 650; margin-bottom: 6px; }
+.list-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); min-height: 52px; }
 .list-row:last-child { border-bottom: 0; }
 .list-row .main { flex: 1; min-width: 0; }
-.list-row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
-.list-row .sub { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.list-row .title { font-weight: 620; overflow: hidden; text-overflow: ellipsis; }
+.list-row .sub { font-size: 13.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.list-row > .ico:last-child { color: var(--faint); }
 .tap { cursor: pointer; }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
 .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; }
 .swatch.on { border-color: var(--text); }
-.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card); }
-.stepper button { width: 34px; height: 34px; display: grid; place-items: center; color: var(--text); }
+.stepper { display: inline-flex; align-items: center; border: 0; border-radius: 11px; overflow: hidden; background: var(--card2); }
+.stepper button { width: 40px; height: 38px; display: grid; place-items: center; color: var(--text); }
 .stepper input { width: 64px; border: 0; border-radius: 0; text-align: center; padding: 6px 2px; background: transparent; }
 .stepper .val { min-width: 34px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 650; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { padding: 6px 11px; border-radius: 999px; background: var(--card2); border: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+.chip { padding: 7px 13px; min-height: 34px; border-radius: 999px; background: var(--card2); border: 0; font-size: 14px; font-weight: 600; }
 .chip.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 .chip.neg { color: var(--danger); }
 .chip.pos { color: var(--good); }
@@ -165,16 +169,16 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
   padding-bottom: env(safe-area-inset-bottom); animation: sheetup .22s cubic-bezier(.2,.8,.2,1); }
 .sheet.wide { max-width: 760px; }
 @media (min-width: 720px) { .sheet-backdrop { align-items: center; } .sheet { border-radius: 18px; max-height: 88vh; max-height: 88dvh; } }
-.sheet-head { display: flex; align-items: center; padding: 12px 10px 6px 16px; gap: 8px; }
-.sheet-title { font-weight: 700; font-size: 17px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sheet-body { overflow-y: auto; padding: 2px 16px 16px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
-.sheet-foot { display: flex; gap: 8px; padding: 10px 16px 12px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.sheet-head { display: flex; align-items: center; padding: 14px 10px 8px 18px; gap: 8px; }
+.sheet-title { font-weight: 750; font-size: 18.5px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sheet-body { overflow-y: auto; padding: 2px 18px 18px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.sheet-foot { display: flex; gap: 8px; padding: 12px 18px 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
 .sheet-foot .spacer { flex: 1; }
 @keyframes sheetup { from { transform: translateY(40px); opacity: 0; } }
 @keyframes fadein { from { opacity: 0; } }
 #toast-root { position: fixed; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 58px); display: flex; flex-direction: column;
   align-items: center; gap: 6px; pointer-events: none; z-index: 100; }
-.toast { background: rgba(16,22,30,.96); color: #f2f5f8; padding: 9px 14px; border-radius: 12px; font-size: 14px; max-width: 92vw;
+.toast { background: rgba(16,22,30,.96); color: #f2f5f8; padding: 11px 16px; border-radius: 14px; font-size: 15px; max-width: 92vw;
   box-shadow: 0 6px 20px rgba(0,0,0,.35); animation: sheetup .2s ease; }
 
 /* ---------- map ---------- */
@@ -183,44 +187,48 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .glass { background: var(--glass); -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
   border: 1px solid var(--glass-line); box-shadow: 0 2px 12px rgba(0,0,0,.22); }
 .fab-col { position: absolute; right: calc(env(safe-area-inset-right) + 10px); top: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 2; }
-.fab { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; color: var(--text); }
+.fab { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; color: var(--text); }
 .fab.on { color: var(--accent); }
 .map-readout { position: absolute; left: calc(env(safe-area-inset-left) + 10px); top: 10px; z-index: 2; pointer-events: none;
-  font-size: 12px; line-height: 1.35; padding: 6px 9px; border-radius: 9px; max-width: calc(100% - 80px); }
+  font-size: 13px; line-height: 1.4; padding: 7px 11px; border-radius: 11px; max-width: calc(100% - 80px); }
+@media (max-width: 600px) { .map-readout .mode-pill, .map-readout .ro-ratio { display: none; } }
+@media (pointer: coarse) { .fab[data-act="zin"], .fab[data-act="zout"] { display: none; } }
 .map-readout b { font-weight: 650; }
 .tools { position: absolute; left: 50%; transform: translateX(-50%); bottom: 10px; display: flex; gap: 2px; padding: 4px;
   border-radius: 15px; z-index: 3; }
-.tools button { width: 50px; height: 42px; border-radius: 11px; display: grid; place-items: center; color: var(--muted); }
+.tools button { width: 52px; height: 52px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; color: var(--muted); font-size: 11px; font-weight: 600; line-height: 1; }
+.tools button .tl { white-space: nowrap; }
 .tools button.on { background: var(--accent); color: var(--accent-ink); }
-.map-panel { position: absolute; left: 10px; right: 10px; bottom: 64px; max-width: 560px; margin: 0 auto; padding: 10px 12px 12px;
-  border-radius: 15px; z-index: 3; display: none; background: var(--glass-strong); }
+.map-panel { position: absolute; left: 10px; right: 10px; bottom: 74px; max-width: 560px; margin: 0 auto; padding: 12px 14px 14px;
+  border-radius: 18px; z-index: 3; display: none; background: var(--glass-strong); max-height: calc(100% - 150px); overflow-y: auto; overscroll-behavior: contain; }
 .map-panel.show { display: block; animation: sheetup .18s ease; }
 .map-panel .row + .row { margin-top: 8px; }
 .map-panel label.lbl { min-width: 62px; }
 .biome-grid { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; scrollbar-width: thin; }
-.biome-sw { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; width: 62px; font-size: 10.5px; color: var(--muted);
+.biome-sw { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 66px; font-size: 11.5px; color: var(--muted);
   text-align: center; line-height: 1.15; }
-.biome-sw i { width: 34px; height: 34px; border-radius: 9px; border: 2px solid transparent; display: block; }
+.biome-sw i { width: 38px; height: 38px; border-radius: 10px; border: 2px solid transparent; display: block; }
 .biome-sw.on { color: var(--text); font-weight: 650; }
 .biome-sw.on i { border-color: var(--text); box-shadow: 0 0 0 2px var(--accent); }
 .biome-sw i.stamp-ic { background: var(--card2); color: var(--text); display: grid; place-items: center; }
 .biome-sw.on i.stamp-ic { color: var(--accent); }
-.tools button { width: 46px; }
-.map-chip { position: absolute; left: 10px; right: 10px; bottom: 64px; max-width: 560px; margin: 0 auto; z-index: 3; padding: 10px 12px;
-  border-radius: 15px; display: none; background: var(--glass-strong); font-size: 13.5px; }
+@media (max-width: 400px) { .tools button { width: 47px; font-size: 10.5px; } }
+.map-chip { position: absolute; left: 10px; right: 10px; bottom: 74px; max-width: 560px; margin: 0 auto; z-index: 3; padding: 12px 14px;
+  border-radius: 18px; display: none; background: var(--glass-strong); font-size: 14.5px; }
 .map-chip.show { display: block; animation: sheetup .18s ease; }
 .map-chip .k { color: var(--muted); }
-.map-busy { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 2; font-size: 12px; padding: 4px 10px;
+.map-busy { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 2; font-size: 13px; padding: 4px 10px;
   border-radius: 999px; pointer-events: none; opacity: 0; transition: opacity .25s; }
 .map-busy.show { opacity: 1; }
-.mode-pill { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.mode-pill { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
 #view-map.framing .fab-col, #view-map.framing .tools, #view-map.framing .map-readout, #view-map.framing .map-chip { display: none; }
 #view-map.framing .map-panel { bottom: 12px; }
 
 /* ---------- characters ---------- */
 .chars-wrap { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr; }
 @media (min-width: 860px) { .chars-wrap { grid-template-columns: 360px 1fr; } }
-.pane { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 10px 14px 28px; min-height: 0; }
+.pane { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 12px 16px 32px; min-height: 0; }
 .list-pane { border-right: 1px solid var(--line); }
 @media (max-width: 859px) {
   .chars-wrap.detail .list-pane { display: none; }
@@ -228,31 +236,31 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 }
 @media (min-width: 860px) { .back-btn { display: none !important; } }
 .pane-head { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; }
-.pane-head h2 { margin: 0; font-size: 21px; flex: 1; }
+.pane-head h2 { margin: 0; font-size: 24px; font-weight: 750; letter-spacing: -.01em; flex: 1; }
 .char-card { display: flex; gap: 12px; align-items: center; cursor: pointer; }
 .char-card.sel { border-color: var(--accent); }
 .avatar { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-weight: 750; color: #14100a; flex: none; font-size: 16px; }
 .avatar.lg { width: 58px; height: 58px; font-size: 21px; }
 .char-card .main { flex: 1; min-width: 0; }
-.char-card .name { font-weight: 680; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.char-card .sub { font-size: 12.5px; color: var(--muted); margin-bottom: 5px; }
+.char-card .name { font-weight: 700; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.char-card .sub { font-size: 13.5px; color: var(--muted); margin-bottom: 6px; }
 .hpbar { height: 8px; border-radius: 4px; background: var(--card2); overflow: hidden; position: relative; }
 .hpbar > i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 4px; }
 .hpbar > b { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: #79c0ff; opacity: .85; }
-.hp-big { font-size: 34px; font-weight: 750; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.05; }
+.hp-big { font-size: 38px; font-weight: 750; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.05; }
 .hp-big small { font-size: 17px; color: var(--muted); font-weight: 600; }
 .cond { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .cond:last-child { border-bottom: 0; }
 .cond .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; }
 .cond .main { flex: 1; min-width: 0; }
 .cond .title { font-weight: 640; }
-.cond .sub { font-size: 12.5px; color: var(--muted); }
+.cond .sub { font-size: 13.5px; color: var(--muted); }
 .item-row { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); }
 .item-row:last-child { border-bottom: 0; }
 .item-row .main { flex: 1; min-width: 0; cursor: pointer; }
 .item-row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.item-row .sub { font-size: 12px; color: var(--muted); }
-.cat-head { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-weight: 700; margin: 12px 0 2px; }
+.item-row .sub { font-size: 13px; color: var(--muted); }
+.cat-head { font-size: 13px; color: var(--muted); font-weight: 700; margin: 14px 0 2px; }
 .uses { display: inline-flex; gap: 3px; vertical-align: middle; }
 .uses i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--magic); display: inline-block; }
 .uses i.full { background: var(--magic); }
@@ -262,7 +270,7 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .roll-result { font-size: 30px; font-weight: 800; text-align: center; padding: 10px 0 4px; letter-spacing: -.01em; }
 .roll-result.yes { color: var(--fert); }
 .roll-result.no { color: var(--muted); }
-.breakdown { font-size: 13px; }
+.breakdown { font-size: 14px; }
 .breakdown .row { justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed var(--line); }
 .breakdown .row:last-child { border-bottom: 0; font-weight: 750; font-size: 14.5px; }
 
@@ -270,19 +278,19 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 #view-timeline { background: var(--bg); }
 .tl-bar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 10px; display: flex; gap: 2px; padding: 4px;
   border-radius: 15px; z-index: 3; }
-.tl-bar button { min-width: 44px; height: 42px; padding: 0 9px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center;
-  gap: 5px; color: var(--text); font-size: 13px; font-weight: 650; }
+.tl-bar button { min-width: 46px; height: 46px; padding: 0 10px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; color: var(--text); font-size: 14px; font-weight: 650; }
 .tl-bar button.primary { background: var(--accent); color: var(--accent-ink); }
 .tl-bar button { white-space: nowrap; }
-.tl-hint { position: absolute; right: calc(env(safe-area-inset-right) + 10px); bottom: 66px; z-index: 2; font-size: 12px; color: var(--muted);
+.tl-hint { position: absolute; right: calc(env(safe-area-inset-right) + 10px); bottom: 70px; z-index: 2; font-size: 13px; color: var(--muted);
   padding: 4px 9px; border-radius: 9px; pointer-events: none; }
 @media (max-width: 430px) { .tl-bar button { min-width: 40px; padding: 0 8px; } .hide-narrow { display: none; } }
 
 /* ---------- settings ---------- */
 .settings { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
-.settings .inner { max-width: 720px; margin: 0 auto; padding: 12px 14px 40px; }
-.settings h2 { font-size: 21px; margin: 4px 0 4px; }
-.kv { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.settings .inner { max-width: 720px; margin: 0 auto; padding: 14px 16px 44px; }
+.settings h2 { font-size: 24px; font-weight: 750; letter-spacing: -.01em; margin: 4px 0 4px; }
+.kv { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
 .kv:last-child { border-bottom: 0; }
 .month-row { display: grid; grid-template-columns: 1fr 70px 66px 34px; gap: 6px; align-items: center; margin: 5px 0; }
 .month-row input { padding: 7px 8px; }
@@ -300,13 +308,13 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .sheet.pal { height: 78vh; height: 78dvh; max-height: 620px; }
 @media (min-width: 720px) { .sheet.pal { align-self: flex-start; margin-top: 9vh; } }
 .pal-input { font-size: 17px; padding: 11px 13px; }
-.pal-group { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-weight: 700; margin: 12px 4px 2px; }
+.pal-group { font-size: 13px; color: var(--muted); font-weight: 700; margin: 14px 4px 2px; }
 .pal-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; cursor: pointer; min-height: 44px; }
 .pal-row.on { background: var(--card2); }
 .pal-row > .ico { color: var(--muted); width: 30px; flex: none; }
 .pal-row .main { flex: 1; min-width: 0; }
 .pal-row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pal-row .sub { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pal-row .sub { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 kbd { font: 600 11.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 2px 6px; border-radius: 6px; background: var(--card2);
   border: 1px solid var(--line); color: var(--text); white-space: nowrap; }
 .keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; font-size: 14px; }
@@ -325,14 +333,14 @@ kbd { font: 600 11.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 .dice-pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0 6px; }
 .dice-pad .btn { padding: 11px 4px; font-size: 15px; }
 /* ---------- rich text: notes, codex, descriptions ---------- */
-.md { line-height: 1.5; overflow-wrap: anywhere; }
+.md { line-height: 1.55; overflow-wrap: anywhere; }
 .md > :first-child { margin-top: 0; }
 .md > :last-child { margin-bottom: 0; }
 .md p { margin: 6px 0; }
 .md h1, .md h2, .md h3 { margin: 14px 0 4px; line-height: 1.25; }
 .md h1 { font-size: 20px; }
 .md h2 { font-size: 17px; }
-.md h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.md h3 { font-size: 15px; color: var(--muted); }
 .md ul, .md ol { margin: 6px 0; padding-left: 22px; }
 .md li { margin: 3px 0; }
 .md li.task { list-style: none; margin-left: -22px; display: flex; gap: 8px; align-items: flex-start; }
@@ -346,15 +354,15 @@ kbd { font: 600 11.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 .wl.missing { color: var(--muted); border-bottom-style: dashed; border-bottom-color: var(--faint); }
 .wl.roll { color: var(--magic); border-bottom-color: color-mix(in srgb, var(--magic) 45%, transparent); white-space: nowrap; }
 .md-tools { display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 6px; }
-.md-tools .btn { padding: 5px 9px; font-size: 13px; }
+.md-tools .btn { padding: 5px 10px; min-height: 34px; font-size: 13.5px; }
 textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 /* ---------- codex ---------- */
-.kind-tag { font-size: 10.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.kind-tag { font-size: 11.5px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
 .entry { cursor: pointer; }
 .entry.sel { border-color: var(--accent); }
-.entry .title { font-weight: 680; font-size: 15.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.entry .snip { font-size: 13px; color: var(--muted); margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.entry-head { font-size: 23px; font-weight: 760; line-height: 1.2; margin: 2px 0 4px; overflow-wrap: anywhere; }
+.entry .title { font-weight: 700; font-size: 16.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry .snip { font-size: 14px; color: var(--muted); margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.entry-head { font-size: 26px; font-weight: 760; line-height: 1.2; margin: 2px 0 4px; overflow-wrap: anywhere; }
 .mini-av { display: flex; }
 .mini-av .avatar { margin-right: -6px; border: 2px solid var(--card); }
 /* ---------- characters: portraits, filters, stats, relationships ---------- */
@@ -365,10 +373,10 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .filter-row::-webkit-scrollbar { display: none; }
 .filter-row .chip { flex: none; }
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 6px; }
-.stat-tile { background: var(--card2); border-radius: 11px; padding: 7px 10px; min-width: 0; text-align: left; }
-.stat-tile .k { font-size: 10.5px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; overflow: hidden;
+.stat-tile { background: var(--card2); border-radius: 12px; padding: 8px 11px; min-width: 0; text-align: left; }
+.stat-tile .k { font-size: 12.5px; color: var(--muted); font-weight: 650; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; display: block; }
-.stat-tile .v { font-size: 20px; font-weight: 760; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.stat-tile .v { font-size: 21px; font-weight: 760; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .stat-tile .v.txt { font-size: 15px; font-weight: 650; padding: 3px 0 2px; }
 .stat-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
 .stat-row .main { flex: 1; min-width: 0; cursor: pointer; }
@@ -385,7 +393,7 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .moon { display: inline-block; vertical-align: -3px; }
 .alm-row { display: flex; align-items: center; gap: 10px; padding: 7px 2px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .alm-row:last-child { border-bottom: 0; }
-.alm-row .when { font-size: 12px; color: var(--muted); white-space: nowrap; text-align: right; }
+.alm-row .when { font-size: 13px; color: var(--muted); white-space: nowrap; text-align: right; }
 .legend-sw { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 7px 12px; }
 .legend-sw > div { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; }
 .legend-sw i { width: 24px; height: 16px; border-radius: 4px; flex: none; display: block; border: 1px solid rgba(0,0,0,.18); }
@@ -393,64 +401,91 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .view-thumb { width: 72px; height: 48px; border-radius: 8px; object-fit: cover; flex: none; background: var(--card2); }
 .sym-picker input[type=search] { width: 100%; }
 .sym-cats { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 6px; scrollbar-width: thin; }
-.sym-cats button { flex: none; border: 1px solid var(--line); background: var(--card2); color: var(--muted); border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+.sym-cats button { flex: none; border: 0; background: var(--card2); color: var(--muted); border-radius: 999px; padding: 7px 12px; font: inherit; font-size: 13px; cursor: pointer; }
 .sym-cats button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 650; }
 .sym-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 4px; max-height: 46vh; overflow-y: auto; }
 .sym-picker.compact .sym-grid { max-height: 150px; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); }
-.sym { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 2px; border-radius: 9px; background: none; border: 1.5px solid transparent; color: var(--muted); font: inherit; font-size: 10px; cursor: pointer; }
+.sym { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 2px; border-radius: 9px; background: none; border: 1.5px solid transparent; color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
 .sym span { line-height: 1.15; text-align: center; max-height: 2.3em; overflow: hidden; }
 .sym.on { border-color: var(--accent); color: var(--text); background: var(--card2); }
 .ph-banner { height: 150px; border-radius: 14px; background-size: cover; background-position: center; margin: 0 0 12px; background-color: var(--card2); }
-.ph-status { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: 3px; background: var(--card2); color: var(--muted); letter-spacing: 0; }
+.ph-status { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: 3px; background: var(--card2); color: var(--muted); letter-spacing: 0; }
 .ph-status.visited { background: rgba(46,157,87,.18); color: #3fb950; }
 .ph-status.ruined { background: rgba(214,48,49,.16); color: #ef6158; }
 .ph-status.secret { background: rgba(167,123,243,.18); color: #b993ff; }
-.sec-head { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; -webkit-user-select: none; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 650; min-height: 28px; }
+.sec-head { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; -webkit-user-select: none; font-size: 16px; color: var(--text); font-weight: 700; min-height: 34px; }
+.sec-head > .ico:first-child { color: var(--muted); }
 .sec-head .grow { flex: 1; }
-.sec-count { background: var(--card2); color: var(--text); border-radius: 999px; padding: 1px 8px; font-size: 11px; letter-spacing: 0; }
-.sec-chev { display: inline-flex; transition: transform .15s; }
+.sec-count { background: var(--card2); color: var(--muted); border-radius: 999px; padding: 1px 9px; font-size: 12.5px; font-weight: 650; }
+.sec-chev { display: inline-flex; transition: transform .15s; color: var(--faint); }
 .sec-chev.open { transform: rotate(90deg); }
 .sec-body { margin-top: 8px; }
 .sec.collapsed { padding-top: 8px; padding-bottom: 8px; }
 .sec.collapsed .sec-body { display: none; }
-.sec-extra { display: inline-flex; gap: 6px; text-transform: none; letter-spacing: 0; }
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; font-size: 14px; align-items: baseline; }
-.kv .k { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.sec-extra { display: inline-flex; gap: 6px; font-size: 14px; font-weight: 600; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 15px; align-items: baseline; }
+.kv .k { color: var(--muted); font-size: 14px; white-space: nowrap; }
 .kv .v { overflow-wrap: anywhere; }
-.ed-grp { border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; margin: 10px 0; }
-.ed-grp summary { cursor: pointer; padding: 11px 0; font-weight: 650; font-size: 14px; }
+.ed-grp { border: 0; background: var(--card); border-radius: 14px; padding: 0 14px; margin: 12px 0; box-shadow: var(--lift); }
+.ed-grp summary { cursor: pointer; padding: 13px 0; font-weight: 700; font-size: 15.5px; min-height: 46px; }
+.map-panel .ed-grp { background: color-mix(in srgb, var(--card2) 55%, transparent); box-shadow: none; }
 .ed-grp[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 8px; }
 .ed-body { padding-bottom: 6px; }
 .poi-ic { font-size: 20px; width: 30px; text-align: center; flex: none; }
 .img-prev { width: 104px; height: 66px; border-radius: 10px; background: var(--card2) center / cover no-repeat; flex: none; }
 .place-hero { display: flex; gap: 12px; align-items: center; margin: 0 0 12px; }
 .place-hero .ph-ic { width: 54px; height: 54px; border-radius: 15px; background: var(--card2); display: grid; place-items: center; flex: none; }
-.place-hero .ph-name { font-size: 23px; font-weight: 750; line-height: 1.15; letter-spacing: -0.01em; overflow-wrap: anywhere; }
-.place-hero .ph-sub { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+.place-hero .ph-name { font-size: 26px; font-weight: 750; line-height: 1.15; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.place-hero .ph-sub { color: var(--muted); font-size: 14.5px; margin-top: 3px; }
 .ph-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 10px; }
 .ph-tile { background: var(--card2); border-radius: 13px; padding: 10px 12px; min-width: 0; border: 1px solid transparent; }
 .ph-tile.tap { cursor: pointer; }
 .ph-tile.tap:hover { border-color: var(--line); }
-.ph-tile .k { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
-.ph-tile .v { font-size: 17px; font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 7px; min-width: 0; line-height: 1.25; overflow-wrap: anywhere; }
-.ph-tile .s { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+.ph-tile .k { font-size: 13px; color: var(--muted); font-weight: 650; }
+.ph-tile .v { font-size: 18px; font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 7px; min-width: 0; line-height: 1.25; overflow-wrap: anywhere; }
+.ph-tile .s { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
 .ph-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(255,255,255,.15); }
-.ph-meta { font-size: 12.5px; color: var(--muted); margin: -2px 0 10px; line-height: 1.55; font-variant-numeric: tabular-nums; }
-.map-tip { position: absolute; z-index: 4; pointer-events: none; padding: 6px 10px; border-radius: 9px; font-size: 12.5px; max-width: 280px; display: none;
+.ph-meta { font-size: 13.5px; color: var(--muted); margin: -2px 0 10px; line-height: 1.55; font-variant-numeric: tabular-nums; }
+.map-tip { position: absolute; z-index: 4; pointer-events: none; padding: 8px 12px; border-radius: 11px; font-size: 14px; max-width: 280px; display: none;
   background: var(--card); color: var(--text); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
 .map-tip.show { display: block; }
-.map-tip .k { color: var(--muted); font-size: 11.5px; margin-top: 1px; }
+.map-tip .k { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 .fab[hidden] { display: none !important; }
 .tog-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
-.tog-chips button { border: 1px solid var(--line); background: var(--card2); color: var(--text); border-radius: 999px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.tog-chips button { border: 0; background: var(--card2); color: var(--text); border-radius: 999px; padding: 7px 12px; min-height: 34px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
 .tog-chips button.off { opacity: .45; text-decoration: line-through; }
 .tog-chips button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 650; }
 .prof svg { width: 100%; height: auto; display: block; }
-.stat-line { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; margin-top: 8px; }
+.stat-line { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; margin-top: 8px; }
 .stat-line b { font-variant-numeric: tabular-nums; }
 .hdg-dial { display: flex; justify-content: center; touch-action: none; cursor: grab; }
 .hdg-btns { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin: 8px 0; }
 .hdg-btns .btn { padding: 6px 0; justify-content: center; }
+/* ---------- local maps: town plans and dungeons ---------- */
+.lm { position: fixed; inset: 0; z-index: 30; background: var(--bg); display: flex; flex-direction: column; }
+.lm-top { flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--bar); border-bottom: 1px solid var(--line);
+  padding: calc(env(safe-area-inset-top) + 6px) calc(env(safe-area-inset-right) + 10px) 8px calc(env(safe-area-inset-left) + 6px); }
+.lm-top .icon-btn { color: var(--text); }
+.lm-title { flex: 1; min-width: 0; }
+.lm-name { font-weight: 750; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lm-sub { font-size: 13px; color: var(--muted); }
+.lm-top .seg { flex: none; }
+.lm-top .seg.lm-levels { flex-basis: 100%; }
+.lm-cv { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; background: #e2dfc5; }
+.lm .tools { bottom: calc(env(safe-area-inset-bottom) + 12px); }
+.lm-hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 84px); padding: 9px 14px; border-radius: 12px;
+  font-size: 14px; font-weight: 600; display: none; z-index: 3; max-width: calc(100% - 24px); text-align: center; }
+.lm-hint.show { display: block; }
+.lm-card { padding-bottom: 12px; }
+.lm-card .row > .ico:first-child { color: var(--accent); }
+.lm-thumb { display: block; width: 100%; height: 150px; border-radius: 12px; margin-top: 10px; background: #e2dfc5; }
+.lm-num { min-width: 30px; height: 30px; border-radius: 50%; background: var(--card2); display: grid; place-items: center; font-weight: 800; font-variant-numeric: tabular-nums; flex: none; }
+.act-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 12px; padding: 0 18px 2px; }
+.act-row::-webkit-scrollbar { display: none; }
+.act-row .btn { flex: none; }
+.quick-row { display: flex; gap: 6px; margin-top: 10px; }
+.quick-row .chip { flex: 1; text-align: center; padding: 7px 0; }
+.quick-row .chip.wide { flex: 1.8; }
 </style>
 </head>
 <body>
@@ -472,21 +507,20 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
         <button class="fab glass" data-act="zin" aria-label="Zoom in"><span data-icon="plus"></span></button>
         <button class="fab glass" data-act="zout" aria-label="Zoom out"><span data-icon="minus"></span></button>
         <button class="fab glass" data-act="home" aria-label="Whole planet"><span data-icon="globe"></span></button>
-        <button class="fab glass" data-act="places" aria-label="Places"><span data-icon="search"></span></button>
+        <button class="fab glass" data-act="places" aria-label="Places" title="Places"><span data-icon="list"></span></button>
         <button class="fab glass" data-act="layers" aria-label="Layers"><span data-icon="layers"></span></button>
-        <button class="fab glass" data-act="world" aria-label="World generation"><span data-icon="cog"></span></button>
         <button class="fab glass" data-act="share" aria-label="Share or print an area as an image"><span data-icon="share"></span></button>
       </div>
       <div id="map-panel" class="map-panel glass"></div>
       <div id="map-chip" class="map-chip glass"></div>
       <div class="tools glass" id="map-tools">
-        <button data-tool="pan" class="on" aria-label="Explore"><span data-icon="hand"></span></button>
-        <button data-tool="place" aria-label="Add places"><span data-icon="pin"></span></button>
-        <button data-tool="sculpt" aria-label="Sculpt terrain"><span data-icon="mountain"></span></button>
-        <button data-tool="paint" aria-label="Paint biomes"><span data-icon="brush"></span></button>
-        <button data-tool="stamp" aria-label="Stamp features: rivers, lakes, landforms, roads"><span data-icon="stamp"></span></button>
-        <button data-tool="measure" aria-label="Measure distance"><span data-icon="ruler"></span></button>
-        <button data-tool="war" aria-label="Factions, territory and war"><span data-icon="flag"></span></button>
+        <button data-tool="pan" class="on" aria-label="Explore"><span data-icon="hand"></span><span class="tl">Explore</span></button>
+        <button data-tool="place" aria-label="Add places"><span data-icon="pin"></span><span class="tl">Place</span></button>
+        <button data-tool="sculpt" aria-label="Sculpt terrain"><span data-icon="mountain"></span><span class="tl">Sculpt</span></button>
+        <button data-tool="paint" aria-label="Paint biomes"><span data-icon="brush"></span><span class="tl">Paint</span></button>
+        <button data-tool="stamp" aria-label="Stamp features: rivers, lakes, landforms, roads"><span data-icon="stamp"></span><span class="tl">Stamp</span></button>
+        <button data-tool="measure" aria-label="Measure distance"><span data-icon="ruler"></span><span class="tl">Measure</span></button>
+        <button data-tool="war" aria-label="Factions, territory and war"><span data-icon="flag"></span><span class="tl">War</span></button>
       </div>
     </section>
     <section id="view-chars" class="view">
@@ -1717,6 +1751,7 @@ const ICONS = {
   sparkle: 'M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.9 2.1 2.1.9-2.1.9L19 21l-.9-2.1-2.1-.9 2.1-.9z',
   seed: 'M12 3c3.5 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 2.5-7 6-11z',
   note: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
+  door: 'M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M3.5 21h17M14.5 12.5h.01',
   dice: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8.5 8.5h.01M15.5 15.5h.01M12 12h.01M15.5 8.5h.01M8.5 15.5h.01',
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   edit: 'M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4',
@@ -2148,6 +2183,7 @@ const Names = (() => {
       case 'item': return rand() < 0.5 ? `${pick(['Keter', 'Chotam', 'Sefer', 'Cherev', 'Menorat', "Mafte'ach", 'Shofar'])} ${R()}` : `${pick(['Blade', 'Crown', 'Lantern', 'Seal', 'Ring', 'Codex', 'Key'])} of ${R()}`;
       case 'creature': return `${R()} ${pick(['Wyrm', 'Stalker', 'Hound', 'Drake', 'Crawler', 'Moth', 'Strider', 'Grazer'])}`;
       case 'religion': return `The ${pick(['Faith', 'Path', 'Light', 'Way', 'Circle'])} of ${R()}`;
+      case 'district': return `${pick(['Shchunat', 'Neve', 'Kiryat', 'Ramat', 'Givat', 'Rova'])} ${R()}`;
       case 'quest': return null;
       default: return hePlace();
     }
@@ -2169,6 +2205,7 @@ const Names = (() => {
       case 'trail': return `${root()} ${pick(['Trail', 'Path', 'Track'])}`;
       case 'border': case 'region': return `The ${root()} ${pick(LAND)}`;
       case 'ruin': return `Ruins of ${place()}`;
+      case 'district': return rand() < 0.6 ? `${root()} Ward` : `${pick(['Old', 'High', 'Low', 'North', 'South', 'East', 'West', 'New'])} ${pick(['Town', 'Ward', 'Quarter', 'Gate', 'Row', 'End'])}`;
       case 'fort': return `${pick(['Fort', 'Castle', 'Keep'])} ${root()}`;
       case 'dungeon': return `${root()} ${pick(['Caverns', 'Deep', 'Vault', 'Hollow'])}`;
       case 'port': return rand() < 0.45 ? `Port ${root()}` : place();
@@ -3910,7 +3947,7 @@ const MapView = (() => {
     const ll = centerLL(), m = mpp(), widthM = W * m;
     const mode = cam.mode === 'world' ? 'Robinson' : st.topo ? 'Topographic · zone ' + cam.zone : 'Transverse Mercator · zone ' + cam.zone;
     const ratio = Math.round(m / (0.0254 / 96) / 1000) * 1000;
-    let html = `<div class="mode-pill">${mode}</div><b>${fmtLL(ll)}</b><br>${fmtDist(widthM)} across · ≈1:${fmtInt(Math.max(1000, ratio))}`;
+    let html = `<div class="mode-pill">${mode}</div><b>${fmtLL(ll)}</b><br>${fmtDist(widthM)} across<span class="ro-ratio"> · ≈1:${fmtInt(Math.max(1000, ratio))}</span>`;
     if (st.topo && st.contours) html += `<br>Contour interval ${st.Iu} ${S.meta.units === 'metric' ? 'm' : 'ft'}`;
     if (html !== lastReadout) { readout.innerHTML = html; lastReadout = html; }
   }
@@ -4249,13 +4286,14 @@ const MapView = (() => {
         tile('Type', sy ? sy.name : tName, sy ? tName : null, () => { close(); editPlace(p); }),
         tile('Terrain', smp.elev > 0 ? T.BIOMES[smp.biome][2] : 'At sea', smp.elev > 0 ? `${fmtElev(smp.elev)} · ${fmtTemp(smp.temp)} average` : null)),
       h('div', { class: 'ph-meta' }, fmtLL([p.lat, p.lon]), youTxt ? h('br') : null, youTxt),
-      h('div', { class: 'row wrap', style: 'gap:6px;margin:0 0 8px' },
+      h('div', { class: 'act-row' },
         h('button', { class: 'btn small', onclick: () => { close(); routeSheet(p); } }, icon('map', 14), 'Route'),
         h('button', { class: 'btn small', onclick: () => { close(); setTab('map'); setHere([p.lat, p.lon]); toast(`You are here: ${p.name}`); } }, icon('target', 14), "I'm here"),
         h('button', { class: 'btn small', onclick: () => { close(); setTab('map'); measure = [[p.lat, p.lon]]; mClosed = false; setTool('measure'); } }, icon('ruler', 14), 'Measure'),
         h('button', { class: 'btn small', onclick: () => startMove(p) }, icon('hand', 14), 'Move'),
         h('button', { class: 'btn small', onclick: copyLink }, icon('link', 14), 'Copy link'),
         twin ? h('button', { class: 'btn small', onclick: () => { close(); Codex.open(twin.id); } }, icon('book', 14), 'Codex') : null),
+      LocalMaps.card(p, close),
       psection('notes', 'note', 'Notes', null, () => p.notes ? md(p.notes, { onToggle: (i, on) => { p.notes = mdToggle(p.notes, i, on); save(); } })
         : h('div', { class: 'small muted' }, 'No notes yet. ', h('a', { class: 'wl', role: 'button', onclick: () => { close(); editPlace(p); } }, 'Write some'))),
       psection('details', 'info', 'Details', info.length || null, () => [
@@ -5007,6 +5045,38 @@ const MapView = (() => {
       out.push({ f, a, b, len: geomOf(f).total, days: roadDays(f) });
     }
     return out;
+  }
+  // around a place, for its town plan (angles in the plan's frame: x east, y south): directions its roads and trails
+  // leave in, the nearest sea or lake ({ sx, sy } toward the water, off = metres to the shore), the nearest river
+  function localContext(p, Rm) {
+    const ll = [p.lat, p.lon], th = b => Math.atan2(-Math.cos(b * D2R), Math.sin(b * D2R));
+    const roads = [];
+    for (const f of S.world.features) {
+      if ((f.kind !== 'road' && f.kind !== 'trail') || !f.pts || f.pts.length < 4) continue;
+      const [a, b] = roadEnds(f); if (a !== p && b !== p) continue;
+      const n = f.pts.length >> 1, fromStart = gcAngle(ll, [f.pts[0], f.pts[1]]) <= gcAngle(ll, [f.pts[2 * n - 2], f.pts[2 * n - 1]]);
+      let to = null;
+      for (let i = 0; i < n; i++) { const k = fromStart ? i : n - 1 - i, q = [f.pts[2 * k], f.pts[2 * k + 1]]; to = q; if (gcAngle(ll, q) * T.RM > Rm * 0.8) break; }
+      if (to && gcAngle(ll, to) * T.RM > 1) roads.push(th(brgDeg(ll, to)));
+    }
+    let sx = 0, sy = 0, wetN = 0, dMin = Infinity;
+    for (const fr of [0.3, 0.55, 0.9, 1.3]) for (let k = 0; k < 16; k++) {
+      const b = k * 22.5, q = destPoint(p.lat, p.lon, b * D2R, Rm * fr / T.RM), smp = T.sample(q[0], q[1]);
+      if (smp.elev <= 0 || smp.lakeLevel != null) { const t = th(b); sx += Math.cos(t) / fr; sy += Math.sin(t) / fr; wetN++; dMin = Math.min(dMin, fr * Rm); }
+    }
+    const sn = Math.hypot(sx, sy);
+    const coast = wetN && sn > 0.5 ? { sx: sx / sn, sy: sy / sn, off: dMin * 0.92 } : null;
+    let river = null, best = Rm;
+    const kx = Math.cos(p.lat * D2R) * D2R * T.RM, ky = D2R * T.RM, loc = (la, lo) => [((lo - p.lon + 540) % 360 - 180) * kx, -(la - p.lat) * ky];
+    for (const f of S.world.features) {
+      if (f.kind !== 'river' || !f.pts) continue;
+      for (let i = 0; i + 3 < f.pts.length; i += 2) {
+        const a = loc(f.pts[i], f.pts[i + 1]), b = loc(f.pts[i + 2], f.pts[i + 3]), ex = b[0] - a[0], ey = b[1] - a[1], L2 = ex * ex + ey * ey;
+        const t = L2 ? clamp(-(a[0] * ex + a[1] * ey) / L2, 0, 1) : 0, qx = a[0] + ex * t, qy = a[1] + ey * t, d = Math.hypot(qx, qy);
+        if (d < best) { best = d; const ang = Math.atan2(ey, ex); river = { ang, off: qx * -Math.sin(ang) + qy * Math.cos(ang), w: clamp(2 * (+f.w1 || 6), 8, 90) }; }
+      }
+    }
+    return { roads, coast, river };
   }
   const pairKey = (a, b) => [a.id, b.id].sort().join('|');
   function roadBetween(a, b) { return roadEdges().find(e => e.a && e.b && pairKey(e.a, e.b) === pairKey(a, b)) || null; }
@@ -6117,34 +6187,47 @@ const MapView = (() => {
     const lay = S.ui.layers;
     const tog = (key, label, sub) => { const c = h('input', { type: 'checkbox', checked: !!lay[key] }); c.addEventListener('change', () => { lay[key] = c.checked; save(); dirty = true; }); return h('label', { class: 'check' }, c, h('div', null, label, sub ? h('div', { class: 'tiny muted' }, sub) : null)); };
     const inv = (key, label, sub) => { const c = h('input', { type: 'checkbox', checked: !lay[key] }); c.addEventListener('change', () => { lay[key] = !c.checked; save(); terrVer++; dirty = true; }); return h('label', { class: 'check' }, c, h('div', null, label, sub ? h('div', { class: 'tiny muted' }, sub) : null)); };
+    const grp = (key, title, open, ...kids) => {
+      const el = h('details', { class: 'ed-grp' }, h('summary', null, title), h('div', { class: 'ed-body' }, ...kids));
+      el.open = (S.ui.layOpen || {})[key] ?? open;
+      el.addEventListener('toggle', () => { S.ui.layOpen = { ...(S.ui.layOpen || {}), [key]: el.open }; save(); });
+      return el;
+    };
     const body = h('div', null,
-      field('Map style', seg([['auto', 'Auto'], ['atlas', 'Atlas'], ['topo', 'Topographic']], lay.style, v => { lay.style = v; save(); dirty = true; }), 'Auto keeps the coloured atlas at every zoom unless you turn on USGS sheets below.'),
-      field('Tint', seg(Object.entries(TINTS).map(([k, v]) => [k, v[0]]), lay.tint || 'natural', v => { lay.tint = v; save(); applyTint(); dirty = true; }), 'A colour grade over the whole map. Shared images use it too.'),
-      inv('noTilt', 'Slide and tilt names to make room', 'When names would overlap they move around their marker and tilt, instead of being hidden'),
-      field('Label size', seg([[0.85, 'Small'], [1, 'Normal'], [1.2, 'Large'], [1.45, 'Huge']], +lay.labelScale || 1, v => { lay.labelScale = v; save(); dirty = true; })),
-      field('Show on the map', (() => {
-        const box = h('div', { class: 'tog-chips' }), counts = groupCounts(), keys = sortGroups(Object.keys(counts));
-        const draw = () => {
-          box.innerHTML = '';
-          if (!keys.length) box.append(h('span', { class: 'tiny muted' }, 'No places yet.'));
-          for (const k of keys) { const hid = !!(lay.hide || {})[k]; box.append(h('button', { type: 'button', class: hid ? 'off' : '', onclick: () => { lay.hide = { ...(lay.hide || {}) }; if (hid) delete lay.hide[k]; else lay.hide[k] = true; save(); dirty = true; draw(); } }, `${groupName(k)} · ${counts[k]}`)); }
-        };
-        draw(); return box;
-      })(), 'Tap a group to hide or show it.'),
-      inv('hideSecret', 'Secret places', 'Untick before sharing your screen or making images for players'),
-      tog('symNoLabels', 'Hide names beside land-use and other symbols', 'Just the symbol, for farm, herd, hazard and similar markers'),
-      h('div', { class: 'lbl', style: 'margin-top:10px' }, 'FACTIONS & WAR'),
-      inv('noTerr', 'Territories and contested zones'), inv('noTerrNames', 'Faction names across their land'),
-      field('Territory fill', seg([[0.1, 'Faint'], [0.2, 'Medium'], [0.34, 'Strong']], +lay.terrA || 0.2, v => { lay.terrA = v; save(); terrVer++; dirty = true; })),
-      inv('noMil', 'Military: units, arrows, front lines and battles'), inv('noMilNames', 'Unit names'),
-      h('button', { class: 'btn small', style: 'margin:4px 0 10px', onclick: () => { lay.tint = 'antique'; lay.noTerr = false; lay.noMil = false; lay.symNoLabels = true; lay.hide = { ...(lay.hide || {}), 'sym:eco': true, 'sym:leisure': true, 'sym:farm': true, 'sym:food': true }; save(); applyTint(); terrVer++; dirty = true; sh.close(); toast('War-room view: antique tint, military and territory on, civilian symbols hidden'); } }, icon('flag', 16), 'War-room view'),
-      tog('usgsClose', 'Switch to USGS sheets when zoomed in', 'Auto style only: map sheets with contours below about 40 miles across'),
-      (() => { const c = h('input', { type: 'checkbox', checked: !!lay.zoomLock }); c.addEventListener('change', () => { lay.zoomLock = c.checked; save(); if (cam.mode === 'local') postCam(); dirty = true; toast(c.checked ? 'Zoom stops at 10 miles across' : 'Zoom lock off'); }); return h('label', { class: 'check' }, c, h('div', null, 'Lock zoom at 10 miles across', h('div', { class: 'tiny muted' }, 'Stops close-ups from zooming in any further'))); })(),
-      tog('hill', 'Shaded relief'), tog('contours', 'Contour lines', 'Topographic style only, labelled every fifth line'),
-      tog('spots', 'Spot heights on summits'), tog('grid', 'Latitude / longitude'), tog('survey', 'Survey grid', 'Sections and townships (1-mile squares), or a 1 km grid in metric'),
-      tog('places', 'Place names'), tog('features', 'Rivers, roads, trails & borders'),
-      field('Contour spacing', seg([[2, 'Sparse'], [1, 'Normal'], [0.5, 'Dense']], lay.density || 1, v => { lay.density = v; save(); dirty = true; })),
-      field('Render quality', seg([['fast', 'Fast'], ['auto', 'Balanced'], ['high', 'Sharp']], S.ui.quality || 'auto', v => { S.ui.quality = v; save(); resize(); }), 'Sharp looks best on Retina screens but takes longer to draw.'));
+      h('div', { class: 'list-row tap', onclick: () => { sh.close(); worldSheet(); } }, icon('cog', 20),
+        h('div', { class: 'main' }, h('div', { class: 'title' }, 'World generation'), h('div', { class: 'sub' }, 'Seed, planet size, oceans, mountains, climate')), icon('chev', 16)),
+      grp('look', 'Look', true,
+        field('Map style', seg([['auto', 'Auto'], ['atlas', 'Atlas'], ['topo', 'Topographic']], lay.style, v => { lay.style = v; save(); dirty = true; }), 'Auto keeps the coloured atlas at every zoom unless you turn on USGS sheets below.'),
+        field('Tint', seg(Object.entries(TINTS).map(([k, v]) => [k, v[0]]), lay.tint || 'natural', v => { lay.tint = v; save(); applyTint(); dirty = true; }), 'A colour grade over the whole map. Shared images use it too.'),
+        field('Label size', seg([[0.85, 'Small'], [1, 'Normal'], [1.2, 'Large'], [1.45, 'Huge']], +lay.labelScale || 1, v => { lay.labelScale = v; save(); dirty = true; })),
+        inv('noTilt', 'Slide and tilt names to make room', 'When names would overlap they move around their marker and tilt, instead of being hidden')),
+      grp('show', 'What to show', true,
+        tog('places', 'Place names'), tog('features', 'Rivers, roads, trails & borders'),
+        field('Show on the map', (() => {
+          const box = h('div', { class: 'tog-chips' }), counts = groupCounts(), keys = sortGroups(Object.keys(counts));
+          const draw = () => {
+            box.innerHTML = '';
+            if (!keys.length) box.append(h('span', { class: 'tiny muted' }, 'No places yet.'));
+            for (const k of keys) { const hid = !!(lay.hide || {})[k]; box.append(h('button', { type: 'button', class: hid ? 'off' : '', onclick: () => { lay.hide = { ...(lay.hide || {}) }; if (hid) delete lay.hide[k]; else lay.hide[k] = true; save(); dirty = true; draw(); } }, `${groupName(k)} · ${counts[k]}`)); }
+          };
+          draw(); return box;
+        })(), 'Tap a group to hide or show it.'),
+        inv('hideSecret', 'Secret places', 'Untick before sharing your screen or making images for players'),
+        tog('symNoLabels', 'Hide names beside land-use and other symbols', 'Just the symbol, for farm, herd, hazard and similar markers'),
+        tog('grid', 'Latitude / longitude'), tog('survey', 'Survey grid', 'Sections and townships (1-mile squares), or a 1 km grid in metric')),
+      grp('war', 'Factions & war', false,
+        inv('noTerr', 'Territories and contested zones'), inv('noTerrNames', 'Faction names across their land'),
+        field('Territory fill', seg([[0.1, 'Faint'], [0.2, 'Medium'], [0.34, 'Strong']], +lay.terrA || 0.2, v => { lay.terrA = v; save(); terrVer++; dirty = true; })),
+        inv('noMil', 'Military: units, arrows, front lines and battles'), inv('noMilNames', 'Unit names'),
+        h('button', { class: 'btn small', style: 'margin:4px 0 10px', onclick: () => { lay.tint = 'antique'; lay.noTerr = false; lay.noMil = false; lay.symNoLabels = true; lay.hide = { ...(lay.hide || {}), 'sym:eco': true, 'sym:leisure': true, 'sym:farm': true, 'sym:food': true }; save(); applyTint(); terrVer++; dirty = true; sh.close(); toast('War-room view: antique tint, military and territory on, civilian symbols hidden'); } }, icon('flag', 16), 'War-room view')),
+      grp('terrain', 'Terrain detail', false,
+        tog('hill', 'Shaded relief'), tog('contours', 'Contour lines', 'Topographic style only, labelled every fifth line'),
+        tog('spots', 'Spot heights on summits'),
+        tog('usgsClose', 'Switch to USGS sheets when zoomed in', 'Auto style only: map sheets with contours below about 40 miles across'),
+        field('Contour spacing', seg([[2, 'Sparse'], [1, 'Normal'], [0.5, 'Dense']], lay.density || 1, v => { lay.density = v; save(); dirty = true; }))),
+      grp('perf', 'Zoom & speed', false,
+        (() => { const c = h('input', { type: 'checkbox', checked: !!lay.zoomLock }); c.addEventListener('change', () => { lay.zoomLock = c.checked; save(); if (cam.mode === 'local') postCam(); dirty = true; toast(c.checked ? 'Zoom stops at 10 miles across' : 'Zoom lock off'); }); return h('label', { class: 'check' }, c, h('div', null, 'Lock zoom at 10 miles across', h('div', { class: 'tiny muted' }, 'Stops close-ups from zooming in any further'))); })(),
+        field('Render quality', seg([['fast', 'Fast'], ['auto', 'Balanced'], ['high', 'Sharp']], S.ui.quality || 'auto', v => { S.ui.quality = v; save(); resize(); }), 'Sharp looks best on Retina screens but takes longer to draw.')));
     let sh;
     sh = openSheet({ title: 'Map layers', body, foot: [
       h('button', { class: 'btn', onclick: () => { sh.close(); legendSheet(); } }, icon('info', 16), 'Legend'),
@@ -6230,7 +6313,7 @@ const MapView = (() => {
     requestAnimationFrame(frame);
   }
   return {
-    init, flyTo, openPlace, editPlace, placesSheet, goHere, hereSheet, roadsSheet, routeSheet, factionsSheet, milSheet, milLabel, showMil, worldSheet, layersSheet, legendSheet, home, zoomToFeature, openFeature, placeWidth, nearby,
+    init, flyTo, openPlace, editPlace, placesSheet, localContext, POI_KINDS, showShareResult, goHere, hereSheet, roadsSheet, routeSheet, factionsSheet, milSheet, milLabel, showMil, worldSheet, layersSheet, legendSheet, home, zoomToFeature, openFeature, placeWidth, nearby,
     stampName: k => (STAMPS[k] || { name: k }).name,
     centerLL,
     show() { visible = true; resize(); dirty = true; },
@@ -6334,6 +6417,879 @@ function conceptionChance(carrier, partner, o) {
 }
 
 /* ===================== characters: views ===================== */
+/* ===================== local maps: a generated town plan or dungeon for any place ===================== */
+// Both are rebuilt from a seed and a few options, so only those (plus names, notes and pins) are stored on the place:
+// p.lmap = { kind, city: { seed, size, walls, water, names, notes }, dun: { cur, levels: [{ seed, size, style, rooms, marks }] } }.
+// Town pins are the place's own points of interest (p.poi[].mx/my, in metres from the centre); dungeon marks live on each level.
+const LocalMaps = (() => {
+  const srng = seed => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+  const newSeed = () => Math.floor(rand() * 2147483647);
+  const seedOf = str => { let x = 2166136261; for (let i = 0; i < str.length; i++) x = Math.imul(x ^ str.charCodeAt(i), 16777619); return (x >>> 0) % 2147483647 || 1; };
+  const TAU = Math.PI * 2;
+
+  /* ---------- convex polygons ([[x, y], …]) ---------- */
+  const area = P => { let a = 0; for (let i = 0, n = P.length; i < n; i++) { const p = P[i], q = P[(i + 1) % n]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; };
+  function centroid(P) {
+    let a = 0, x = 0, y = 0;
+    for (let i = 0, n = P.length; i < n; i++) { const p = P[i], q = P[(i + 1) % n], c = p[0] * q[1] - q[0] * p[1]; a += c; x += (p[0] + q[0]) * c; y += (p[1] + q[1]) * c; }
+    return Math.abs(a) < 1e-9 ? P[0].slice() : [x / (3 * a), y / (3 * a)];
+  }
+  // the part of P where nx·x + ny·y <= d
+  function clip(P, nx, ny, d) {
+    if (!P) return null;
+    const out = [];
+    for (let i = 0, n = P.length; i < n; i++) {
+      const a = P[i], b = P[(i + 1) % n], da = nx * a[0] + ny * a[1] - d, db = nx * b[0] + ny * b[1] - d;
+      if (da <= 0) out.push(a);
+      if ((da < 0 && db > 0) || (da > 0 && db < 0)) { const t = da / (da - db); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+    }
+    return out.length >= 3 && Math.abs(area(out)) > 1 ? out : null;
+  }
+  // both sides of the line through (px, py) with normal (nx, ny), leaving a gap g between them
+  const split = (P, px, py, nx, ny, g) => { const d = nx * px + ny * py; return [clip(P, nx, ny, d - g / 2), clip(P, -nx, -ny, -d - g / 2)]; };
+  function longAxis(P) {
+    let best = 0, bd = 0;
+    for (let k = 0; k < 12; k++) {
+      const a = k * Math.PI / 12, c = Math.cos(a), s = Math.sin(a); let lo = Infinity, hi = -Infinity;
+      for (const p of P) { const v = p[0] * c + p[1] * s; if (v < lo) lo = v; if (v > hi) hi = v; }
+      if (hi - lo > bd) { bd = hi - lo; best = a; }
+    }
+    return [best, bd];
+  }
+  // cut P across its long axis again and again until every piece is below maxA
+  function subdivide(P, maxA, gap, r, out, jit = 0.3, depth = 0) {
+    if (Math.abs(area(P)) <= maxA || depth > 16) { out.push(P); return; }
+    const [ang, len] = longAxis(P), c = centroid(P), sk = ang + (r() - 0.5) * 0.45, nx = Math.cos(sk), ny = Math.sin(sk), off = (r() - 0.5) * jit * len;
+    const [a, b] = split(P, c[0] + nx * off, c[1] + ny * off, nx, ny, gap);
+    if (!a && !b) { out.push(P); return; }
+    if (a) subdivide(a, maxA, gap, r, out, jit, depth + 1);
+    if (b) subdivide(b, maxA, gap, r, out, jit, depth + 1);
+  }
+  // fields: cut along and across the line to the town, so they come out as strips and trapezoids around it
+  function subdivideRadial(P, maxA, gap, r, out, cx, cy, depth = 0) {
+    const A = Math.abs(area(P));
+    if (A <= maxA || depth > 16) { out.push(P); return; }
+    const c = centroid(P), ar = Math.atan2(c[1] - cy, c[0] - cx);
+    const ext = a => { const co = Math.cos(a), si = Math.sin(a); let lo = Infinity, hi = -Infinity; for (const q of P) { const v = q[0] * co + q[1] * si; if (v < lo) lo = v; if (v > hi) hi = v; } return hi - lo; };
+    const er = ext(ar), et = ext(ar + Math.PI / 2), na = (er > et * 1.4 ? ar : ar + Math.PI / 2) + (r() - 0.5) * 0.25, nx = Math.cos(na), ny = Math.sin(na), off = (r() - 0.5) * 0.4 * Math.max(er, et);
+    const [a, b] = split(P, c[0] + nx * off, c[1] + ny * off, nx, ny, gap);
+    if (!a && !b) { out.push(P); return; }
+    if (a) subdivideRadial(a, maxA, gap, r, out, cx, cy, depth + 1);
+    if (b) subdivideRadial(b, maxA, gap, r, out, cx, cy, depth + 1);
+  }
+  function hull(pts) {
+    const P = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]), cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const lo = [], up = [];
+    for (const p of P) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+    for (let i = P.length - 1; i >= 0; i--) { const p = P[i]; while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+    return lo.slice(0, -1).concat(up.slice(0, -1));
+  }
+  function inside(P, x, y) {
+    let c = false;
+    for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; }
+    return c;
+  }
+  function segDist(px, py, a, b) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy; let t = L ? ((px - a[0]) * dx + (py - a[1]) * dy) / L : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+    return Math.hypot(px - a[0] - dx * t, py - a[1] - dy * t);
+  }
+  const edgeDist = (P, x, y) => { let m = Infinity; for (let i = 0; i < P.length; i++) m = Math.min(m, segDist(x, y, P[i], P[(i + 1) % P.length])); return m; };
+  // P shrunk by w on every side (convex only)
+  function inset(P, w) {
+    const ccw = area(P) > 0, n = P.length, L = [];
+    for (let i = 0; i < n; i++) {
+      const a = P[i], b = P[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = (ccw ? dy : -dy) / l, ny = (ccw ? -dx : dx) / l;
+      L.push([a[0] - nx * w, a[1] - ny * w, dx, dy]);
+    }
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const A = L[(i + n - 1) % n], B = L[i], den = A[2] * B[3] - A[3] * B[2];
+      if (Math.abs(den) < 1e-9) { out.push([B[0], B[1]]); continue; }
+      const t = ((B[0] - A[0]) * B[3] - (B[1] - A[1]) * B[2]) / den;
+      out.push([A[0] + A[2] * t, A[1] + A[3] * t]);
+    }
+    return area(out) * area(P) > 0 && Math.abs(area(out)) > 4 ? out : null;
+  }
+  const rect = (cx, cy, w, hh, a) => { const c = Math.cos(a), s = Math.sin(a), q = [[-w / 2, -hh / 2], [w / 2, -hh / 2], [w / 2, hh / 2], [-w / 2, hh / 2]]; return q.map(([x, y]) => [cx + x * c - y * s, cy + x * s + y * c]); };
+  const addPoly = (path, P) => { path.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) path.lineTo(P[i][0], P[i][1]); path.closePath(); };
+  // many shapes at once go in as one SVG path string: adding closed shapes one by one gets slower with every shape in Chrome
+  const svgPoly = P => 'M' + P.map(q => q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join('L') + 'Z';
+  const polys = list => new Path2D(list.map(svgPoly).join(''));
+  const pick = (r, a) => a[Math.floor(r() * a.length)];
+
+  /* ---------- what kind of map a place gets ---------- */
+  const DUNGEONY = new Set(['dungeon']);
+  const NO_MAP = new Set(['region', 'water']);
+  function state(p) {
+    const m = p.lmap || {};   // not attached until something changes, so just looking writes nothing
+    m.kind = m.kind === 'dungeon' || m.kind === 'city' ? m.kind : DUNGEONY.has(p.type) ? 'dungeon' : 'city';
+    m.city = Object.assign({ seed: 0, size: 'auto', walls: 'auto', water: 'auto', names: {}, notes: {} }, m.city || {});
+    m.dun = Object.assign({ cur: 0, levels: [] }, m.dun || {});
+    if (!m.city.seed) m.city.seed = seedOf(p.id + ':town');
+    if (!m.dun.levels.length) m.dun.levels.push({ ...newLevel(), seed: seedOf(p.id + ':dungeon') });
+    m.dun.cur = clamp(m.dun.cur | 0, 0, m.dun.levels.length - 1);
+    return m;
+  }
+  const newLevel = (base) => ({ seed: newSeed(), size: base ? base.size : 'medium', style: base ? base.style : 'rooms', rooms: {}, marks: [] });
+
+  /* ===================== towns ===================== */
+  const CITY = {
+    village: { name: 'Village', R: 230, ward: 24000, block: 5200, lot: 230, dens: 0.42, road: 7, street: 6, gates: 3 },
+    town: { name: 'Town', R: 470, ward: 52000, block: 3800, lot: 170, dens: 0.9, road: 9, street: 8, gates: 4 },
+    city: { name: 'City', R: 820, ward: 90000, block: 3400, lot: 150, dens: 0.93, road: 13, street: 11, gates: 5 },
+    metro: { name: 'Great city', R: 1250, ward: 130000, block: 3600, lot: 185, dens: 0.95, road: 16, street: 13, gates: 6 },
+  };
+  function sizeKey(p, C) {
+    if (CITY[C.size]) return C.size;
+    const n = +p.pop || 0;
+    if (n) return n < 400 ? 'village' : n < 6000 ? 'town' : n < 60000 ? 'city' : 'metro';
+    return p.type === 'capital' ? 'metro' : p.type === 'city' ? 'city' : ['town', 'port', 'fort', 'ruin'].includes(p.type) ? 'town' : 'village';
+  }
+  const WARDS = {
+    market: ['Market Ward', "Merchants' Quarter", 'Exchange Ward', 'Guild Row'],
+    temple: ['Temple Quarter', 'Holy Ward', 'Cathedral Close', 'Shrine Hill'],
+    castle: ['Castle Ward', 'The Citadel', 'Castle Hill', 'The Keep'],
+    docks: ['The Docks', 'Harbour Ward', 'Wharfside', 'Riverside'],
+    craft: ["Tanners' Row", "Smiths' Ward", "Weavers' Quarter", "Potters' Lane", "Coopers' Ward", "Masons' Quarter", "Dyers' Row", "Brewers' Ward"],
+    res: ['Old Town', 'Hillside', 'Lantern Ward', 'High Street', 'Bell Ward', 'Crown Ward', 'Mill Ward', 'Well Ward', 'Chapel Ward', 'Oak Ward', 'Fountain Ward'],
+    slum: ['The Warrens', 'Low Town', 'Mudside', 'Ragged Row'],
+    park: ['The Commons', 'The Gardens', 'Green Ward'],
+  };
+  const WARDS_HE = { market: ['HaShuk', 'Shuk HaIr', 'Kikar HaShuk'], temple: ['Rova HaMikdash', 'Har HaKodesh', 'Kikar HaMikdash'], castle: ['HaMetzuda', 'HaBira', 'Migdal HaIr'],
+    docks: ['HaNamal', 'Sfat HaYam', 'Rova HaNamal'], craft: ['Rova HaNapachim', 'Rova HaYotzrim', 'Rova HaOrgim', 'Rova HaTzaba\'im', 'Rova HaBonim'],
+    slum: ['HaMa\'abara', 'Ir HaTachtit'], park: ['HaGan', 'Gan HaIr', 'HaPardes'] };
+  function wardName(type, r, used) {
+    const he = S.meta.nameStyle === 'hebrew', list = (he ? WARDS_HE[type] : WARDS[type]) || [];
+    for (let k = 0; k < 8; k++) { const n = list.length ? pick(r, list) : ''; if (n && !used.has(n)) { used.add(n); return n; } }
+    for (let k = 0; k < 8; k++) { const n = Names.make('district'); if (!used.has(n)) { used.add(n); return n; } }
+    return 'Ward ' + (used.size + 1);
+  }
+  // the town's surroundings from the world map: road directions, sea or lake, river (or made up, if asked for)
+  function surroundings(p, C, R, r) {
+    let cx = { roads: [], coast: null, river: null };
+    try { cx = MapView.localContext(p, R * 1.6); } catch (e) { console.error(e); }
+    let { coast, river } = cx;
+    if (C.water === 'none') coast = river = null;
+    if (C.water === 'river') coast = null;
+    if (C.water === 'coast') river = null;
+    if (C.water === 'river' && !river) { const ang = r() * Math.PI; river = { ang, off: (r() - 0.5) * 0.5 * R, w: 10 + R * 0.03 }; }
+    if (C.water === 'coast' && !coast) { const a = r() * TAU; coast = { sx: Math.cos(a), sy: Math.sin(a), off: R * (0.45 + r() * 0.3) }; }
+    if (coast && p.type === 'port') coast.off = Math.min(coast.off, R * 0.5);
+    if (coast) coast.off = Math.max(coast.off, R * 0.3);
+    if (river) river.off = clamp(river.off, -0.45 * R, 0.45 * R);
+    return { roads: cx.roads || [], coast, river };
+  }
+  function genCity(p, C) {
+    const sz = sizeKey(p, C), Z = CITY[sz], R = Z.R, r = srng(C.seed);
+    const ruined = p.type === 'ruin' || p.status === 'ruined' || p.status === 'abandoned', fort = p.type === 'fort';
+    const walls = C.walls === 'yes' || (C.walls !== 'no' && (sz !== 'village' || fort));
+    const { roads, coast, river } = surroundings(p, C, R, r);
+    const Vh = R * 1.75, view = [[-Vh, -Vh], [Vh, -Vh], [Vh, Vh], [-Vh, Vh]];
+    const wet = (x, y, m = 0) => (coast && coast.sx * x + coast.sy * y > coast.off - m) || (river && Math.abs(-Math.sin(river.ang) * x + Math.cos(river.ang) * y - river.off) < river.w / 2 + m);
+    // outline: a jittered, slightly stretched convex shape, cut back from the shore
+    const ell = 1 + r() * 0.25, rot = r() * Math.PI, raw = [];
+    for (let i = 0; i < 18; i++) {
+      const a = i / 18 * TAU + (r() - 0.5) * 0.25, rr = R * (0.86 + r() * 0.14), x = Math.cos(a) * rr * ell, y = Math.sin(a) * rr / ell;
+      raw.push([x * Math.cos(rot) - y * Math.sin(rot), x * Math.sin(rot) + y * Math.cos(rot)]);
+    }
+    let outline = hull(raw);
+    if (coast) outline = clip(outline, coast.sx, coast.sy, coast.off - 16) || outline;
+    const c0 = centroid(outline), cx = c0[0] + (r() - 0.5) * R * 0.1, cy = c0[1] + (r() - 0.5) * R * 0.1;
+    // main roads: toward the real roads first, then made up until there are enough gates; never straight into the sea
+    const angs = [];
+    const far = a => { const d = Math.cos(a), e = Math.sin(a); return !coast || coast.sx * d + coast.sy * e < 0.55; };
+    for (const a of roads) if (far(a) && angs.every(b => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) > 0.5)) angs.push(a);
+    for (let k = 0; angs.length < Z.gates && k < 60; k++) { const a = r() * TAU; if (far(a) && angs.every(b => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) > 0.9)) angs.push(a); }
+    const rays = angs.map(a => ({ a: ((a % TAU) + TAU) % TAU, w: Z.road, main: true })).sort((x, y) => x.a - y.a);
+    for (let i = 0; i < rays.length; i++) {   // fill wide gaps with lesser streets so every sector stays convex
+      const a = rays[i].a, b = i + 1 < rays.length ? rays[i + 1].a : rays[0].a + TAU;
+      if (b - a > Math.PI * 0.85) { rays.splice(i + 1, 0, { a: (a + (b - a) / 2) % TAU, w: Z.road * 0.6, main: false }); rays.sort((x, y) => x.a - y.a); i = -1; }
+    }
+    if (!rays.length) rays.push({ a: 0, w: Z.road, main: true }, { a: 2.1, w: Z.road, main: true }, { a: 4.2, w: Z.road, main: true });
+    const rp = Math.sqrt(R) * (sz === 'village' ? 1.6 : 2.1);   // the square
+    // sectors between the roads, the square cut out of their tips, the river cut through them
+    let sectors = [];
+    for (let i = 0; i < rays.length; i++) {
+      const A = rays[i], B = rays[(i + 1) % rays.length], a0 = A.a, a1 = i + 1 < rays.length ? B.a : B.a + TAU;
+      let P = clip(outline, Math.sin(a0), -Math.cos(a0), Math.sin(a0) * cx - Math.cos(a0) * cy - A.w / 2);
+      P = clip(P, -Math.sin(a1), Math.cos(a1), -Math.sin(a1) * cx + Math.cos(a1) * cy - B.w / 2);
+      const bi = (a0 + a1) / 2; P = clip(P, -Math.cos(bi), -Math.sin(bi), -(Math.cos(bi) * cx + Math.sin(bi) * cy) - rp);
+      if (P) sectors.push(P);
+    }
+    if (river) {
+      const nx = -Math.sin(river.ang), ny = Math.cos(river.ang), hw = river.w / 2 + 7;
+      sectors = sectors.flatMap(P => [clip(P, nx, ny, river.off - hw), clip(P, -nx, -ny, -river.off - hw)]).filter(Boolean);
+    }
+    // wards, then a type for each
+    const wardsP = []; for (const P of sectors) subdivide(P, Z.ward, Z.street, r, wardsP, 0.3);
+    const wards = wardsP.map(P => { const c = centroid(P); return { P, c, a: Math.abs(area(P)), d: Math.hypot(c[0] - cx, c[1] - cy), wet: wet(c[0], c[1], R * 0.18), type: 'res' }; }).filter(w => w.a > 300);
+    const byD = wards.slice().sort((a, b) => a.d - b.d);
+    if (sz !== 'village') {
+      for (const w of byD.slice(0, sz === 'town' ? 1 : 2)) w.type = 'market';
+      const t = byD.find(w => w.type === 'res'); if (t) t.type = 'temple';
+      if (walls || fort || p.type === 'capital') { const far2 = byD.filter(w => w.type === 'res' && !w.wet); const k = fort ? far2[0] : far2[far2.length - 1 - Math.floor(r() * Math.min(3, far2.length))]; if (k) k.type = 'castle'; }
+      for (const w of wards) if (w.type === 'res' && w.wet) w.type = 'docks';
+      const rest = byD.filter(w => w.type === 'res');
+      rest.forEach((w, i) => { const f = i / Math.max(1, rest.length - 1); w.type = f > 0.8 && sz !== 'town' ? 'slum' : r() < 0.4 ? 'craft' : 'res'; });
+      if (sz !== 'town') { const pk = rest.find(w => w.type === 'res' && w.d > R * 0.3); if (pk && r() < 0.8) pk.type = 'park'; }
+    } else { const t = byD[0]; if (t) t.type = 'temple'; }
+    // blocks, lots, buildings
+    const bld = [], special = [], parks = [], trees = [], innerWalls = [];
+    for (const w of wards) {
+      if (w.type === 'park') { const q = inset(w.P, 3); if (q) parks.push(q); for (let k = 0; k < w.a / 900; k++) { const x = w.c[0] + (r() - 0.5) * Math.sqrt(w.a), y = w.c[1] + (r() - 0.5) * Math.sqrt(w.a); if (inside(w.P, x, y) && edgeDist(w.P, x, y) > 6) trees.push([x, y, 3 + r() * 4]); } continue; }
+      if (w.type === 'castle') {
+        const q = inset(w.P, 4); if (!q) continue; innerWalls.push(q);
+        const [ang, len] = longAxis(q), s = Math.min(len * 0.32, Math.sqrt(w.a) * 0.38);
+        special.push(rect(w.c[0], w.c[1], s, s * (0.8 + r() * 0.3), ang));
+        for (let k = 0; k < 3; k++) { const a = ang + k * 2.1 + r(), dd = s * (0.9 + r() * 0.3), hb = rect(w.c[0] + Math.cos(a) * dd, w.c[1] + Math.sin(a) * dd, s * 0.55, s * 0.24, a + Math.PI / 2); if (hb.every(([x, y]) => inside(q, x, y) && edgeDist(q, x, y) > 3)) bld.push(hb); }
+        continue;
+      }
+      const blocks = []; subdivide(w.P, Z.block, sz === 'village' ? 5 : 4, r, blocks, 0.35);
+      let templeDone = w.type !== 'temple';
+      if (!templeDone) { const big = blocks.reduce((m, b) => (Math.abs(area(b)) > Math.abs(area(m)) ? b : m), blocks[0]); const q = big && inset(big, 4); if (q) { special.push(q); blocks.splice(blocks.indexOf(big), 1); } templeDone = true; }
+      const lotA = Z.lot * (w.type === 'docks' ? 2.4 : w.type === 'slum' ? 0.7 : w.type === 'market' ? 1.15 : 1), dens = Z.dens * (w.type === 'slum' ? 1.04 : 1);
+      for (const b of blocks) {
+        const lots = []; subdivide(b, lotA, 0.9, r, lots, 0.4);
+        for (const L of lots) {
+          if (!L.some(([x, y]) => edgeDist(b, x, y) < 2.5)) { if (r() < 0.12 && sz !== 'village') trees.push([...centroid(L), 2.5 + r() * 2]); continue; }   // courtyard
+          if (r() > (ruined ? dens * 0.5 : dens)) { if (sz === 'village' && r() < 0.35) trees.push([...centroid(L), 3 + r() * 3]); continue; }
+          if (sz === 'village') { const q = inset(L, Math.min(3.5, Math.sqrt(Math.abs(area(L))) * 0.2)); if (q) bld.push(q); } else bld.push(L);
+        }
+      }
+    }
+    // the town square: a well or fountain and, in towns, market stalls
+    const stalls = [];
+    if (sz !== 'village') for (let k = 0; k < rp / 2.5; k++) { const a = r() * TAU, d = rp * (0.35 + r() * 0.45); stalls.push(rect(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 4 + r() * 2, 3, r() * Math.PI)); }
+    // gates: where the main roads cross the wall
+    const gates = [];
+    for (const ray of rays) {
+      if (!ray.main) continue;
+      const dx = Math.cos(ray.a), dy = Math.sin(ray.a);
+      let best = null;
+      for (let i = 0; i < outline.length; i++) {
+        const a = outline[i], b = outline[(i + 1) % outline.length], ex = b[0] - a[0], ey = b[1] - a[1], den = dx * ey - dy * ex; if (Math.abs(den) < 1e-9) continue;
+        const t = ((a[0] - cx) * ey - (a[1] - cy) * ex) / den, u = ((a[0] - cx) * dy - (a[1] - cy) * dx) / den;
+        if (t > 0 && u >= 0 && u <= 1 && (!best || t < best.t)) best = { t, x: cx + dx * t, y: cy + dy * t, edge: i, u, w: ray.w };
+      }
+      if (best) gates.push(best);
+    }
+    // countryside: fields and farms around the town, houses strung along the roads, copses
+    const fields = [], farms = [];
+    const nearRoad = (x, y, m) => rays.some(ray => { if (!ray.main) return false; const dx = Math.cos(ray.a), dy = Math.sin(ray.a), t = (x - cx) * dx + (y - cy) * dy; return t > 0 && Math.abs(-(x - cx) * dy + (y - cy) * dx) < m; });
+    const sc = Math.sqrt(R / 800), fieldA = clamp(7000 * sc, 3200, 10000), ring = [];
+    for (let i = 0; i < 28; i++) { const a = i / 28 * TAU; ring.push([cx + Math.cos(a) * Vh * 1.08, cy + Math.sin(a) * Vh * 1.08]); }
+    for (let i = 0; i < rays.length; i++) {
+      const A = rays[i], B = rays[(i + 1) % rays.length], a0 = A.a, a1 = i + 1 < rays.length ? B.a : B.a + TAU, hw0 = (A.main ? Z.road : 0) / 2 + 4, hw1 = (B.main ? Z.road : 0) / 2 + 4;
+      let P = clip(ring, Math.sin(a0), -Math.cos(a0), Math.sin(a0) * cx - Math.cos(a0) * cy - hw0);
+      P = clip(P, -Math.sin(a1), Math.cos(a1), -Math.sin(a1) * cx + Math.cos(a1) * cy - hw1);
+      if (!P) continue;
+      const pieces = []; subdivideRadial(P, fieldA, 3, r, pieces, cx, cy);
+      for (const q of pieces) {
+        const cq = centroid(q), dq = Math.hypot(cq[0] - cx, cq[1] - cy);
+        if (q.some(([x, y]) => inside(outline, x, y)) || edgeDist(outline, cq[0], cq[1]) < 14 || q.some(([x, y]) => wet(x, y, 6))) continue;
+        if (Math.abs(area(q)) < fieldA * 0.18) continue;
+        // farther out, more of the land is left wild
+        if (r() < 0.85 * Math.min(1, Math.max(0, (dq - R * 1.3) / (Vh - R * 1.3)))) { if (r() < 0.5) for (let j = 0; j < 7; j++) { const x = cq[0] + (r() - 0.5) * 50 * sc, y = cq[1] + (r() - 0.5) * 50 * sc; if (inside(q, x, y)) trees.push([x, y, 4 + r() * 5]); } continue; }
+        if (r() < 0.13) { for (let j = 0; j < 4; j++) { const x = cq[0] + (r() - 0.5) * 30 * sc, y = cq[1] + (r() - 0.5) * 30 * sc; if (inside(q, x, y)) trees.push([x, y, 4 + r() * 4]); } continue; }   // meadow and copse
+        fields.push({ P: q, c: Math.floor(r() * 4), a: longAxis(q)[0] });
+      }
+    }
+    for (const ray of rays) {
+      if (!ray.main) continue;
+      const dx = Math.cos(ray.a), dy = Math.sin(ray.a);
+      for (let t = R * 0.95; t < R * (sz === 'village' ? 1.25 : 1.5); t += 14 + r() * 22) for (const side of [-1, 1]) {
+        if (r() < 0.35) continue;
+        const o = Z.road / 2 + 6 + r() * 6, x = cx + dx * t - dy * o * side, y = cy + dy * t + dx * o * side, q = rect(x, y, 8 + r() * 6, 6 + r() * 4, ray.a);
+        if (q.every(([u, v]) => !inside(outline, u, v) && !wet(u, v, 3))) farms.push(q);
+      }
+    }
+    for (let k = 0; k < 40; k++) {
+      const a = r() * TAU, d = R * (1.1 + r() * 0.6), x0 = cx + Math.cos(a) * d, y0 = cy + Math.sin(a) * d;
+      for (let j = 0, n = 3 + Math.floor(r() * 9); j < n; j++) { const x = x0 + (r() - 0.5) * 50 * sc, y = y0 + (r() - 0.5) * 50 * sc; if (!inside(outline, x, y) && !wet(x, y, 4) && !nearRoad(x, y, Z.road) && !fields.some(f => inside(f.P, x, y))) trees.push([x, y, 4 + r() * 5]); }
+    }
+    // piers along the shore
+    const piers = [];
+    if (coast) {
+      const tx = -coast.sy, ty = coast.sx, bx = coast.sx * coast.off, by = coast.sy * coast.off;
+      for (let t = -R; t < R; t += 45 + r() * 50) {
+        const x = bx + tx * t, y = by + ty * t; if (edgeDist(outline, x - coast.sx * 20, y - coast.sy * 20) > 40 && !inside(outline, x - coast.sx * 20, y - coast.sy * 20)) continue;
+        const L = 25 + r() * 45; piers.push(rect(x + coast.sx * L / 2, y + coast.sy * L / 2, 6, L + 6, Math.atan2(coast.sy, coast.sx) + Math.PI / 2));
+      }
+    }
+    const used = new Set();
+    for (const w of wards) w.name = wardName(w.type, r, used);
+    return { kind: 'city', sz, R, Vh, view, roadW: Z.road, outline, cx, cy, rp, rays, gates, walls, wards, bld, special, parks, trees, innerWalls, stalls, fields, farms, piers, coast, river, ruined, title: `${p.name}` };
+  }
+
+  /* ===================== dungeons ===================== */
+  const DSIZE = { small: [36, 26, 7], medium: [50, 36, 12], large: [66, 48, 20] };
+  function genDungeon(L) {
+    const r = srng(L.seed), [W, H, nR] = DSIZE[L.size] || DSIZE.medium, N = W * H;
+    const g = new Uint8Array(N), roomOf = new Int16Array(N).fill(-1);   // g: 0 rock, 1 floor, 2 corridor, 3 water
+    const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : g[y * W + x]);
+    let rooms = [];
+    const doors = [], pillars = [];
+    if (L.style === 'caves') {
+      for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) g[y * W + x] = r() < 0.55 ? 1 : 0;
+      for (let it = 0; it < 5; it++) {
+        const n = new Uint8Array(N);
+        for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+          let c = 0; for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if ((i || j) && g[(y + j) * W + x + i]) c++;
+          n[y * W + x] = c >= 5 || (g[y * W + x] && c >= 4) ? 1 : 0;
+        }
+        g.set(n);
+      }
+      // keep the largest cave
+      const lab = new Int32Array(N).fill(-1); let bestL = -1, bestN = 0;
+      for (let s = 0; s < N; s++) {
+        if (!g[s] || lab[s] >= 0) continue;
+        const q = [s]; lab[s] = s; let cnt = 0;
+        while (q.length) { const v = q.pop(); cnt++; const x = v % W, y = (v / W) | 0; for (const [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const u = (y + j) * W + x + i; if (x + i >= 0 && x + i < W && g[u] && lab[u] < 0) { lab[u] = s; q.push(u); } } }
+        if (cnt > bestN) { bestN = cnt; bestL = s; }
+      }
+      for (let s = 0; s < N; s++) if (g[s] && lab[s] !== bestL) g[s] = 0;
+      // chambers: cluster the floor (k-means), each cluster numbered like a room
+      const fl = []; for (let s = 0; s < N; s++) if (g[s]) fl.push(s);
+      const k = Math.max(3, Math.round(nR * 0.8)), cs = [];
+      for (let i = 0; i < k && fl.length; i++) { const s = fl[Math.floor(r() * fl.length)]; cs.push([s % W, (s / W) | 0]); }
+      for (let it = 0; it < 8; it++) {
+        const acc = cs.map(() => [0, 0, 0]);
+        for (const s of fl) { const x = s % W, y = (s / W) | 0; let bi = 0, bd = Infinity; cs.forEach((c, i) => { const d = (c[0] - x) ** 2 + (c[1] - y) ** 2; if (d < bd) { bd = d; bi = i; } }); roomOf[s] = bi; acc[bi][0] += x; acc[bi][1] += y; acc[bi][2]++; }
+        acc.forEach((a, i) => { if (a[2]) cs[i] = [a[0] / a[2], a[1] / a[2]]; });
+      }
+      rooms = cs.map((c, i) => { let bs = -1, bd = Infinity; for (const s of fl) if (roomOf[s] === i) { const d = (s % W - c[0]) ** 2 + (((s / W) | 0) - c[1]) ** 2; if (d < bd) { bd = d; bs = s; } } return bs < 0 ? null : { cx: bs % W, cy: (bs / W) | 0, i }; }).filter(Boolean);
+      // a pool or two
+      for (let k2 = 0, n = 1 + Math.floor(r() * 2); k2 < n && fl.length; k2++) {
+        const q = [fl[Math.floor(r() * fl.length)]], want = 6 + Math.floor(r() * 18); let got = 0;
+        while (q.length && got < want) { const v = q.shift(); if (g[v] !== 1) continue; g[v] = 3; got++; const x = v % W, y = (v / W) | 0; for (const [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (at(x + i, y + j) === 1 && r() < 0.8) q.push((y + j) * W + x + i); }
+      }
+    } else {
+      for (let t = 0; rooms.length < nR && t < 800; t++) {
+        const w = 4 + Math.floor(r() * 7), hh = 4 + Math.floor(r() * 6), x = 2 + Math.floor(r() * (W - w - 4)), y = 2 + Math.floor(r() * (H - hh - 4));
+        if (rooms.some(o => x < o.x + o.w + 2 && x + w + 2 > o.x && y < o.y + o.h + 2 && y + hh + 2 > o.y)) continue;
+        rooms.push({ x, y, w, h: hh, cx: x + (w >> 1), cy: y + (hh >> 1) });
+      }
+      rooms.forEach((o, i) => { o.i = i; for (let y = o.y; y < o.y + o.h; y++) for (let x = o.x; x < o.x + o.w; x++) { g[y * W + x] = 1; roomOf[y * W + x] = i; } });
+      // corridors: a spanning tree over the rooms plus a few loops
+      const n = rooms.length, inT = new Array(n).fill(false), edges = [];
+      if (n) inT[0] = true;
+      const dist = (a, b) => Math.abs(a.cx - b.cx) + Math.abs(a.cy - b.cy);
+      for (let c = 1; c < n; c++) {
+        let ba = -1, bb = -1, bd = Infinity;
+        for (let a = 0; a < n; a++) if (inT[a]) for (let b = 0; b < n; b++) if (!inT[b]) { const d = dist(rooms[a], rooms[b]); if (d < bd) { bd = d; ba = a; bb = b; } }
+        inT[bb] = true; edges.push([ba, bb]);
+      }
+      for (let a = 0; a < n; a++) { const near = rooms.map((o, b) => [dist(rooms[a], o), b]).filter(([, b]) => b !== a).sort((x, y) => x[0] - y[0]).slice(0, 2); for (const [, b] of near) if (r() < 0.18 && !edges.some(e => (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a))) edges.push([a, b]); }
+      const carve = (x, y) => { const v = y * W + x; if (g[v] === 0) g[v] = 2; };
+      for (const [a, b] of edges) {
+        const A = rooms[a], B = rooms[b], hf = r() < 0.5;
+        if (hf) { for (let x = Math.min(A.cx, B.cx); x <= Math.max(A.cx, B.cx); x++) carve(x, A.cy); for (let y = Math.min(A.cy, B.cy); y <= Math.max(A.cy, B.cy); y++) carve(B.cx, y); }
+        else { for (let y = Math.min(A.cy, B.cy); y <= Math.max(A.cy, B.cy); y++) carve(A.cx, y); for (let x = Math.min(A.cx, B.cx); x <= Math.max(A.cx, B.cx); x++) carve(x, B.cy); }
+      }
+      // doors where a corridor meets a room head-on
+      for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+        if (g[y * W + x] !== 2) continue;
+        for (const [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          if (at(x + i, y + j) !== 1 || at(x - i, y - j) !== 2) continue;
+          if (at(x + j, y + i) !== 0 || at(x - j, y - i) !== 0) continue;
+          const k = r(); doors.push({ x: x + i * 0.5, y: y + j * 0.5, v: i === 0, kind: k < 0.07 ? 'secret' : k < 0.2 ? 'locked' : k < 0.45 ? 'arch' : 'door' }); break;
+        }
+      }
+      for (const o of rooms) if (o.w >= 7 && o.h >= 7 && r() < 0.55) pillars.push([o.x + 1.5, o.y + 1.5], [o.x + o.w - 1.5, o.y + 1.5], [o.x + 1.5, o.y + o.h - 1.5], [o.x + o.w - 1.5, o.y + o.h - 1.5]);
+      for (const o of rooms) if (r() < 0.12 && o.w >= 6 && o.h >= 6) for (let y = o.y + 2; y < o.y + o.h - 2; y++) for (let x = o.x + 2; x < o.x + o.w - 2; x++) g[y * W + x] = 3;
+    }
+    // stairs up in the first room, down in the room furthest away on foot; rooms numbered outward from the entrance
+    const stairs = [];
+    if (rooms.length) {
+      const start = rooms.reduce((m, o) => (L.style === 'caves' ? o.cx < m.cx : o.cx + o.cy < m.cx + m.cy) ? o : m, rooms[0]);
+      const dist = new Int32Array(N).fill(-1), q = [start.cy * W + start.cx]; dist[q[0]] = 0;
+      for (let h2 = 0; h2 < q.length; h2++) { const v = q[h2], x = v % W, y = (v / W) | 0; for (const [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const u = (y + j) * W + x + i; if (at(x + i, y + j) && dist[u] < 0) { dist[u] = dist[v] + 1; q.push(u); } } }
+      const dOf = o => dist[o.cy * W + o.cx];
+      rooms.sort((a, b) => (dOf(a) < 0 ? 1e9 : dOf(a)) - (dOf(b) < 0 ? 1e9 : dOf(b)));
+      const remap = new Map(rooms.map((o, k) => [o.i, k])); for (let s = 0; s < N; s++) if (roomOf[s] >= 0) roomOf[s] = remap.get(roomOf[s]);
+      rooms.forEach((o, k) => { o.n = k + 1; o.i = k; });
+      // stairs in a corner of the room (rooms) or beside the middle (caves), clear of the room number
+      const spot = o => { const c = o.w ? [[o.x, o.y], [o.x + o.w - 1, o.y + o.h - 1], [o.x + o.w - 1, o.y]] : [[o.cx + 2, o.cy], [o.cx - 2, o.cy], [o.cx, o.cy + 2], [o.cx, o.cy - 2], [o.cx, o.cy]];
+        return c.find(([x, y]) => at(x, y) === 1 && !pillars.some(q => Math.floor(q[0]) === x && Math.floor(q[1]) === y)) || [o.cx, o.cy]; };
+      const s0 = spot(start); stairs.push({ x: s0[0], y: s0[1], dir: 'up' });
+      const last = rooms[rooms.length - 1]; if (last !== start) { const s1 = spot(last); stairs.push({ x: s1[0], y: s1[1], dir: 'down' }); }
+    }
+    // the part of the grid in use, for framing
+    let x0 = W, y0 = H, x1 = 0, y1 = 0;
+    for (let s = 0; s < N; s++) if (g[s]) { const x = s % W, y = (s / W) | 0; if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+    return { kind: 'dungeon', W, H, g, roomOf, rooms, doors, pillars, stairs, style: L.style, box: x1 >= x0 ? [x0, y0, x1 + 1, y1 + 1] : [0, 0, W, H] };
+  }
+
+  /* ===================== drawing ===================== */
+  const PAPER = { paper: '#ece6d3', country: '#e2dfc5', ground: '#f4eedf', grass: '#dfe4c3', road: '#f5f0e2', roadEdge: '#c8bea4', bldg: '#b3a58e', bldgEdge: '#6c6150', special: '#8b7860',
+    wall: '#4b4136', water: '#a2c6da', waterEdge: '#6f9fba', fields: ['#d7d5a6', '#cbd39f', '#dfd2a1', '#c6cf9c'], tree: '#9ab47a', treeEdge: '#6d8a52', park: '#cdd9a7', plaza: '#ece2c4', label: '#3b3229', sand: '#e9dfbf' };
+  // geometry is built into Path2D once per layout and reused for every frame
+  function cityPaths(G) {
+    if (G.paths) return G.paths;
+    const P = {}, mk = polys;
+    P.bld = mk(G.bld); P.special = mk(G.special); P.parks = mk(G.parks); P.stalls = mk(G.stalls); P.farms = mk(G.farms); P.piers = mk(G.piers);
+    P.fieldsBy = [0, 1, 2, 3].map(c => mk(G.fields.filter(f => f.c === c).map(f => f.P)));
+    P.furrows = new Path2D();
+    for (const f of G.fields) {
+      const c = Math.cos(f.a), s = Math.sin(f.a), ctr = centroid(f.P);
+      let ext = 0; for (const q of f.P) ext = Math.max(ext, Math.hypot(q[0] - ctr[0], q[1] - ctr[1]));
+      for (let o = -ext; o <= ext; o += 6) { const ax = ctr[0] - s * o, ay = ctr[1] + c * o, seg = []; for (const t of [-ext, ext]) seg.push([ax + c * t, ay + s * t]);
+        // clip the furrow to the field
+        let t0 = 0, t1 = 1; const dx = seg[1][0] - seg[0][0], dy = seg[1][1] - seg[0][1], ccw = area(f.P) > 0, ok = (() => {
+          for (let i = 0; i < f.P.length; i++) { const a = f.P[i], b = f.P[(i + 1) % f.P.length], nx = ccw ? b[1] - a[1] : a[1] - b[1], ny = ccw ? a[0] - b[0] : b[0] - a[0];
+            const den = nx * dx + ny * dy, num = nx * (seg[0][0] - a[0]) + ny * (seg[0][1] - a[1]);
+            if (Math.abs(den) < 1e-9) { if (num > 0) return false; continue; }
+            const t = -num / den; if (den > 0) t1 = Math.min(t1, t); else t0 = Math.max(t0, t); }
+          return t0 < t1; })();
+        if (ok) { P.furrows.moveTo(seg[0][0] + dx * t0, seg[0][1] + dy * t0); P.furrows.lineTo(seg[0][0] + dx * t1, seg[0][1] + dy * t1); }
+      }
+    }
+    P.trees = new Path2D(); for (const [x, y, rr] of G.trees) { P.trees.moveTo(x + rr, y); P.trees.arc(x, y, rr, 0, TAU); }
+    P.outline = mk([G.outline]);
+    P.roads = new Path2D(); for (const ray of G.rays) { P.roads.moveTo(G.cx, G.cy); P.roads.lineTo(G.cx + Math.cos(ray.a) * G.Vh * 1.5, G.cy + Math.sin(ray.a) * G.Vh * 1.5); }
+    P.mainRoads = new Path2D(); for (const ray of G.rays) if (ray.main) { P.mainRoads.moveTo(G.cx, G.cy); P.mainRoads.lineTo(G.cx + Math.cos(ray.a) * G.Vh * 1.5, G.cy + Math.sin(ray.a) * G.Vh * 1.5); }
+    const far = G.Vh * 3, wave = (t, ph, amp) => amp * (Math.sin(t / 37 + ph) * 0.6 + Math.sin(t / 13 + ph * 2.3) * 0.4);
+    // a shore along the line where the normal (nx, ny) reaches off, wavering by amp, closed off on the side of `side`
+    const shore = (nx, ny, off, amp, ph, side) => { const tx = -ny, ty = nx, pts = []; for (let t = -far; t <= far; t += 12) { const o = off + wave(t, ph, amp); pts.push([nx * o + tx * t, ny * o + ty * t]); }
+      pts.push([nx * (off + side * far) + tx * far, ny * (off + side * far) + ty * far], [nx * (off + side * far) - tx * far, ny * (off + side * far) - ty * far]); return pts; };
+    if (G.coast) { const c = G.coast; P.sea = mk([shore(c.sx, c.sy, c.off + 4, 7, 1.3, 1)]); P.sand = mk([shore(c.sx, c.sy, c.off - 6, 7, 1.3, 1)]); }
+    if (G.river) {
+      const v = G.river, nx = -Math.sin(v.ang), ny = Math.cos(v.ang), tx = -ny, ty = nx, pts = [];
+      for (let t = -far; t <= far; t += 12) { const o = v.off + v.w / 2 + wave(t, 0.4, 2.5); pts.push([nx * o + tx * t, ny * o + ty * t]); }
+      for (let t = far; t >= -far; t -= 12) { const o = v.off - v.w / 2 - wave(t, 2.1, 2.5); pts.push([nx * o + tx * t, ny * o + ty * t]); }
+      P.river = mk([pts]);
+    }
+    // walls, broken at the gates and left off the seaward side
+    P.towers = new Path2D();
+    if (G.walls) {
+      P.wall = new Path2D();
+      const O = G.outline, seaSide = (a, b) => G.coast && G.coast.sx * (a[0] + b[0]) / 2 + G.coast.sy * (a[1] + b[1]) / 2 > G.coast.off - 40;
+      for (let i = 0; i < O.length; i++) {
+        const a = O[i], b = O[(i + 1) % O.length]; if (seaSide(a, b)) continue;
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]), cuts = G.gates.filter(q => q.edge === i).map(q => [q.u - (q.w / 2 + 4) / len, q.u + (q.w / 2 + 4) / len]).sort((x, y) => x[0] - y[0]);
+        let t = 0; for (const [u0, u1] of cuts.concat([[1, 1]])) { if (u0 > t) { P.wall.moveTo(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t); P.wall.lineTo(a[0] + (b[0] - a[0]) * u0, a[1] + (b[1] - a[1]) * u0); } t = Math.max(t, u1); }
+        P.towers.moveTo(a[0] + 6, a[1]); P.towers.arc(a[0], a[1], 6, 0, TAU);
+      }
+      for (const q of G.gates) { const e = G.outline[q.edge], f = G.outline[(q.edge + 1) % G.outline.length], len = Math.hypot(f[0] - e[0], f[1] - e[1]), ux = (f[0] - e[0]) / len, uy = (f[1] - e[1]) / len, o = q.w / 2 + 5;
+        for (const s of [-1, 1]) { const x = q.x + ux * o * s, y = q.y + uy * o * s; P.towers.moveTo(x + 5, y); P.towers.arc(x, y, 5, 0, TAU); } }
+    }
+    P.inner = mk(G.innerWalls); for (const q of G.innerWalls) for (const [x, y] of q) { P.towers.moveTo(x + 4.5, y); P.towers.arc(x, y, 4.5, 0, TAU); }
+    return (G.paths = P);
+  }
+  // draws the town with world→screen already set on g; k = screen pixels per metre
+  function drawCity(g, G, k) {
+    const P = cityPaths(G), C = PAPER, lw = px => px / k;
+    g.fillStyle = C.country; g.fillRect(-G.Vh * 2, -G.Vh * 2, G.Vh * 4, G.Vh * 4);
+    P.fieldsBy.forEach((f, i) => { g.fillStyle = C.fields[i]; g.fill(f); });
+    if (k > 0.25) { g.strokeStyle = 'rgba(110,100,60,.22)'; g.lineWidth = lw(0.8); g.stroke(P.furrows); }
+    g.strokeStyle = 'rgba(120,110,80,.35)'; g.lineWidth = lw(0.8); P.fieldsBy.forEach(f => g.stroke(f));
+    g.fillStyle = G.sz === 'village' ? C.grass : C.ground; g.fill(P.outline);
+    // roads: an edge, then the surface
+    g.lineCap = 'round'; g.strokeStyle = C.roadEdge; g.lineWidth = G.roadW + lw(2.2); g.stroke(P.mainRoads);
+    g.strokeStyle = C.road; g.lineWidth = G.roadW; g.stroke(P.mainRoads);
+    g.beginPath(); g.moveTo(G.cx + G.rp, G.cy); g.arc(G.cx, G.cy, G.rp, 0, TAU); g.fillStyle = C.plaza; g.fill();
+    if (P.sand) { g.fillStyle = C.sand; g.fill(P.sand); }
+    if (P.sea) { g.fillStyle = C.water; g.fill(P.sea); g.strokeStyle = C.waterEdge; g.lineWidth = lw(1.4); g.stroke(P.sea); }
+    if (P.river) { g.fillStyle = C.water; g.fill(P.river); g.strokeStyle = C.waterEdge; g.lineWidth = lw(1.4); g.stroke(P.river); }
+    if (G.river) {   // bridges where the main roads cross
+      const v = G.river, nx = -Math.sin(v.ang), ny = Math.cos(v.ang);
+      for (const ray of G.rays) { const dx = Math.cos(ray.a), dy = Math.sin(ray.a), den = nx * dx + ny * dy; if (Math.abs(den) < 0.15) continue; const t = (v.off - (nx * G.cx + ny * G.cy)) / den; if (t <= 0) continue;
+        const q = rect(G.cx + dx * t, G.cy + dy * t, ray.w + 4, v.w / Math.abs(den) + 10, ray.a + Math.PI / 2); g.beginPath(); addPoly(g, q); g.fillStyle = '#d9cfb6'; g.fill(); g.strokeStyle = C.bldgEdge; g.lineWidth = lw(1); g.stroke(); }
+    }
+    g.fillStyle = '#cdbf9f'; g.fill(P.piers); g.strokeStyle = C.bldgEdge; g.lineWidth = lw(0.8); g.stroke(P.piers);
+    g.fillStyle = C.park; g.fill(P.parks);
+    g.fillStyle = C.tree; g.fill(P.trees); if (k > 0.35) { g.strokeStyle = C.treeEdge; g.lineWidth = lw(0.8); g.stroke(P.trees); }
+    g.fillStyle = G.ruined ? '#cdc2ad' : C.bldg; g.fill(P.bld); g.fill(P.farms);
+    if (k > 0.3) { g.strokeStyle = G.ruined ? '#958a77' : C.bldgEdge; g.lineWidth = lw(0.7); g.stroke(P.bld); g.stroke(P.farms); }
+    g.fillStyle = G.ruined ? '#b9ab92' : C.special; g.fill(P.special); g.strokeStyle = C.bldgEdge; g.lineWidth = lw(1.1); g.stroke(P.special);
+    g.fillStyle = '#c7b48f'; g.fill(P.stalls);
+    g.beginPath(); g.arc(G.cx, G.cy, Math.max(2.5, G.rp * 0.12), 0, TAU); g.fillStyle = C.water; g.fill(); g.strokeStyle = C.wall; g.lineWidth = lw(1.2); g.stroke();
+    if (G.walls) { g.lineCap = 'butt'; g.strokeStyle = G.ruined ? '#7d7264' : C.wall; g.lineWidth = Math.max(3.5, lw(2.5)); g.stroke(P.wall); }
+    g.strokeStyle = G.ruined ? '#7d7264' : C.wall; g.lineWidth = Math.max(2.5, lw(2)); g.stroke(P.inner);
+    g.fillStyle = G.ruined ? '#8a7f70' : C.wall; g.fill(P.towers);
+  }
+  // dungeon geometry: floor as a path of cells (rooms) or soft blobs (caves), plus hatching around it
+  function dunPaths(D) {
+    if (D.paths) return D.paths;
+    const { W, H, g } = D, P = { floor: new Path2D(), water: new Path2D(), hatch: new Path2D(), grid: new Path2D() }, r = srng(W * 7919 + H);
+    const cave = D.style === 'caves', cells = [], pools = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const v = g[y * W + x];
+      if (v) {
+        if (cave) { P.floor.moveTo(x + 0.5 + 0.74, y + 0.5); P.floor.arc(x + 0.5, y + 0.5, 0.74, 0, TAU); }
+        else cells.push(`M${x} ${y}h1v1h-1Z`);
+        if (v === 3) { if (cave) { P.water.moveTo(x + 0.5 + 0.82, y + 0.5); P.water.arc(x + 0.5, y + 0.5, 0.82, 0, TAU); } else pools.push(`M${x + 0.1} ${y + 0.1}h0.8v0.8h-0.8Z`); }
+        continue;
+      }
+      let near = false; for (let j = -1; j <= 1 && !near; j++) for (let i = -1; i <= 1; i++) { const xx = x + i, yy = y + j; if (xx >= 0 && yy >= 0 && xx < W && yy < H && g[yy * W + xx]) { near = true; break; } }
+      if (!near) continue;
+      for (let s = 0; s < 3; s++) { const a = r() * Math.PI, cx0 = x + r(), cy0 = y + r(), l = 0.25 + r() * 0.3; P.hatch.moveTo(cx0 - Math.cos(a) * l, cy0 - Math.sin(a) * l); P.hatch.lineTo(cx0 + Math.cos(a) * l, cy0 + Math.sin(a) * l); }
+    }
+    if (!cave) { P.floor = new Path2D(cells.join('')); P.water = new Path2D(pools.join('')); }
+    for (let x = 0; x <= W; x++) { P.grid.moveTo(x, 0); P.grid.lineTo(x, H); }
+    for (let y = 0; y <= H; y++) { P.grid.moveTo(0, y); P.grid.lineTo(W, y); }
+    return (D.paths = P);
+  }
+  function drawDungeon(g, D, k) {
+    const P = dunPaths(D), lw = px => px / k;
+    g.fillStyle = '#ebe5d5'; g.fillRect(-4, -4, D.W + 8, D.H + 8);
+    g.strokeStyle = 'rgba(70,62,50,.55)'; g.lineWidth = lw(1.1); g.stroke(P.hatch);
+    g.strokeStyle = '#2d2721'; g.lineWidth = 0.32; g.lineJoin = 'round'; g.stroke(P.floor);
+    g.fillStyle = '#fbf8f0'; g.fill(P.floor);
+    g.fillStyle = '#b6d6e6'; g.fill(P.water);
+    if (k > 9) { g.save(); g.clip(P.floor); g.strokeStyle = 'rgba(110,100,80,.18)'; g.lineWidth = lw(1); g.stroke(P.grid); g.restore(); }
+    g.fillStyle = '#2d2721'; for (const [x, y] of D.pillars) { g.beginPath(); g.arc(x, y, 0.32, 0, TAU); g.fill(); }
+    for (const d of D.doors) {
+      if (d.kind === 'arch') continue;
+      g.save(); g.translate(d.x + 0.5, d.y + 0.5); if (d.v) g.rotate(Math.PI / 2);
+      if (d.kind === 'secret') { g.fillStyle = '#2d2721'; g.font = '700 0.62px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('S', 0, 0.04); }
+      else { g.fillStyle = '#fbf8f0'; g.strokeStyle = '#2d2721'; g.lineWidth = 0.09; g.fillRect(-0.12, -0.42, 0.24, 0.84); g.strokeRect(-0.12, -0.42, 0.24, 0.84); if (d.kind === 'locked') { g.fillStyle = '#2d2721'; g.fillRect(-0.07, -0.07, 0.14, 0.14); } }
+      g.restore();
+    }
+    for (const s of D.stairs) {
+      g.save(); g.translate(s.x + 0.5, s.y + 0.5); g.strokeStyle = '#2d2721'; g.lineWidth = 0.07;
+      for (let i = 0; i < 5; i++) { const y = -0.4 + i * 0.2, w = s.dir === 'down' ? 0.42 - i * 0.07 : 0.14 + i * 0.07; g.beginPath(); g.moveTo(-w, y); g.lineTo(w, y); g.stroke(); }
+      g.restore();
+    }
+  }
+
+  /* ===================== the viewer ===================== */
+  let V = null;
+  const cache = new Map();
+  function layoutOf(p, m, kind) {
+    const C = m.city, L = m.dun.levels[m.dun.cur];
+    const key = kind === 'city' ? `c|${p.id}|${C.seed}|${C.size}|${C.walls}|${C.water}|${p.type}|${p.status}|${p.pop}|${S.meta.nameStyle}` : `d|${L.seed}|${L.size}|${L.style}`;
+    if (!cache.has(key)) { cache.set(key, kind === 'city' ? genCity(p, C) : genDungeon(L)); if (cache.size > 6) cache.delete(cache.keys().next().value); }
+    return cache.get(key);
+  }
+  const MARKS = { monster: ['👹', 'Monster'], treasure: ['💰', 'Treasure'], trap: ['⚠️', 'Trap'], npc: ['🧙', 'Person'], secret: ['🗝️', 'Secret'], loot: ['📦', 'Supplies'], note: ['📝', 'Note'] };
+  const POIK = () => MapView.POI_KINDS;
+  function pinsOf() {
+    if (V.kind === 'city') return (V.p.poi || []).filter(q => q.mx != null).map(q => ({ x: q.mx, y: q.my, ic: (POIK()[q.kind] || POIK().other)[0], label: q.name, ref: q }));
+    return (V.m.dun.levels[V.m.dun.cur].marks || []).map(q => ({ x: q.x, y: q.y, ic: (MARKS[q.kind] || MARKS.note)[0], label: q.label, ref: q }));
+  }
+  function fit() {
+    const G = V.G, w = V.cv.clientWidth, hh = V.cv.clientHeight;
+    if (!w || !hh) { V.k = 0; return; }
+    const ext = G.kind === 'city' ? [-G.Vh * 0.82, -G.Vh * 0.82, G.Vh * 0.82, G.Vh * 0.82] : [G.box[0] - 1.5, G.box[1] - 1.5, G.box[2] + 1.5, G.box[3] + 1.5];
+    V.k = Math.min(w / (ext[2] - ext[0]), hh / (ext[3] - ext[1]));
+    V.ox = w / 2 - (ext[0] + ext[2]) / 2 * V.k; V.oy = hh / 2 - (ext[1] + ext[3]) / 2 * V.k;
+    V.kMin = V.k * 0.6;
+  }
+  const toWorld = (x, y) => [(x - V.ox) / V.k, (y - V.oy) / V.k];
+  const toScreen = (x, y) => [x * V.k + V.ox, y * V.k + V.oy];
+  function label(g, text, x, y, size, opts = {}) {
+    g.font = `${opts.weight || 650} ${size}px ${opts.serif ? 'Georgia, "Times New Roman", serif' : '-apple-system, system-ui, sans-serif'}`;
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    g.strokeStyle = opts.halo || 'rgba(250,246,234,.92)'; g.lineWidth = size * 0.32; g.strokeText(text, x, y);
+    g.fillStyle = opts.color || PAPER.label; g.fillText(text, x, y);
+  }
+  // the map into g (CSS pixels w × hh) with the view k/ox/oy; shared by the viewer, thumbnails and images
+  function paint(g, G, w, hh, k, ox, oy, dpr, extras = {}) {
+    const ty = extras.ty || 0;
+    g.setTransform(dpr, 0, 0, dpr, 0, ty); g.fillStyle = G.kind === 'city' ? PAPER.country : '#ebe5d5'; g.fillRect(0, 0, w, hh);
+    g.save(); g.beginPath(); g.rect(0, 0, w, hh); g.clip();
+    g.setTransform(dpr * k, 0, 0, dpr * k, dpr * ox, dpr * oy + ty);
+    if (G.kind === 'city') drawCity(g, G, k); else drawDungeon(g, G, k);
+    g.restore();
+    g.setTransform(dpr, 0, 0, dpr, 0, ty);
+    if (!extras.bare) overlay(g, G, k, ox, oy, extras);
+  }
+  // names, numbers and pins, drawn over the map at screen size
+  function overlay(g, G, k, ox, oy, extras) {
+    const sc = (x, y) => [x * k + ox, y * k + oy];
+    if (G.kind === 'city') {
+      const names = extras.names || {};
+      const big = clamp(k * 60, 12, 15.5), boxes = (extras.pins || []).map(pin => { const [x, y] = sc(pin.x, pin.y); return [x - 60, y - 16, x + 60, y + 32]; });
+      g.font = `700 ${big}px Georgia, "Times New Roman", serif`;
+      const order = G.wards.map((wd, i) => i).sort((a, b) => G.wards[b].a - G.wards[a].a);
+      if (k > 0.04) for (const i of order) {
+        const wd = G.wards[i]; if (wd.a * k * k < 900) continue;
+        const t = names[i] || wd.name, [x, y] = sc(wd.c[0], wd.c[1]), hw = g.measureText(t).width / 2 + 4, bx = [x - hw, y - big * 0.7, x + hw, y + big * 0.7];
+        if (boxes.some(b => bx[0] < b[2] && bx[2] > b[0] && bx[1] < b[3] && bx[3] > b[1])) continue;
+        boxes.push(bx); label(g, t, x, y, big, { serif: true, weight: 700 });
+      }
+    } else {
+      const names = extras.rooms || {}, fs = clamp(k * 0.75, 11, 18);
+      for (const o of G.rooms) { const [x, y] = sc(o.cx + 0.5, o.cy + 0.5); const nm = names[o.n] && names[o.n].name; label(g, String(o.n), x, y, fs * 1.15, { weight: 800, serif: true }); if (nm && k > 14) label(g, nm, x, y + fs * 1.05, fs * 0.8, { weight: 650 }); }
+    }
+    for (const pin of extras.pins || []) {
+      const [x, y] = sc(pin.x, pin.y), rr = 13;
+      g.beginPath(); g.arc(x, y, rr, 0, TAU); g.fillStyle = '#fffdf6'; g.shadowColor = 'rgba(0,0,0,.3)'; g.shadowBlur = 6; g.fill(); g.shadowBlur = 0;
+      g.strokeStyle = pin.on ? '#e9a23b' : '#4b4136'; g.lineWidth = pin.on ? 3 : 1.5; g.stroke();
+      g.font = '15px "Apple Color Emoji","Segoe UI Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#000'; g.fillText(pin.ic, x, y + 1);
+      if (pin.label) label(g, pin.label, x, y + rr + 10, 12.5, { weight: 700 });
+    }
+  }
+  // while a finger or the wheel is moving the view, the last full drawing is moved and scaled instead of redrawn
+  // (a big town takes a fifth of a second to draw); the full drawing follows once things settle
+  function draw() {
+    if (!V) return; V.raf = 0;
+    const cv = V.cv, dpr = Math.min(3, window.devicePixelRatio || 1), w = cv.clientWidth, hh = cv.clientHeight;
+    if (!w || !hh) return;   // not laid out yet; the resize or the next frame draws it
+    if (!V.k) fit();
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(hh * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(hh * dpr); V.snap = null; }
+    const g = cv.getContext('2d'), sn = V.snap;
+    if (V.fast && sn) {
+      const f = V.k / sn.k;
+      g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = V.G.kind === 'city' ? PAPER.country : '#ebe5d5'; g.fillRect(0, 0, cv.width, cv.height);
+      g.drawImage(sn.c, (V.ox - sn.ox * f) * dpr, (V.oy - sn.oy * f) * dpr, sn.c.width * f, sn.c.height * f);
+    } else {
+      paint(g, V.G, w, hh, V.k, V.ox, V.oy, dpr, { bare: true });
+      const c = sn && sn.c.width === cv.width && sn.c.height === cv.height ? sn.c : Object.assign(document.createElement('canvas'), { width: cv.width, height: cv.height });
+      const cg = c.getContext('2d'); cg.setTransform(1, 0, 0, 1, 0, 0); cg.drawImage(cv, 0, 0);
+      V.snap = { c, k: V.k, ox: V.ox, oy: V.oy };
+    }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const pins = pinsOf().map(q => ({ ...q, on: V.drag && V.drag.pin && V.drag.pin.ref === q.ref }));
+    overlay(g, V.G, V.k, V.ox, V.oy, { pins, names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms });
+  }
+  const redraw = fast => {
+    if (!V) return;
+    V.fast = !!fast;
+    if (!V.raf) V.raf = requestAnimationFrame(draw);
+    if (fast) { clearTimeout(V.idle); V.idle = setTimeout(() => { if (V) { V.fast = false; if (!V.raf) V.raf = requestAnimationFrame(draw); } }, 160); }
+  };
+  const persist = () => { V.p.lmap = V.m; save(); emit('data'); };
+  function rebuild(refit) { V.G = layoutOf(V.p, V.m, V.kind); V.snap = null; if (refit) fit(); renderChrome(); redraw(); }
+
+  function open(p, kind) {
+    if (V) close(true);
+    const m = state(p); if (kind) m.kind = kind;
+    const cv = h('canvas', { class: 'lm-cv' });
+    const el = h('div', { class: 'lm', role: 'dialog', 'aria-label': 'Local map' });
+    V = { p, m, kind: m.kind, el, cv, k: 0, ox: 0, oy: 0, mode: null, ptrs: new Map(), raf: 0 };
+    el.append(h('div', { class: 'lm-top' }), cv, h('div', { class: 'lm-hint glass' }), h('div', { class: 'lm-bar tools glass' }));
+    document.body.append(el);
+    wire(cv);
+    V.G = layoutOf(p, m, V.kind);
+    renderChrome(); fit(); draw();
+    if (!V.k) requestAnimationFrame(() => redraw());
+    V.onKey = e => { if (e.key === 'Escape' && !sheetStack.length && V) { e.preventDefault(); close(); } };
+    document.addEventListener('keydown', V.onKey);
+    V.onResize = () => { V.snap = null; redraw(); };
+    window.addEventListener('resize', V.onResize);
+  }
+  function close(silent) {
+    if (!V) return;
+    const p = V.p; document.removeEventListener('keydown', V.onKey); window.removeEventListener('resize', V.onResize);
+    if (V.raf) cancelAnimationFrame(V.raf);
+    clearTimeout(V.idle); V.el.remove(); V = null;
+    if (!silent) MapView.openPlace(p);
+  }
+  function setMode(mode) { V.mode = mode; renderChrome(); }
+  function renderChrome() {
+    const { el, m, p } = V, top = el.querySelector('.lm-top'), bar = el.querySelector('.lm-bar'), hint = el.querySelector('.lm-hint');
+    const city = V.kind === 'city', L = m.dun.levels[m.dun.cur], sub = city ? `${CITY[V.G.sz].name} plan` : `Level ${m.dun.cur + 1} of ${m.dun.levels.length}`;
+    top.innerHTML = '';
+    top.append(h('button', { class: 'icon-btn', 'aria-label': 'Back to the place', onclick: () => close() }, icon('back', 22)),
+      h('div', { class: 'lm-title' }, h('div', { class: 'lm-name' }, p.name), h('div', { class: 'lm-sub' }, sub)),
+      seg([['city', 'Town'], ['dungeon', 'Dungeon']], V.kind, v => { V.kind = v; m.kind = v; persist(); V.mode = null; rebuild(true); }));
+    if (!city && m.dun.levels.length > 1) top.append(seg(m.dun.levels.map((_, i) => [i, 'L' + (i + 1)]), m.dun.cur, v => { m.dun.cur = v; persist(); V.mode = null; rebuild(true); }, 'lm-levels'));
+    const b = (ic, word, on, fn) => h('button', { class: on ? 'on' : '', onclick: fn, 'aria-label': word }, icon(ic, 22), h('span', { class: 'tl' }, word));
+    bar.innerHTML = '';
+    bar.append(b('pin', 'Pin', V.mode && V.mode.t === 'add', () => setMode(V.mode && V.mode.t === 'add' ? null : { t: 'add' })),
+      b('list', city ? 'Places' : 'Key', false, listSheet),
+      b('dice', 'Remake', false, remake),
+      b('sliders', 'Options', false, optionsSheet),
+      b('share', 'Image', false, exportImage));
+    const msg = V.mode && V.mode.t === 'add' ? (city ? 'Tap the map to add a place here: an inn, shop, temple…' : 'Tap the map to mark a monster, treasure, trap…')
+      : V.mode && V.mode.t === 'put' ? `Tap the map to put ${V.mode.q.name} there` : '';
+    hint.textContent = msg; hint.classList.toggle('show', !!msg);
+  }
+
+  /* ---------- gestures: drag to pan, pinch or wheel to zoom, tap for details, drag a pin to move it ---------- */
+  function hitPin(x, y) { let best = null, bd = 22; for (const q of pinsOf()) { const [sx, sy] = toScreen(q.x, q.y), d = Math.hypot(sx - x, sy - y); if (d < bd) { bd = d; best = q; } } return best; }
+  function zoomAt(x, y, f, fast = true) { const nk = clamp(V.k * f, V.kMin || 0.02, V.G.kind === 'city' ? 40 : 120); f = nk / V.k; V.ox = x - (x - V.ox) * f; V.oy = y - (y - V.oy) * f; V.k = nk; redraw(fast); }
+  function wire(cv) {
+    const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    cv.addEventListener('pointerdown', e => {
+      try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+      const [x, y] = pos(e); V.ptrs.set(e.pointerId, [x, y]);
+      if (V.ptrs.size === 1) { const pin = hitPin(x, y); V.drag = { x0: x, y0: y, lx: x, ly: y, moved: false, pin, t0: performance.now() }; }
+      else { V.drag = null; const [a, b] = [...V.ptrs.values()]; V.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; }
+    });
+    cv.addEventListener('pointermove', e => {
+      if (!V || !V.ptrs.has(e.pointerId)) return;
+      const [x, y] = pos(e); V.ptrs.set(e.pointerId, [x, y]);
+      if (V.pinch && V.ptrs.size >= 2) {
+        const [a, b] = [...V.ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        V.ox += mx - V.pinch.mx; V.oy += my - V.pinch.my; zoomAt(mx, my, d / V.pinch.d); V.pinch = { d, mx, my }; return;
+      }
+      const D = V.drag; if (!D) return;
+      if (!D.moved && Math.hypot(x - D.x0, y - D.y0) > 6) D.moved = true;
+      if (!D.moved) return;
+      if (D.pin) { const [wx, wy] = toWorld(x, y); if (V.kind === 'city') { D.pin.ref.mx = +wx.toFixed(1); D.pin.ref.my = +wy.toFixed(1); } else { D.pin.ref.x = +wx.toFixed(2); D.pin.ref.y = +wy.toFixed(2); } }
+      else { V.ox += x - D.lx; V.oy += y - D.ly; }
+      D.lx = x; D.ly = y; redraw(true);
+    });
+    const end = e => {
+      if (!V || !V.ptrs.has(e.pointerId)) return;
+      V.ptrs.delete(e.pointerId);
+      if (V.ptrs.size < 2) V.pinch = null;
+      const D = V.drag; V.drag = null;
+      if (!D || e.type === 'pointercancel') { redraw(); return; }
+      if (D.moved) { if (D.pin) persist(); redraw(); return; }
+      onTap(D.x0, D.y0, D.pin);
+    };
+    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = pos(e); zoomAt(x, y, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0022))); }, { passive: false });
+    cv.addEventListener('dblclick', e => { const [x, y] = pos(e); zoomAt(x, y, 2, false); });
+  }
+  function onTap(x, y, pin) {
+    const [wx, wy] = toWorld(x, y);
+    if (V.mode && V.mode.t === 'put') { const q = V.mode.q; q.mx = +wx.toFixed(1); q.my = +wy.toFixed(1); persist(); setMode(null); redraw(); toast(`${q.name} is on the map`); return; }
+    if (V.mode && V.mode.t === 'add') { setMode(null); pinSheet(null, wx, wy); return; }
+    if (pin) { pinSheet(pin.ref); return; }
+    if (V.kind === 'city') { const i = V.G.wards.findIndex(w => inside(w.P, wx, wy)); if (i >= 0) wardSheet(i); return; }
+    const D = V.G, cx = Math.floor(wx), cy = Math.floor(wy);
+    if (cx >= 0 && cy >= 0 && cx < D.W && cy < D.H) { const ri = D.roomOf[cy * D.W + cx]; if (ri >= 0 && D.rooms[ri]) roomSheet(D.rooms[ri].n); }
+  }
+
+  /* ---------- sheets: pins, districts, rooms, lists, options ---------- */
+  function pinSheet(q, wx, wy) {
+    const city = V.kind === 'city', isNew = !q, KINDS = city ? POIK() : MARKS;
+    const d = q ? { ...q } : city ? { id: uid(), name: '', kind: 'inn', note: '', mx: +wx.toFixed(1), my: +wy.toFixed(1) } : { id: uid(), kind: 'monster', label: '', note: '', x: +wx.toFixed(2), y: +wy.toFixed(2) };
+    const name = h('input', { value: (city ? d.name : d.label) || '', placeholder: city ? 'e.g. The Rusty Anchor' : 'e.g. Goblin guards', autocomplete: 'off' });
+    const kind = h('select', null, Object.entries(KINDS).map(([k, v]) => h('option', { value: k }, v[0] + '  ' + v[1]))); kind.value = KINDS[d.kind] ? d.kind : Object.keys(KINDS)[0];
+    let noteV = d.note || '';
+    const note = mdEditor(noteV, v => { noteV = v; }, { minHeight: '100px', placeholder: city ? 'Who runs it, prices, rumours… [[links]] work' : 'What is here, how it behaves, what it guards… {2d6} rolls work' });
+    let sh;
+    const list = city ? (V.p.poi = V.p.poi || []) : V.m.dun.levels[V.m.dun.cur].marks;
+    sh = openSheet({ title: isNew ? (city ? `Add to ${V.p.name}` : 'Mark the map') : (city ? d.name : d.label || KINDS[d.kind][1]), body: h('div', null, field('Name', name), field('Kind', kind), field('Notes', note)), foot: [
+      !isNew ? h('button', { class: 'btn danger', onclick: () => {
+        const u = undoable(['world.places']); const i = list.indexOf(q);
+        if (city) { delete q.mx; delete q.my; } else if (i >= 0) list.splice(i, 1);
+        persist(); sh.close(); redraw(); u(city ? `${d.name} taken off the map (still listed on the place)` : 'Mark removed', reopen);
+      } }, icon('trash', 16), city ? 'Off the map' : 'Remove') : null,
+      h('div', { class: 'spacer' }),
+      h('button', { class: 'btn primary', onclick: () => {
+        const nm = name.value.trim();
+        if (city) { d.name = nm || POIK()[kind.value][1]; } else d.label = nm;
+        d.kind = kind.value; d.note = noteV.trim();
+        if (isNew) list.push(d); else Object.assign(q, d);
+        persist(); sh.close(); redraw();
+      } }, 'Save')].filter(Boolean) });
+    if (isNew) setTimeout(() => name.focus(), 60);
+  }
+  const reopen = () => { if (!V) return; const p = S.world.places.find(x => x.id === V.p.id); if (p) { V.p = p; V.m = state(p); rebuild(false); } };
+  function wardSheet(i) {
+    const w = V.G.wards[i], C = V.m.city, cur = (C.names || {})[i] || w.name;
+    const name = h('input', { value: cur, autocomplete: 'off' });
+    let noteV = (C.notes || {})[i] || '';
+    const note = mdEditor(noteV, v => { noteV = v; }, { minHeight: '110px', placeholder: 'Who lives here, what it is known for, trouble brewing… [[links]] work' });
+    const kinds = { market: 'Market', temple: 'Temple quarter', castle: 'Castle', docks: 'Docks', craft: 'Craftsfolk', res: 'Homes', slum: 'Poor quarter', park: 'Park' };
+    let sh;
+    sh = openSheet({ title: cur, body: h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:4px' }, `${kinds[w.type] || 'District'} · about ${fmtInt(w.a / 10000 * 2.47)} acres`),
+      field('Name', Names.field(name, () => 'district')), field('Notes', note)), foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => {
+        C.names = { ...(C.names || {}) }; C.notes = { ...(C.notes || {}) };
+        const nm = name.value.trim(); if (nm && nm !== w.name) C.names[i] = nm; else delete C.names[i];
+        if (noteV.trim()) C.notes[i] = noteV.trim(); else delete C.notes[i];
+        persist(); sh.close(); redraw();
+      } }, 'Save')] });
+  }
+  function roomSheet(n) {
+    const L = V.m.dun.levels[V.m.dun.cur], cur = (L.rooms || {})[n] || {};
+    const name = h('input', { value: cur.name || '', placeholder: 'e.g. Guard room', autocomplete: 'off' });
+    let noteV = cur.note || '';
+    const note = mdEditor(noteV, v => { noteV = v; }, { minHeight: '130px', placeholder: 'Read-aloud text, monsters, treasure, traps… {2d6} rolls and [[links]] work' });
+    let sh;
+    sh = openSheet({ title: `Room ${n}${cur.name ? ' · ' + cur.name : ''}`, body: h('div', null, field('Name', name), field('Notes', note)), foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => {
+      L.rooms = { ...(L.rooms || {}) }; const nm = name.value.trim(), nt = noteV.trim();
+      if (nm || nt) L.rooms[n] = { name: nm, note: nt }; else delete L.rooms[n];
+      persist(); sh.close(); redraw();
+    } }, 'Save')] });
+  }
+  function listSheet() {
+    let sh;
+    const go = (x, y, k) => { sh.close(); const w = V.cv.clientWidth, hh = V.cv.clientHeight; V.k = Math.max(V.k, k); V.ox = w / 2 - x * V.k; V.oy = hh / 2 - y * V.k; redraw(); };
+    let body;
+    if (V.kind === 'city') {
+      const pois = V.p.poi || [], on = pois.filter(q => q.mx != null), off = pois.filter(q => q.mx == null);
+      body = h('div', null,
+        h('div', { class: 'grp-title' }, 'On the map'),
+        on.length ? on.map(q => h('div', { class: 'list-row tap', onclick: () => go(q.mx, q.my, 1.2) }, h('span', { class: 'poi-ic' }, (POIK()[q.kind] || POIK().other)[0]), h('div', { class: 'main' }, h('div', { class: 'title' }, q.name), h('div', { class: 'sub' }, (POIK()[q.kind] || POIK().other)[1])), icon('chev', 16)))
+          : h('div', { class: 'small muted' }, 'Nothing pinned yet. Tap Pin, then the map.'),
+        off.length ? [h('div', { class: 'grp-title' }, 'Not on the map yet'), off.map(q => h('div', { class: 'list-row' }, h('span', { class: 'poi-ic' }, (POIK()[q.kind] || POIK().other)[0]), h('div', { class: 'main' }, h('div', { class: 'title' }, q.name)),
+          h('button', { class: 'btn small', onclick: () => { sh.close(); setMode({ t: 'put', q }); } }, icon('pin', 14), 'Place')))] : null,
+        h('div', { class: 'grp-title' }, 'Districts'),
+        V.G.wards.map((w, i) => h('div', { class: 'list-row tap', onclick: () => go(w.c[0], w.c[1], 0.8) }, h('div', { class: 'main' }, h('div', { class: 'title' }, (V.m.city.names || {})[i] || w.name), (V.m.city.notes || {})[i] ? h('div', { class: 'sub' }, mdPlain(V.m.city.notes[i]).slice(0, 90)) : null), icon('chev', 16))));
+    } else {
+      const L = V.m.dun.levels[V.m.dun.cur];
+      body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Tap a room on the map to write its key.'),
+        V.G.rooms.map(o => { const rm = (L.rooms || {})[o.n] || {}; return h('div', { class: 'list-row tap', onclick: () => { sh.close(); roomSheet(o.n); } }, h('span', { class: 'lm-num' }, String(o.n)),
+          h('div', { class: 'main' }, h('div', { class: 'title' + (rm.name ? '' : ' muted') }, rm.name || 'Unnamed'), rm.note ? h('div', { class: 'sub' }, mdPlain(rm.note).slice(0, 100)) : null), icon('chev', 16)); }),
+        (L.marks || []).length ? [h('div', { class: 'grp-title' }, 'Marks'), L.marks.map(q => h('div', { class: 'list-row tap', onclick: () => go(q.x, q.y, 24) }, h('span', { class: 'poi-ic' }, (MARKS[q.kind] || MARKS.note)[0]), h('div', { class: 'main' }, h('div', { class: 'title' }, q.label || (MARKS[q.kind] || MARKS.note)[1])), icon('chev', 16)))] : null);
+    }
+    sh = openSheet({ title: V.kind === 'city' ? `${V.p.name}: places & districts` : `Room key · level ${V.m.dun.cur + 1}`, body });
+  }
+  function remake() {
+    const u = undoable(['world.places']);
+    if (V.kind === 'city') { V.m.city.seed = newSeed(); V.m.city.names = {}; V.m.city.notes = {}; }
+    else { const L = V.m.dun.levels[V.m.dun.cur]; L.seed = newSeed(); L.rooms = {}; L.marks = []; }
+    persist(); rebuild(true);
+    u(V.kind === 'city' ? 'New layout. District names and notes start fresh; your pins stay.' : 'New layout for this level', reopen);
+  }
+  function optionsSheet() {
+    let sh, body;
+    if (V.kind === 'city') {
+      const C = V.m.city, set = (k, v) => { C[k] = v; persist(); rebuild(true); };
+      body = h('div', null,
+        field('Size', seg([['auto', 'Auto'], ['village', 'Village'], ['town', 'Town'], ['city', 'City'], ['metro', 'Great']], C.size, v => set('size', v)), 'Auto follows the population.'),
+        field('Walls', seg([['auto', 'Auto'], ['yes', 'Walled'], ['no', 'Open']], C.walls, v => set('walls', v))),
+        field('Water', seg([['auto', 'From the map'], ['none', 'None'], ['river', 'River'], ['coast', 'Coast']], C.water, v => set('water', v)), 'From the map uses the sea, lakes and rivers around this place, and its roads become the gates.'));
+    } else {
+      const lv = V.m.dun.levels, L = lv[V.m.dun.cur], set = (k, v) => { L[k] = v; L.rooms = {}; persist(); rebuild(true); };
+      body = h('div', null,
+        field('Size', seg([['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']], L.size, v => set('size', v))),
+        field('Style', seg([['rooms', 'Rooms & halls'], ['caves', 'Caves']], L.style, v => set('style', v)), 'Changing size or style makes a new layout, so the room key starts fresh.'),
+        h('div', { class: 'grp-title' }, 'Levels'),
+        lv.map((x, i) => h('div', { class: 'list-row' }, h('div', { class: 'main' }, h('div', { class: 'title' }, `Level ${i + 1}`), h('div', { class: 'sub' }, `${x.style === 'caves' ? 'Caves' : 'Rooms'} · ${x.size} · ${Object.keys(x.rooms || {}).length} rooms keyed`)),
+          lv.length > 1 ? h('button', { class: 'btn small danger', onclick: async () => { if (!(await confirmDlg(`Delete level ${i + 1} and its room key?`))) return; lv.splice(i, 1); V.m.dun.cur = Math.min(V.m.dun.cur, lv.length - 1); persist(); sh.close(); rebuild(true); } }, 'Delete') : null)),
+        h('button', { class: 'btn', style: 'margin-top:10px', onclick: () => { lv.push(newLevel(L)); V.m.dun.cur = lv.length - 1; persist(); sh.close(); rebuild(true); toast(`Level ${lv.length} added`); } }, icon('plus', 16), 'Add a level below'));
+    }
+    sh = openSheet({ title: V.kind === 'city' ? 'Town plan' : 'Dungeon', body, foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => sh.close() }, 'Done')] });
+  }
+  async function exportImage() {
+    const G = V.G, city = G.kind === 'city', title = city ? V.p.name : `${V.p.name} · level ${V.m.dun.cur + 1}`;
+    const bw = city ? 0 : G.box[2] - G.box[0] + 3, bh = city ? 0 : G.box[3] - G.box[1] + 3;
+    const ext = city ? G.Vh * 1.64 : Math.max(bw, bh), size = 2400, k = size / ext, w = city ? size : bw * k, hh = city ? size : bh * k;
+    const c = document.createElement('canvas'); c.width = Math.round(w); c.height = Math.round(hh + 70);
+    const g = c.getContext('2d');
+    g.fillStyle = city ? PAPER.country : '#ebe5d5'; g.fillRect(0, 0, c.width, c.height);
+    const ox = city ? w / 2 : (1.5 - G.box[0]) * k, oy = city ? hh / 2 : (1.5 - G.box[1]) * k;
+    paint(g, G, w, hh, k, ox, oy, 1, { pins: pinsOf(), names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms, ty: 70 });
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = PAPER.label; g.font = '700 38px Georgia, "Times New Roman", serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(title, 28, 38);
+    if (city) { g.font = '600 20px -apple-system, system-ui, sans-serif'; g.textAlign = 'right'; g.fillText(`${CITY[G.sz].name} plan · ${fmtDist(G.Vh * 1.64)} across`, c.width - 28, 38); }
+    let blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+    if (!blob) { toast('Could not make the image'); return; }
+    MapView.showShareResult(blob, c.width, c.height, title);
+  }
+
+  /* ---------- the card on a place's page, with a small preview ---------- */
+  function card(p, closePage) {
+    if (NO_MAP.has(p.type)) return null;
+    const m = state(p), kind = m.kind, word = kind === 'dungeon' ? 'Dungeon map' : (CITY[sizeKey(p, m.city)] || CITY.town).name + ' plan';
+    const cv = h('canvas', { class: 'lm-thumb' });
+    const el = h('div', { class: 'card lm-card tap', role: 'button', tabindex: 0, onclick: () => { closePage(); open(p); }, onkeydown: e => { if (e.key === 'Enter') { closePage(); open(p); } } },
+      h('div', { class: 'row' }, icon(kind === 'dungeon' ? 'door' : 'map', 18), h('div', { class: 'grow' }, h('div', { style: 'font-weight:700' }, word),
+        h('div', { class: 'small muted' }, kind === 'dungeon' ? `${m.dun.levels.length} level${m.dun.levels.length > 1 ? 's' : ''} · rooms, doors, stairs, notes` : 'Streets, districts and pins for its points of interest')), icon('chev', 16)),
+      cv);
+    setTimeout(() => {
+      if (!cv.isConnected) return;
+      const G = layoutOf(p, m, kind), w = cv.clientWidth || 320, hh = cv.clientHeight || 140, dpr = Math.min(2, window.devicePixelRatio || 1);
+      cv.width = Math.round(w * dpr); cv.height = Math.round(hh * dpr);
+      const bw = kind === 'city' ? 0 : G.box[2] - G.box[0] + 2, bh = kind === 'city' ? 0 : G.box[3] - G.box[1] + 2;
+      const k = kind === 'city' ? w / (G.R * 2.4) : Math.min(w / bw, hh / bh);
+      const ox = kind === 'city' ? w / 2 : w / 2 - (G.box[0] + G.box[2]) / 2 * k, oy = kind === 'city' ? hh / 2 : hh / 2 - (G.box[1] + G.box[3]) / 2 * k;
+      paint(cv.getContext('2d'), G, w, hh, k, ox, oy, dpr, { bare: true });
+    }, 40);
+    return el;
+  }
+  return { open, card, get isOpen() { return !!V; }, debug: { genCity, genDungeon, cityPaths, drawCity } };
+})();
+
 const Chars = (() => {
   const wrap = $('#chars-wrap'), listEl = $('#char-list'), det = $('#char-detail');
   let sel = null, tab = 'vitals', query = '';
@@ -6506,13 +7462,12 @@ const Chars = (() => {
       h('div', { style: 'margin:8px 0 12px' }, hpBar(c)),
       h('div', { class: 'row' }, h('button', { class: 'btn danger', style: 'flex:1', onclick: () => apply(-1) }, 'Damage'), amt,
         h('button', { class: 'btn', style: 'flex:1;color:var(--good)', onclick: () => apply(1) }, 'Heal')),
-      h('div', { class: 'chips', style: 'margin-top:9px' },
-        [-10, -5, -1].map(v => h('button', { class: 'chip neg', onclick: () => { changeHp(c, v); commit(); } }, '−' + -v)),
-        [1, 5, 10].map(v => h('button', { class: 'chip pos', onclick: () => { changeHp(c, v); commit(); } }, '+' + v)),
-        h('button', { class: 'chip', onclick: () => { const prev = { cur: hp.cur, temp: hp.temp }; hp.temp += Math.max(0, Math.round(numOr(amt.value, 0))); logHp(c, 0, 'Temp +' + amt.value, prev); commit(); } }, '+ Temp'),
-        h('button', { class: 'chip', onclick: () => { const prev = { cur: hp.cur, temp: hp.temp }; hp.cur = hp.max; logHp(c, hp.max - prev.cur, 'Full heal', prev); commit(); } }, 'Full heal')),
+      h('div', { class: 'quick-row' },
+        [-5, -1].map(v => h('button', { class: 'chip neg', onclick: () => { changeHp(c, v); commit(); } }, '−' + -v)),
+        [1, 5].map(v => h('button', { class: 'chip pos', onclick: () => { changeHp(c, v); commit(); } }, '+' + v)),
+        h('button', { class: 'chip wide', onclick: () => { const prev = { cur: hp.cur, temp: hp.temp }; hp.cur = hp.max; logHp(c, hp.max - prev.cur, 'Full heal', prev); commit(); } }, 'Full heal')),
       last ? h('div', { class: 'row', style: 'margin-top:10px' },
-        h('div', { class: 'grow tiny muted num' }, 'Recent: ' + c.hpLog.slice(0, 8).map(l => l.note && l.d === 0 ? l.note : (l.d > 0 ? '+' : l.d < 0 ? '−' : '±') + Math.abs(l.d)).join('  ')),
+        h('div', { class: 'grow small muted num' }, 'Recent: ' + c.hpLog.slice(0, 6).map(l => l.note && l.d === 0 ? l.note : (l.d > 0 ? '+' : l.d < 0 ? '−' : '±') + Math.abs(l.d)).join('  ')),
         h('button', { class: 'btn small ghost', onclick: () => { const l = c.hpLog.shift(); hp.cur = l.prevCur; hp.temp = l.prevTemp; commit(); } }, icon('undo', 14), 'Undo')) : null);
     return h('div', null, hpCard, statsCard(c), condCard(c, 'affliction'), condCard(c, 'blessing'));
   }
@@ -6522,7 +7477,7 @@ const Chars = (() => {
     ['Morale', 'bar', 5, 10], ['Fatigue', 'pips', 0, 5, 'zero'], ['Inspiration', 'pips', 0, 1], ['Reputation', 'num', 0], ['Initiative', 'num', 0], ['Class / calling', 'text', ''], ['Rank', 'text', '']];
   function statsCard(c) {
     const card = h('div', { class: 'card' }, h('h3', null, icon('list', 15), 'Stats & trackers', h('span', { class: 'grow' }),
-      c.stats.length && S.chars.length > 1 ? h('button', { class: 'btn small ghost', onclick: () => copyStats(c) }, icon('copy', 14), 'Copy to…') : null,
+      c.stats.length && S.chars.length > 1 ? h('button', { class: 'btn small ghost', title: 'Copy these stats to other characters', onclick: () => copyStats(c) }, icon('copy', 14), 'Copy') : null,
       h('button', { class: 'btn small', onclick: () => editStat(c, null) }, icon('plus', 14), 'Add')));
     if (!c.stats.length) { card.append(h('div', { class: 'small muted' }, 'Level, attributes, stamina, sanity, XP… whatever your system tracks.')); return card; }
     const tiles = c.stats.filter(s => s.type === 'num' || s.type === 'text');
