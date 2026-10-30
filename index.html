@@ -492,9 +492,10 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .lm-row .btn.primary { background: var(--accent); color: var(--accent-ink); }
 .lm-row .chip.on { background: var(--accent); color: var(--accent-ink); }
 .lm-row input { flex: none; width: 96px; padding: 5px 9px; font-size: 14px; }
-.lm-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--glass-strong); border-radius: 11px; padding: 3px; flex: none; }
+.lm-modes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; background: var(--glass-strong); border-radius: 11px; padding: 3px; flex: none; }
 .lm-modes button { padding: 6px 0; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
 .lm-modes button.on { background: var(--accent); color: var(--accent-ink); }
+.lm-mod { touch-action: pan-x; }
 .lm-mod canvas { width: 44px; height: 26px; display: block; }
 .lm-tray-g { flex: none; font-size: 11px; font-weight: 700; color: #cfd6dc; padding: 0 2px 0 8px; }
 .lm-mod { flex: none; width: 72px; height: 62px; border-radius: 12px; background: var(--glass-strong); color: var(--text); font-size: 11px; font-weight: 600; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
@@ -8047,7 +8048,8 @@ const LocalMaps = (() => {
   function shipLayout(s) {
     const Hh = shipHull(s), d = s.cur, dk = s.decks[d];
     const key = `${s.seed}|${s.cls}|${s.decks.length}|${d}|${s.decks.map(x => (x.ver | 0) + (x.edit ? 'e' : '')).join(',')}|${Object.entries(dk.rooms).map(([k, v]) => (v.type ? k + v.type : '') + (v.nowin ? k + 'w' : '')).join('')}`;
-    let G = shipCache.get(key);
+    const winKey = dk.win ? JSON.stringify(dk.win) : '';
+    let G = shipCache.get(key + winKey);
     if (G) { G.look = s.look; return G; }
     const { W, H } = Hh, N = W * H, base = deckBase(s, Hh, d), cell = base.cell, r = srng((s.seed * 31 + d * 977 + (dk.ver | 0)) >>> 0);
     const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]);
@@ -8087,7 +8089,15 @@ const LocalMaps = (() => {
       const box = w => (w.v ? [Math.min(w.x + w.s * 0.17, w.x + w.s * 0.51), w.y + 0.12, Math.max(w.x + w.s * 0.17, w.x + w.s * 0.51), w.y + 0.88] : [w.x + 0.12, Math.min(w.y + w.s * 0.17, w.y + w.s * 0.51), w.x + 0.88, Math.max(w.y + w.s * 0.17, w.y + w.s * 0.51)]);
       const bs = open.map(box), gone = new Set(), M = 0.08;
       for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) { const a = bs[i], b = bs[j]; if (a[0] < b[2] + M && b[0] < a[2] + M && a[1] < b[3] + M && b[1] < a[3] + M) { gone.add(i); gone.add(j); } }
-      windows.length = 0; open.forEach((w, i) => { if (!gone.has(i)) windows.push(w); });
+      const mine = dk.win || {}, set = mine.set || {}, wkey = w => (w.v ? 1 : 0) + ':' + w.x + ':' + w.y;
+      windows.length = 0; if (!mine.none) open.forEach((w, i) => { if (!gone.has(i) && set[wkey(w)] !== 0) windows.push(w); });
+      // windows placed by hand stay wherever they look out, whatever they touch
+      for (const k of Object.keys(set)) {
+        if (!set[k]) continue;
+        const [v, x, y] = k.split(':').map(Number), a = v ? at(x - 1, y) : at(x, y - 1), b = at(x, y);
+        if ((a < 0) === (b < 0) || ds.has(k) || windows.some(w => wkey(w) === k)) continue;
+        windows.push({ x, y, v, s: a < 0 ? -1 : 1 });
+      }
     }
     // corridor light strips along runs of three or more cells, and pipes along their walls
     const strips = [], pipes = [], dset = new Set(doors.map(e => e.v + ':' + e.x + ':' + e.y));
@@ -8113,7 +8123,7 @@ const LocalMaps = (() => {
         for (let i = 0; i < low.length;) { let j = i; while (j + 1 < low.length && low[j + 1] === low[j] + 1) j++; const n = j - i + 1, y = ((low[i] / W) | 0) + 1; G.nozzles.push({ x: low[i] % W + n / 2, y, w: Math.min(n * 0.78, 3.4) }); i = j + 1; }
       }
     }
-    shipCache.set(key, G); if (shipCache.size > 8) shipCache.delete(shipCache.keys().next().value);
+    shipCache.set(key + winKey, G); if (shipCache.size > 8) shipCache.delete(shipCache.keys().next().value);
     return G;
   }
   // the hull's outline: a smooth line about two thirds of a cell outside every solid cell (marching squares over the
@@ -8988,14 +8998,14 @@ const LocalMaps = (() => {
     const b = (ic, word, on, fn, off) => h('button', { class: on ? 'on' : '', onclick: fn, 'aria-label': word, disabled: off || null }, icon(ic, 22), h('span', { class: 'tl' }, word));
     bar.innerHTML = '';
     const tray = el.querySelector('.lm-tray'), building = V.edit && V.edit.tool === 'build';
-    tray.style.display = building ? 'flex' : 'none'; hint.style.bottom = building ? `calc(env(safe-area-inset-bottom) + ${TRAY}px)` : '';
+    tray.style.display = building ? 'flex' : 'none'; hint.style.bottom = building ? 'auto' : ''; hint.style.top = building ? (V.cv.offsetTop + 8) + 'px' : '';
     if (building) {
       renderTray(tray);
       const E = V.edit, n = shipChecks().warn.length;
       bar.append(b('undo', 'Undo', false, undoEdit, !E.undo.length), b('redo', 'Redo', false, redoEdit, !E.redo.length), b('alert', n ? `Check ${n}` : 'Check', false, checkSheet), b('check', 'Done', false, () => { V.edit = null; renderChrome(); redraw(); }));
       const lab = E.mod && E.mod.n;
       hint.textContent = E.mode === 'add' ? (!E.mod ? 'Pick a module' : E.ghost ? `${lab}: tap it again to place, or drag on the plan` : `No room for ${lab} here`)
-        : E.mode === 'move' ? (E.mod ? `Drag ${lab} into place` : 'Drag a room or corridor to move it · tap it for more') : E.mode === 'doors' ? 'Tap a wall to add a door · drag a door to move it · tap a door to change it'
+        : E.mode === 'move' ? (E.mod ? `Drag ${lab} into place` : 'Drag a room or corridor to move it · tap it for more') : E.mode === 'doors' ? 'Tap a wall to add a door · drag a door to move it · tap a door to change it' : E.mode === 'windows' ? 'Tap or drag the outer wall'
           : E.brush === 'room' ? `Drag a box to make ${RT[E.type][0].toLowerCase()}` : E.brush === 'corr' ? 'Drag to draw corridor' : 'Drag to cut squares away';
       hint.classList.add('show');
       return;
@@ -9045,7 +9055,7 @@ const LocalMaps = (() => {
   function renderTray(tray) {
     const E = V.edit, keep = [...tray.querySelectorAll('.lm-row')].map(r => r.scrollLeft); tray.innerHTML = '';
     const setMode = m => { E.mode = m; E.mod = null; E.ghost = null; renderChrome(); redraw(); };
-    tray.append(h('div', { class: 'lm-modes' }, [['add', 'Add'], ['move', 'Move'], ['doors', 'Doors'], ['paint', 'Paint']].map(([m, l]) => h('button', { class: E.mode === m ? 'on' : '', onclick: () => setMode(m) }, l))));
+    tray.append(h('div', { class: 'lm-modes' }, [['add', 'Add'], ['move', 'Move'], ['doors', 'Doors'], ['windows', 'Windows'], ['paint', 'Paint']].map(([m, l]) => h('button', { class: E.mode === m ? 'on' : '', onclick: () => setMode(m) }, l))));
     const row = (...kids) => { const r = h('div', { class: 'lm-row' }, ...kids); tray.append(r); return r; }, btn = (l, fn, off, on) => h('button', { class: 'btn small' + (on ? ' primary' : ''), onclick: fn, disabled: off || null }, l);
     if (E.mode === 'add') {
       row(btn('Turn', () => { E.rot = (E.rot + 1) % 4; aim(); redraw(); }, !E.mod), btn('Mirror', () => { E.mirror = !E.mirror; renderChrome(); redraw(); }, false, E.mirror), btn('Place', placeModule, !E.ghost, !!E.ghost));
@@ -9056,16 +9066,61 @@ const LocalMaps = (() => {
       const mods = h('div', { class: 'lm-row' }); tray.append(mods);
       const fill = () => {
         mods.innerHTML = ''; const q = E.q.toLowerCase(), list = q ? MODS.filter(m => (m.n + ' ' + m.g).toLowerCase().includes(q)) : E.cat === 'Recent' ? recent() : MODS.filter(m => m.g === E.cat);
-        for (const m of list) mods.append(h('button', { class: 'lm-mod' + (E.mod === m ? ' on' : ''), onclick: () => { if (E.mod === m) { placeModule(); return; } E.mod = m; E.rot = 0; aim(); renderChrome(); redraw(); } }, modIcon(m), m.n));
+        for (const m of list) mods.append(h('button', { class: 'lm-mod' + (E.mod === m ? ' on' : ''), onpointerdown: ev => tileDrag(ev, m), onclick: () => { if (E.mod === m) { placeModule(); return; } E.mod = m; E.rot = 0; aim(); renderChrome(); redraw(); } }, modIcon(m), m.n));
         if (!list.length) mods.append(h('span', { class: 'small muted' }, 'Nothing by that name'));
       };
       search.addEventListener('input', () => { E.q = search.value; fill(); }); fill();
     } else if (E.mode === 'doors') row(btn('Redo all doors', () => { const D = editable(); D.doors = D.doors.filter(e => e.k === 'hatch' || e.k === 'bay'); autoDoors(D); pushUndo(); commitDeck(D); toast('Doors laid out again'); }), btn('Doors for rooms without one', fixDoors));
-    else if (E.mode === 'paint') {
+    else if (E.mode === 'windows') {
+      const setWin = w => { pushUndo(); deckOf().win = w; persist(); rebuild(false); };
+      row(btn('All round', () => { const G = V.G, set = {}; for (const [k] of outerEdges(G)) set[k] = 1; setWin({ none: true, set }); }), btn('None', () => setWin({ none: true, set: {} })), btn('Automatic', () => setWin(null)));
+    } else if (E.mode === 'paint') {
       row(...[['room', 'Room'], ['corr', 'Corridor'], ['erase', 'Erase']].map(([b2, l]) => btn(l, () => { E.brush = b2; renderChrome(); }, false, E.brush === b2)));
       row(...Object.keys(RT).map(t => h('button', { class: 'chip' + (E.type === t && E.brush === 'room' ? ' on' : ''), onclick: () => { E.type = t; E.brush = 'room'; renderChrome(); } }, RT[t][3] + ' ' + RT[t][0])));
     }
     [...tray.querySelectorAll('.lm-row')].forEach((r, i) => { r.scrollLeft = keep[i] || 0; });
+  }
+  // every stretch of wall between floor and open space, as [key, x, y] at its middle
+  function outerEdges(G) {
+    const { W, H, cell } = G, out = [], at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]);
+    for (let y = 0; y <= H; y++) for (let x = 0; x <= W; x++) {
+      if ((at(x - 1, y) < 0) !== (at(x, y) < 0) && y < H) out.push(['1:' + x + ':' + y, x, y + 0.5]);
+      if ((at(x, y - 1) < 0) !== (at(x, y) < 0) && x < W) out.push(['0:' + x + ':' + y, x + 0.5, y]);
+    }
+    return out;
+  }
+  function winTo(x, y) {
+    const q = V.winDrag, [wx, wy] = toWorld(x, y), w = wallEdge(wx, wy, 1, e => (e.a < 0) !== (e.b < 0)); if (!w) return;
+    const k = w.v + ':' + w.x + ':' + w.y;
+    if (q.val == null) q.val = V.G.windows.some(o => (o.v ? 1 : 0) === w.v && o.x === w.x && o.y === w.y) ? 0 : 1;
+    q.keys.add(k);
+  }
+  function commitWindows(q) {
+    if (!q.keys.size) return;
+    pushUndo(); const dk = deckOf(), w = dk.win = { none: !!(dk.win && dk.win.none), set: { ...((dk.win && dk.win.set) || {}) } };
+    for (const k of q.keys) w.set[k] = q.val;
+    persist(); rebuild(false);
+  }
+  function trayShown(on) { V.el.querySelector('.lm-tray').style.visibility = on ? '' : 'hidden'; }
+  // while a module is being dragged: it sits above the finger so it can be seen, and the plan scrolls at the edges
+  function dragAim(x, y, type) {
+    const w = V.cv.clientWidth, hh = V.cv.clientHeight, e = 36;
+    if (x < e) V.ox += 7; else if (x > w - e) V.ox -= 7; if (y < e) V.oy += 7; else if (y > hh - e - 70) V.oy -= 7;
+    const [wx, wy] = toWorld(x, y - (type === 'mouse' ? 0 : 70)); aim(wx, wy);
+  }
+  function tileDrag(e0, m) {
+    const sy = e0.clientY, E = V.edit; let on = false;
+    const pos = ev => { const r = V.cv.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
+    const move = ev => {
+      if (!on && sy - ev.clientY > 12) { on = true; E.mod = m; E.rot = 0; V.placing = true; trayShown(false); }
+      if (on) { const [x, y] = pos(ev); dragAim(x, y, ev.pointerType); redraw(true); }
+    };
+    const up = ev => {
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      if (!on) return; V.placing = false; trayShown(true); const [, y] = pos(ev);
+      if (ev.type === 'pointerup' && y < V.cv.clientHeight - 80) placeModule(); else { E.ghost = null; renderChrome(); redraw(); }
+    };
+    addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   }
   function renameShip() {
     let sh; const name = h('input', { value: V.ship.title, autocomplete: 'off' });
@@ -9118,6 +9173,16 @@ const LocalMaps = (() => {
     const G = V.G, { W, H, cell } = G, c = modCells(m, rot), bw = Math.max(...c.map(q => q[0])) + 1, bh = Math.max(...c.map(q => q[1])) + 1;
     const free = (ox, oy) => c.every(([x, y]) => { const X = ox + x, Y = oy + y; return X > 0 && Y > 0 && X < W - 1 && Y < H - 1 && cell[Y * W + X] < 0; });
     if (!cell.some(v => v >= 0)) { const ox = clamp(Math.round(tx - bw / 2), 1, W - bw - 1), oy = clamp(Math.round(ty - bh / 2), 1, H - bh - 1); return { x: ox, y: oy, c }; }
+    if (V.placing) {
+      // near the ship it snaps on; further out it goes exactly where it's dropped
+      const fx = Math.round(tx - bw / 2), fy = Math.round(ty - bh / 2); let near = null, nd = 10;
+      for (let oy = Math.max(1, fy - 3); oy <= fy + 3 && oy + bh < H; oy++) for (let ox = Math.max(1, fx - 3); ox <= fx + 3 && ox + bw < W; ox++) {
+        const d = (ox - fx) ** 2 + (oy - fy) ** 2; if (d >= nd || !free(ox, oy)) continue;
+        if (c.some(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([i, j]) => cell[(oy + y + j) * W + ox + x + i] >= 0))) { nd = d; near = { x: ox, y: oy, c }; }
+      }
+      if (near) return near;
+      if (fx > 0 && fy > 0 && fx + bw < W && fy + bh < H && free(fx, fy)) return { x: fx, y: fy, c };
+    }
     let best = null, bs = Infinity;
     for (let oy = 1; oy + bh < H; oy++) for (let ox = 1; ox + bw < W; ox++) {
       const d = (ox + bw / 2 - tx) ** 2 + (oy + bh / 2 - ty) ** 2; if (d >= bs || !free(ox, oy)) continue;
@@ -9141,6 +9206,10 @@ const LocalMaps = (() => {
   }
   function ghostOverlay(g) {
     const E = V.edit, gh = E.ghost;
+    if (E.mode === 'windows') {
+      const q = V.winDrag;
+      for (const [k, x, y] of outerEdges(V.G)) { const [sx, sy] = toScreen(x, y), hit = q && q.keys.has(k); g.beginPath(); g.arc(sx, sy, hit ? 6 : 3, 0, TAU); g.fillStyle = hit ? (q.val ? 'rgba(110,235,150,.95)' : 'rgba(255,90,80,.95)') : 'rgba(255,255,255,.55)'; g.fill(); }
+    }
     if (E.mode === 'doors') {
       for (const e of V.G.doors) { const [x, y] = toScreen(e.v ? e.x : e.x + 0.5, e.v ? e.y + 0.5 : e.y); g.beginPath(); g.arc(x, y, 8, 0, TAU); g.fillStyle = V.doorDrag && V.doorDrag.e.x === e.x && V.doorDrag.e.y === e.y && V.doorDrag.e.v === e.v ? 'rgba(255,190,70,.9)' : 'rgba(110,200,255,.7)'; g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke(); }
       const to = V.doorDrag && V.doorDrag.to; if (to) { const [x, y] = toScreen(to.v ? to.x : to.x + 0.5, to.v ? to.y + 0.5 : to.y); g.beginPath(); g.arc(x, y, 11, 0, TAU); g.fillStyle = 'rgba(110,235,150,.9)'; g.fill(); g.stroke(); }
@@ -9222,11 +9291,11 @@ const LocalMaps = (() => {
       act('Remove', () => removeAt(x + 0.5, y + 0.5), 'danger')) });
   }
   // the wall nearest a point, within reach
-  function wallEdge(wx, wy, reach = 0.8) {
+  function wallEdge(wx, wy, reach = 0.8, keep) {
     const { W, H, cell } = V.G, at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]), cx = Math.floor(wx), cy = Math.floor(wy); let best = null, bd = reach;
     for (let y = cy - 2; y <= cy + 2; y++) for (let x = cx - 2; x <= cx + 2; x++) for (const v of [1, 0]) {
       const a = v ? at(x - 1, y) : at(x, y - 1), b = at(x, y); if (a === b) continue;
-      const d = Math.hypot(wx - (v ? x : x + 0.5), wy - (v ? y + 0.5 : y)); if (d < bd) { bd = d; best = { x, y, v, a, b }; }
+      const d = Math.hypot(wx - (v ? x : x + 0.5), wy - (v ? y + 0.5 : y)); if (d < bd && (!keep || keep({ a, b }))) { bd = d; best = { x, y, v, a, b }; }
     }
     return best;
   }
@@ -9263,12 +9332,12 @@ const LocalMaps = (() => {
     for (let i = 0; i <= n; i++) { const X = Math.round(lx + (cx - lx) * i / n), Y = Math.round(ly + (cy - ly) * i / n); if (X >= 0 && Y >= 0 && X < Hh.W && Y < Hh.H) st.cells.set(Y * Hh.W + X, [X, Y]); }
     st.last = [cx, cy];
   }
-  const snapDeck = d => { const dk = V.s.decks[d]; return { d, edit: dk.edit ? JSON.parse(JSON.stringify(dk.edit)) : null, rooms: JSON.parse(JSON.stringify(dk.rooms)) }; };
+  const snapDeck = d => { const dk = V.s.decks[d]; return { d, win: dk.win ? JSON.parse(JSON.stringify(dk.win)) : null, edit: dk.edit ? JSON.parse(JSON.stringify(dk.edit)) : null, rooms: JSON.parse(JSON.stringify(dk.rooms)) }; };
   const pushUndo = () => { V.edit.undo.push(snapDeck(V.s.cur)); V.edit.redo = []; if (V.edit.undo.length > 80) V.edit.undo.shift(); };
   function stepEdit(from, to) {
     const u = V.edit && from.pop(); if (!u) return;
     const dk = V.s.decks[u.d]; if (!dk) return;
-    to.push(snapDeck(u.d)); dk.edit = u.edit; dk.rooms = u.rooms; dk.ver = (dk.ver | 0) + 1; V.s.cur = u.d; V.edit.carry = false; V.edit.mod = V.edit.mode === 'add' ? V.edit.mod : null; persist(); rebuild(false);
+    to.push(snapDeck(u.d)); dk.edit = u.edit; dk.rooms = u.rooms; dk.win = u.win; dk.ver = (dk.ver | 0) + 1; V.s.cur = u.d; V.edit.carry = false; V.edit.mod = V.edit.mode === 'add' ? V.edit.mod : null; persist(); rebuild(false);
   }
   const undoEdit = () => V.edit && stepEdit(V.edit.undo, V.edit.redo), redoEdit = () => V.edit && stepEdit(V.edit.redo, V.edit.undo);
   // the deck as it is now, ready to change: a copy of its grid, room kinds and doors
@@ -9313,9 +9382,10 @@ const LocalMaps = (() => {
         if (V.edit && V.edit.mode === 'paint' && !e.button) { V.drag = null; V.stroke = { cells: new Map(), last: null, first: null, t: V.edit.brush, type: V.edit.type }; strokeTo(x, y); redraw(true); return; }
         if (V.edit && V.edit.mode === 'doors' && !e.button) { const dr = doorAt(x, y); if (dr) { V.drag = null; V.doorDrag = { e: dr, x0: x, y0: y, moved: false, to: null }; redraw(true); return; } }
         if (V.edit && V.edit.mode === 'move' && !e.button) { const [wx, wy] = toWorld(x, y), cx = Math.floor(wx), cy = Math.floor(wy), G = V.G; if (cx >= 0 && cy >= 0 && cx < G.W && cy < G.H && G.cell[cy * G.W + cx] >= 0) { V.drag = null; V.pick = { x0: x, y0: y, cx, cy }; return; } }
-        if (V.edit && V.edit.tool === 'build' && V.edit.mod && !e.button) { V.drag = null; V.placing = true; const [wx, wy] = toWorld(x, y); aim(wx, wy); redraw(true); return; }
+        if (V.edit && V.edit.mode === 'windows' && !e.button) { V.drag = null; V.winDrag = { keys: new Set(), val: null }; winTo(x, y); redraw(true); return; }
+        if (V.edit && V.edit.tool === 'build' && V.edit.mod && !e.button) { V.drag = null; V.placing = true; V.placeStart = [x, y]; V.placeMoved = false; const [wx, wy] = toWorld(x, y); aim(wx, wy); redraw(true); return; }
         const pin = V.edit ? null : hitPin(x, y); V.drag = { x0: x, y0: y, lx: x, ly: y, moved: false, pin, t0: performance.now() };
-      } else { V.placing = false; V.pick = null; V.doorDrag = null; if (V.stroke) { V.stroke = null; redraw(true); } V.drag = null; const [a, b] = [...V.ptrs.values()]; V.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; }
+      } else { V.placing = false; trayShown(true); V.winDrag = null; V.pick = null; V.doorDrag = null; if (V.stroke) { V.stroke = null; redraw(true); } V.drag = null; const [a, b] = [...V.ptrs.values()]; V.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; }
     });
     cv.addEventListener('pointermove', e => {
       if (!V || !V.ptrs.has(e.pointerId)) return;
@@ -9324,9 +9394,10 @@ const LocalMaps = (() => {
         const [a, b] = [...V.ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         V.ox += mx - V.pinch.mx; V.oy += my - V.pinch.my; zoomAt(mx, my, d / V.pinch.d); V.pinch = { d, mx, my }; return;
       }
-      if (V.pick) { if (Math.hypot(x - V.pick.x0, y - V.pick.y0) > 8) { const q = V.pick; V.pick = null; if (pickUp(q.cx, q.cy)) V.placing = true; } return; }
+      if (V.pick) { if (Math.hypot(x - V.pick.x0, y - V.pick.y0) > 8) { const q = V.pick; V.pick = null; if (pickUp(q.cx, q.cy)) { V.placing = true; V.placeMoved = true; trayShown(false); } } return; }
       if (V.doorDrag) { const q = V.doorDrag; if (Math.hypot(x - q.x0, y - q.y0) > 8) q.moved = true; if (q.moved) { const [wx, wy] = toWorld(x, y); q.to = wallEdge(wx, wy, 1.5); } redraw(true); return; }
-      if (V.placing) { const [wx, wy] = toWorld(x, y); aim(wx, wy); redraw(true); return; }
+      if (V.winDrag) { winTo(x, y); redraw(true); return; }
+      if (V.placing) { if (!V.placeMoved && V.placeStart && Math.hypot(x - V.placeStart[0], y - V.placeStart[1]) < 8) return; V.placeMoved = true; trayShown(false); dragAim(x, y, e.pointerType); redraw(true); return; }
       if (V.stroke) { strokeTo(x, y); redraw(true); return; }
       const D = V.drag; if (!D) return;
       if (!D.moved && Math.hypot(x - D.x0, y - D.y0) > 6) D.moved = true;
@@ -9339,9 +9410,10 @@ const LocalMaps = (() => {
       if (!V || !V.ptrs.has(e.pointerId)) return;
       V.ptrs.delete(e.pointerId);
       if (V.ptrs.size < 2) V.pinch = null;
+      if (V.winDrag) { const q = V.winDrag; V.winDrag = null; if (e.type === 'pointercancel') redraw(); else { commitWindows(q); redraw(); } return; }
       if (V.pick) { const q = V.pick; V.pick = null; if (e.type !== 'pointercancel') moduleSheet(q.cx, q.cy); return; }
       if (V.doorDrag) { const q = V.doorDrag; V.doorDrag = null; if (e.type === 'pointercancel') { redraw(); return; } if (q.moved && q.to) moveDoor(q.e, q.to); else if (!q.moved) doorSheet(q.e); else redraw(); return; }
-      if (V.placing) { V.placing = false; if (e.type !== 'pointercancel' && !V.ptrs.size) placeModule(); else redraw(); return; }
+      if (V.placing) { V.placing = false; trayShown(true); if (e.type !== 'pointercancel' && !V.ptrs.size) placeModule(); else redraw(); return; }
       if (V.stroke) { const st = V.stroke; V.stroke = null; if (e.type !== 'pointercancel' && !V.ptrs.size) applyStroke(st); else redraw(); return; }
       const D = V.drag; V.drag = null;
       if (!D || e.type === 'pointercancel') { redraw(); return; }
@@ -9499,7 +9571,7 @@ const LocalMaps = (() => {
           s.decks.length > 1 ? h('button', { class: 'btn small danger', onclick: async () => { if (!(await confirmDlg(`Delete deck ${i + 1} with its room names, notes and marks?`))) return; const u = undoable(['codex']); s.decks.splice(i, 1); s.cur = Math.min(s.cur, s.decks.length - 1); persist(); sh.close(); rebuild(true); u(`Deck ${i + 1} deleted`, reopen); } }, 'Delete') : null)),
         h('div', { class: 'row wrap', style: 'margin-top:10px' },
           s.decks.length < 8 ? h('button', { class: 'btn', onclick: () => { s.decks.push(...freshDecks(1)); normShip(s); s.cur = s.decks.length - 1; persist(); sh.close(); rebuild(true); toast(`Deck ${s.decks.length} added; unpainted decks were laid out again`); } }, icon('plus', 16), 'Add a deck') : null,
-          s.decks.length < 8 ? h('button', { class: 'btn', onclick: () => { const Hh2 = shipHull(s), b0 = deckBase(s, Hh2, s.cur), d0 = deckOf(), copy = { rooms: JSON.parse(JSON.stringify(d0.rooms)), marks: [], edit: encodeDeck(b0, Hh2.W, Hh2.H), ver: 0 }; s.decks.push(copy); normShip(s); s.cur = s.decks.length - 1; persist(); sh.close(); rebuild(true); toast('Deck copied'); } }, icon('copy', 16), 'Copy this deck') : null,
+          s.decks.length < 8 ? h('button', { class: 'btn', onclick: () => { const Hh2 = shipHull(s), b0 = deckBase(s, Hh2, s.cur), d0 = deckOf(), copy = { rooms: JSON.parse(JSON.stringify(d0.rooms)), marks: [], win: d0.win ? JSON.parse(JSON.stringify(d0.win)) : null, edit: encodeDeck(b0, Hh2.W, Hh2.H), ver: 0 }; s.decks.push(copy); normShip(s); s.cur = s.decks.length - 1; persist(); sh.close(); rebuild(true); toast('Deck copied'); } }, icon('copy', 16), 'Copy this deck') : null,
           h('button', { class: 'btn', onclick: async () => {
             if (!(await confirmDlg(`Clear deck ${s.cur + 1} so you can paint it from scratch? Its rooms, names, notes and marks go.`, { ok: 'Clear deck' }))) return;
             const u = undoable(['codex']), dk = deckOf(); dk.edit = encodeDeck({ cell: new Int16Array(Hh.W * Hh.H).fill(-1), types: [null], doors: [] }, Hh.W, Hh.H); dk.rooms = {}; dk.marks = []; dk.ver = (dk.ver | 0) + 1;
