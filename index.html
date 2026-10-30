@@ -63,7 +63,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 #topbar { flex: none; display: flex; align-items: center; gap: 10px; min-height: 50px; z-index: 6;
   padding: calc(env(safe-area-inset-top) + 6px) calc(env(safe-area-inset-right) + 10px) 6px calc(env(safe-area-inset-left) + 14px);
   background: var(--bar); border-bottom: 1px solid var(--line); }
-.brand { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
+.brand { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; background: none; border: 0; padding: 4px 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+#brand-sub { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#brand-sub:empty { display: none; }
+.brand-chev { transform: rotate(90deg); color: var(--muted); flex: none; }
 .brand .logo { color: var(--accent); }
 #campaign-name { font-weight: 700; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .date-chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 999px;
@@ -491,7 +495,7 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 <body>
 <div id="app">
   <header id="topbar">
-    <div class="brand"><span class="logo" data-icon="globe" data-size="22"></span><span id="campaign-name">World Manager</span></div>
+    <button class="brand" id="brand-btn" aria-label="Worlds" title="Worlds"><span class="logo" data-icon="globe" data-size="22"></span><span class="brand-text"><span id="campaign-name">World Manager</span><span id="brand-sub"></span></span><span class="brand-chev" data-icon="chev" data-size="14"></span></button>
     <button id="search-btn" class="icon-btn top-ic" aria-label="Search everything" title="Search  ( / or Ctrl+K )"><span data-icon="search" data-size="20"></span></button>
     <button id="dice-btn" class="icon-btn top-ic" aria-label="Roll dice" title="Roll dice  ( R )"><span data-icon="dice" data-size="21"></span></button>
     <button id="save-btn" class="icon-btn top-save" aria-label="Save & load worlds"><span data-icon="save" data-size="21"></span></button>
@@ -1960,7 +1964,7 @@ function findByName(name) {
   const n = lc(name); if (!n) return null;
   const e = S.codex.find(x => lc(x.title) === n); if (e) return { kind: 'codex', obj: e, label: (CODEX_KINDS[e.kind] || CODEX_KINDS.note)[0] };
   const c = S.chars.find(x => lc(x.name) === n); if (c) return { kind: 'char', obj: c, label: 'Character' };
-  const p = S.world.places.find(x => lc(x.name) === n); if (p) return { kind: 'place', obj: p, label: (PTYPES[p.type] || PTYPES.other).name };
+  const p = everyPlace().find(x => lc(x.name) === n); if (p) { const w = worldOfPlace(p); return { kind: 'place', obj: p, label: (PTYPES[p.type] || PTYPES.other).name + (w !== S.world ? ' on ' + w.name : '') }; }
   const f = S.world.features.find(x => x.name && lc(x.name) === n); if (f) return { kind: 'feature', obj: f, label: 'Map feature' };
   const ev = S.events.find(x => lc(x.title) === n); if (ev) return { kind: 'event', obj: ev, label: 'Event' };
   return null;
@@ -1971,7 +1975,7 @@ function openThing(r) {
   const o = r.obj;
   if (r.kind === 'codex') Codex.open(o.id);
   else if (r.kind === 'char') Chars.open(o.id);
-  else if (r.kind === 'place') { setTab('map'); MapView.flyTo(o.lat, o.lon, MapView.placeWidth(o)); setTimeout(() => MapView.openPlace(o), 250); }
+  else if (r.kind === 'place') gotoPlace(o);
   else if (r.kind === 'feature') { setTab('map'); MapView.zoomToFeature(o); }
   else if (r.kind === 'event') Timeline.focusEvent(o.id);
 }
@@ -1991,7 +1995,7 @@ function backlinks(name, self) {
   const re = new RegExp('\\[\\[\\s*' + escRe(name.trim()) + '\\s*(\\||\\]\\])', 'i'), out = [];
   for (const e of S.codex) if (e !== self && re.test(e.body || '')) out.push({ kind: 'codex', obj: e, title: e.title, sub: (CODEX_KINDS[e.kind] || CODEX_KINDS.note)[0] });
   for (const c of S.chars) if (c !== self && re.test(c.notes || '')) out.push({ kind: 'char', obj: c, title: c.name, sub: 'Character notes' });
-  for (const p of S.world.places) if (p !== self && re.test(p.notes || '')) out.push({ kind: 'place', obj: p, title: p.name, sub: 'Place notes' });
+  for (const p of everyPlace()) if (p !== self && re.test(p.notes || '')) out.push({ kind: 'place', obj: p, title: placeLabel(p), sub: 'Place notes' });
   for (const ev of S.events) if (ev !== self && re.test(ev.desc || '')) out.push({ kind: 'event', obj: ev, title: ev.title, sub: 'Event · ' + Cal.fmt(ev.start) });
   return out;
 }
@@ -2008,7 +2012,7 @@ function renameLinks(oldName, newName) {
   const fix = s => (s ? s.replace(re, () => { n++; return '[[' + newName.trim(); }) : s);
   for (const e of S.codex) e.body = fix(e.body);
   for (const c of S.chars) c.notes = fix(c.notes);
-  for (const p of S.world.places) p.notes = fix(p.notes);
+  for (const p of everyPlace()) p.notes = fix(p.notes);
   for (const ev of S.events) ev.desc = fix(ev.desc);
   if (n) { save(); toast(`Updated ${plural(n, 'link')} to “${newName.trim()}”`); }
   return n;
@@ -2017,7 +2021,7 @@ function linkTargets() {
   const out = [];
   for (const e of S.codex) out.push([e.title, (CODEX_KINDS[e.kind] || CODEX_KINDS.note)[0], 'book']);
   for (const c of S.chars) out.push([c.name, 'Character', 'users']);
-  for (const p of S.world.places) out.push([p.name, (PTYPES[p.type] || PTYPES.other).name, 'pin']);
+  for (const p of everyPlace()) { const w = worldOfPlace(p); out.push([p.name, (PTYPES[p.type] || PTYPES.other).name + (w !== S.world ? ' · ' + w.name : ''), 'pin']); }
   for (const f of S.world.features) if (f.name) out.push([f.name, 'Map feature', 'river']);
   for (const ev of S.events) out.push([ev.title, 'Event · ' + Cal.fmt(ev.start), 'timeline']);
   return out;
@@ -2435,7 +2439,8 @@ function defaultState() {
       negHp: false, outsideWindow: 5, theme: 'auto', created: Date.now(),
       earth: { on: true, y: 1997, m: 2, d: 13 },   // Earth (Gregorian) date of day 0 CS; m is 0-based
       holidays: [], moons: [] },
-    world: { seed: 'colony', radiusMi: 3959, oceanPct: 64, continentScale: 1, mountains: 1, roughness: 1, temp: 0, moist: 0, cm: 0, places: [], sculpt: [], paint: [], features: [], views: [], here: null, factions: [], terr: [], fronts: [], mil: [] },
+    world: { id: uid(), name: '', created: 0, seed: 'colony', radiusMi: 3959, oceanPct: 64, continentScale: 1, mountains: 1, roughness: 1, temp: 0, moist: 0, cm: 0, places: [], sculpt: [], paint: [], features: [], views: [], here: null, factions: [], terr: [], fronts: [], mil: [] },
+    worlds: [],   // the campaign's other worlds; S.world is the one on the map
     species: [{ id: uid(), name: 'Human', gestation: 280, cycle: 28, fertileStart: 10, fertileLen: 6, baseChance: 20, twinChance: 1.5 }],
     chars: [],
     events: [],
@@ -2451,10 +2456,14 @@ function defaultState() {
 function migrate(s) {
   const d = defaultState();
   s = s && typeof s === 'object' ? s : d;
-  for (const k of ['meta', 'world', 'ui']) s[k] = Object.assign({}, d[k], s[k] || {});
+  for (const k of ['meta', 'ui']) s[k] = Object.assign({}, d[k], s[k] || {});
   s.ui.layers = Object.assign({}, d.ui.layers, s.ui.layers || {});
   s.meta.earth = Object.assign({}, d.meta.earth, s.meta.earth || {});
-  for (const k of ['places', 'sculpt', 'paint', 'features', 'views', 'factions', 'terr', 'fronts', 'mil']) if (!Array.isArray(s.world[k])) s.world[k] = [];
+  const w0 = s.world && typeof s.world === 'object' ? s.world : {};
+  if (!w0.name) w0.name = s.meta.name && s.meta.name !== d.meta.name ? s.meta.name : 'Home world';
+  if (!w0.created) w0.created = s.meta.created || 1;
+  s.world = normWorld(w0);
+  s.worlds = Array.isArray(s.worlds) ? s.worlds.filter(w => w && typeof w === 'object').map(normWorld) : [];
   for (const k of ['chars', 'events', 'codex', 'eras']) if (!Array.isArray(s[k])) s[k] = [];
   for (const k of ['holidays', 'moons']) if (!Array.isArray(s.meta[k])) s.meta[k] = [];
   s.dice = Object.assign({}, d.dice, s.dice && typeof s.dice === 'object' ? s.dice : {});
@@ -2467,6 +2476,14 @@ function migrate(s) {
   for (const e of s.codex) normalizeEntry(e);
   s.v = 1;
   return s;
+}
+function normWorld(w) {
+  const d = defaultState().world;
+  w = Object.assign({}, d, w && typeof w === 'object' ? w : {});
+  for (const k of ['places', 'sculpt', 'paint', 'features', 'views', 'factions', 'terr', 'fronts', 'mil']) if (!Array.isArray(w[k])) w[k] = [];
+  if (!w.name) w.name = 'World';
+  if (!w.created) w.created = Date.now();
+  return w;
 }
 let S = defaultState();
 let saveTimer = 0, savePending = false;
@@ -2482,6 +2499,47 @@ window.addEventListener('pagehide', () => flush());
 const bus = new EventTarget();
 function emit(type, detail) { bus.dispatchEvent(new CustomEvent(type, { detail })); }
 function on(type, fn) { bus.addEventListener(type, e => fn(e.detail)); }
+
+/* ===================== worlds ===================== */
+// a campaign can have several worlds (planets, planes, maps). Characters, the timeline and the codex are shared;
+// each world has its own map: terrain, edits, places, roads, territory. S.world is the one being shown.
+const allWorlds = () => [S.world, ...S.worlds].sort((a, b) => (a.created || 0) - (b.created || 0));
+const worldOfPlace = p => (S.world.places.includes(p) ? S.world : S.worlds.find(w => w.places.includes(p)) || null);
+const everyPlace = () => S.world.places.concat(...S.worlds.map(w => w.places));   // this world's first
+function placeById(id) { if (!id) return null; for (const w of [S.world, ...S.worlds]) { const p = w.places.find(x => x.id === id); if (p) return p; } return null; }
+// a place's name, with its world when that is not the one on the map
+function placeLabel(p) { const w = worldOfPlace(p); return w && w !== S.world ? `${p.name} (${w.name})` : p.name; }
+// <option>s for a place picker, grouped by world when there is more than one
+function placeOptions() {
+  const opts = w => [...w.places].sort((a, b) => a.name.localeCompare(b.name)).map(p => h('option', { value: p.id }, p.name));
+  if (!S.worlds.length) return opts(S.world);
+  return allWorlds().filter(w => w.places.length).map(w => h('optgroup', { label: w === S.world ? `${w.name} (this map)` : w.name }, opts(w)));
+}
+// put another world on the map. The app restarts on it, so nothing from the old map lingers; `after` runs once it is up
+async function switchWorld(id, after) {
+  const t = S.worlds.find(w => w.id === id); if (!t) return;
+  const cur = S.world;
+  try { const th = Saves.thumb(); if (th) cur.thumb = th; } catch (e) {}
+  cur.cam = S.ui.cam;
+  S.worlds[S.worlds.indexOf(t)] = cur; S.world = t;
+  S.ui.cam = t.cam || null; delete t.cam;
+  S.ui.tab = 'map'; S.ui.after = Object.assign({ hello: true }, after || {});
+  savePending = true; await flush(); frozen = true;
+  location.reload();
+}
+// show a place on the map, crossing to its world first if need be; open = also open its page
+function gotoPlace(p, open = true) {
+  if (!p) return;
+  const w = worldOfPlace(p);
+  if (w && w !== S.world) { switchWorld(w.id, { place: p.id, open }); return; }
+  setTab('map'); MapView.flyTo(p.lat, p.lon, MapView.placeWidth(p));
+  if (open) setTimeout(() => MapView.openPlace(p), 300);
+}
+function newWorld(name, seed) {
+  const w = normWorld({ id: uid(), name: name || 'New world', seed: seed || Math.random().toString(36).slice(2, 8), created: Date.now() });
+  S.worlds.push(w); save();
+  return w;
+}
 
 /* ===================== calendar ===================== */
 const Cal = {
@@ -2615,7 +2673,10 @@ function dateInput(day, onChange, opts = {}) {
 function refreshDate() {
   $('#date-text').textContent = Cal.fmt(S.meta.today);
   $('#date-earth').textContent = Earth.on() ? Earth.fmt(S.meta.today) : '';
-  $('#campaign-name').textContent = S.meta.name || 'World Manager';
+  // with several worlds the one on the map comes first and the campaign goes underneath
+  const many = S.worlds.length > 0;
+  $('#campaign-name').textContent = many ? S.world.name : S.meta.name || 'World Manager';
+  $('#brand-sub').textContent = many ? S.meta.name || '' : '';
 }
 function setToday(day) {
   const old = S.meta.today; S.meta.today = Math.round(day); save(); refreshDate();
@@ -6198,6 +6259,8 @@ const MapView = (() => {
     const body = h('div', null,
       h('div', { class: 'list-row tap', onclick: () => { sh.close(); worldSheet(); } }, icon('cog', 20),
         h('div', { class: 'main' }, h('div', { class: 'title' }, 'World generation'), h('div', { class: 'sub' }, 'Seed, planet size, oceans, mountains, climate')), icon('chev', 16)),
+      h('div', { class: 'list-row tap', onclick: () => { sh.close(); openWorldsSheet(); } }, icon('globe', 20),
+        h('div', { class: 'main' }, h('div', { class: 'title' }, 'Worlds'), h('div', { class: 'sub' }, S.worlds.length ? `${S.worlds.length + 1} worlds · this map is ${S.world.name}` : 'Add another planet or map to this campaign')), icon('chev', 16)),
       grp('look', 'Look', true,
         field('Map style', seg([['auto', 'Auto'], ['atlas', 'Atlas'], ['topo', 'Topographic']], lay.style, v => { lay.style = v; save(); dirty = true; }), 'Auto keeps the coloured atlas at every zoom unless you turn on USGS sheets below.'),
         field('Tint', seg(Object.entries(TINTS).map(([k, v]) => [k, v[0]]), lay.tint || 'natural', v => { lay.tint = v; save(); applyTint(); dirty = true; }), 'A colour grade over the whole map. Shared images use it too.'),
@@ -7959,12 +8022,12 @@ const Chars = (() => {
           if (!nameHit && !hits.length) continue;
         }
         shown++;
-        const r = c.hp, live = c.role !== 'Container' && c.status !== 'dead', at = c.at && S.world.places.find(p => p.id === c.at);
+        const r = c.hp, live = c.role !== 'Container' && c.status !== 'dead', at = placeById(c.at);
         cards.append(h('div', { class: 'card char-card' + (c.id === sel ? ' sel' : '') + (c.status === 'dead' || c.status === 'retired' ? ' dim' : ''), onclick: () => open(c.id) },
           avatar(c, 44),
           h('div', { class: 'main' },
             h('div', { class: 'name' }, c.name),
-            h('div', { class: 'sub' }, subtitle(c) + (at ? ' · at ' + at.name : '')),
+            h('div', { class: 'sub' }, subtitle(c) + (at ? ' · at ' + placeLabel(at) : '')),
             live ? hpBar(c) : null,
             h('div', { class: 'chips', style: 'margin-top:6px;gap:4px' }, badges(c)),
             hits && hits.length ? h('div', { class: 'tiny', style: 'margin-top:5px;color:var(--accent)' }, 'Has ' + hits.map(i => `${i.name}${+i.qty !== 1 ? ' ×' + i.qty : ''}`).join(', ')) : null),
@@ -8176,8 +8239,10 @@ const Chars = (() => {
     const draw = () => {
       const s = lc(q.value); list.innerHTML = '';
       list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); onPick(null); } }, icon('close', 18), h('div', { class: 'main' }, h('div', { class: 'title' }, 'Nowhere in particular'))));
-      for (const p of S.world.places.filter(p => !s || lc(p.name).includes(s)).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 100))
-        list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); onPick(p); } }, icon('pin', 18), h('div', { class: 'main' }, h('div', { class: 'title' }, p.name), h('div', { class: 'sub' }, (PTYPES[p.type] || PTYPES.other).name))));
+      for (const p of everyPlace().filter(p => !s || lc(p.name).includes(s)).sort((a, b) => (worldOfPlace(a) === S.world ? 0 : 1) - (worldOfPlace(b) === S.world ? 0 : 1) || a.name.localeCompare(b.name)).slice(0, 100)) {
+        const w = worldOfPlace(p);
+        list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); onPick(p); } }, icon('pin', 18), h('div', { class: 'main' }, h('div', { class: 'title' }, p.name), h('div', { class: 'sub' }, (PTYPES[p.type] || PTYPES.other).name + (w !== S.world ? ' · ' + w.name : '')))));
+      }
     };
     q.addEventListener('input', draw); draw();
     sh = openSheet({ title, body: h('div', null, q, list) });
@@ -8281,10 +8346,10 @@ const Chars = (() => {
       for (const c of members) {
         const cb = h('input', { type: 'checkbox', checked: chosen.has(c.id) });
         cb.addEventListener('change', () => cb.checked ? chosen.add(c.id) : chosen.delete(c.id));
-        const at = c.at && S.world.places.find(p => p.id === c.at);
+        const at = placeById(c.at);
         list.append(h('label', { class: 'list-row', style: 'cursor:pointer' }, cb, avatar(c, 32),
           h('div', { class: 'main' }, h('div', { class: 'title' }, c.name, c.hp.cur <= 0 ? h('span', { class: 'badge down', style: 'margin-left:6px' }, 'Down') : null, c.role !== 'PC' ? h('span', { class: 'badge', style: 'margin-left:6px' }, c.role) : null),
-            hpBar(c), at ? h('div', { class: 'tiny muted', style: 'margin-top:3px' }, 'At ' + at.name) : null),
+            hpBar(c), at ? h('div', { class: 'tiny muted', style: 'margin-top:3px' }, 'At ' + placeLabel(at)) : null),
           h('div', { class: 'num', style: 'min-width:60px;text-align:right;font-weight:700' }, `${c.hp.cur}/${c.hp.max}`, c.hp.temp ? h('span', { class: 'tiny', style: 'color:#79c0ff' }, ' +' + c.hp.temp) : null)));
       }
     };
@@ -8810,11 +8875,11 @@ const Chars = (() => {
     hasBirth.addEventListener('change', () => { c.birth = hasBirth.checked ? S.meta.today - 25 * Cal.dpy() : null; commit(); });
     drawBirth();
     const placeSel = key => {
-      const s = h('select', null, h('option', { value: '' }, '—'), [...S.world.places].sort((a, b) => a.name.localeCompare(b.name)).map(p => h('option', { value: p.id }, p.name)));
+      const s = h('select', null, h('option', { value: '' }, '—'), placeOptions());
       s.value = c[key] || ''; s.addEventListener('change', () => { c[key] = s.value || null; commit(); MapView.redraw(); });
       return s;
     };
-    const at = c.at && S.world.places.find(p => p.id === c.at);
+    const at = placeById(c.at);
     const parents = c.parents.map(charById).filter(Boolean), kids = S.chars.filter(x => x.parents.includes(c.id));
     const status = h('select', null, Object.entries(STATUSES).map(([k, [label]]) => h('option', { value: k }, label)));
     status.value = c.status;
@@ -8834,8 +8899,8 @@ const Chars = (() => {
     h('div', { class: 'card' }, h('h3', null, icon('tag', 15), 'Tags'), tagEditor(c.tags, () => { save(); renderList(); })),
     h('div', { class: 'card' },
       h('div', { class: 'cols2' }, field('Home', placeSel('home')), field('Currently at', placeSel('at'))),
-      at ? h('button', { class: 'btn small', onclick: () => { setTab('map'); MapView.flyTo(at.lat, at.lon, 8); } }, icon('map', 14), 'Show on map') : null,
-      !S.world.places.length ? h('div', { class: 'tiny muted' }, 'Add places on the map to link characters to them.') : null),
+      at ? h('button', { class: 'btn small', onclick: () => gotoPlace(at, false) }, icon('map', 14), worldOfPlace(at) === S.world ? 'Show on map' : 'Show on ' + worldOfPlace(at).name) : null,
+      !everyPlace().length ? h('div', { class: 'tiny muted' }, 'Add places on the map to link characters to them.') : null),
     c.role !== 'Container' ? relsCard(c) : null,
     parents.length || kids.length ? h('div', { class: 'card' }, h('h3', null, icon('users', 15), 'Family'),
       parents.map(x => famRow(x, 'Parent')),
@@ -9280,7 +9345,7 @@ const Timeline = (() => {
   /* ----- editor & list ----- */
   // read an event: description with live [[links]], who was involved, where, which era
   function viewEvent(ev) {
-    const pl = ev.place && S.world.places.find(p => p.id === ev.place), era = eraAt(ev.start), who = (ev.chars || []).map(charById).filter(Boolean);
+    const pl = placeById(ev.place), era = eraAt(ev.start), who = (ev.chars || []).map(charById).filter(Boolean);
     let sh;
     const body = h('div', null,
       h('div', { class: 'row', style: 'gap:8px;margin-bottom:4px' }, h('i', { class: 'att', style: { background: catColor(ev.cat) } }), h('span', { class: 'kind-tag', style: { color: catColor(ev.cat) } }, ev.cat || 'General')),
@@ -9289,7 +9354,7 @@ const Timeline = (() => {
       h('div', { class: 'small muted', style: 'margin-top:2px' }, [ev.start > S.meta.today ? 'in ' + Cal.span(ev.start - S.meta.today) : ev.start < S.meta.today ? Cal.span(S.meta.today - ev.start) + ' ago' : 'today', era ? `${era.name}, year ${eraYear(era, ev.start)}` : null].filter(Boolean).join(' · ')),
       ev.desc ? h('div', { class: 'card', style: 'margin-top:10px' }, md(ev.desc, { onToggle: (i, on) => { ev.desc = mdToggle(ev.desc, i, on); save(); } })) : null,
       who.length ? h('div', { class: 'chips', style: 'margin:10px 0 4px' }, who.map(c => h('button', { class: 'chip', style: 'display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 3px', onclick: () => { sh.close(); Chars.open(c.id); } }, avatar(c, 22), c.name))) : null,
-      pl ? h('button', { class: 'btn small', style: 'margin-top:8px', onclick: () => { sh.close(); setTab('map'); MapView.flyTo(pl.lat, pl.lon, MapView.placeWidth(pl)); } }, icon('pin', 14), pl.name) : null,
+      pl ? h('button', { class: 'btn small', style: 'margin-top:8px', onclick: () => { sh.close(); gotoPlace(pl, false); } }, icon('pin', 14), placeLabel(pl)) : null,
       backlinksCard(ev.title, ev));
     sh = openSheet({ title: ev.title, body, foot: [
       h('button', { class: 'btn danger', 'aria-label': 'Delete', onclick: () => { const u = undoable(['events']); S.events = S.events.filter(x => x !== ev); save(); dirty = true; sh.close(); emit('data'); u(`Deleted “${ev.title}”`); } }, icon('trash', 16)),
@@ -9317,7 +9382,7 @@ const Timeline = (() => {
     const desc = mdEditor(descV, v => { descV = v; }, { minHeight: '96px', placeholder: 'Details… [[links]] to characters, places and codex entries work here' });
     const chosen = new Set(d.chars);
     const charChips = h('div', { class: 'chips' }, S.chars.map(c => { const b = h('button', { class: 'chip' + (chosen.has(c.id) ? ' on' : ''), type: 'button' }, c.name); b.addEventListener('click', () => { chosen.has(c.id) ? chosen.delete(c.id) : chosen.add(c.id); b.classList.toggle('on'); }); return b; }));
-    const place = h('select', null, h('option', { value: '' }, '—'), [...S.world.places].sort((a, b) => a.name.localeCompare(b.name)).map(p => h('option', { value: p.id }, p.name)));
+    const place = h('select', null, h('option', { value: '' }, '—'), placeOptions());
     place.value = d.place || '';
     let sh;
     const doSave = () => {
@@ -9330,17 +9395,17 @@ const Timeline = (() => {
       save(); dirty = true; sh.close(); emit('data');
       if (isNew && S.ui.tab !== 'timeline') toast(`Event added: ${d.title}`, 3500, { label: 'Show', fn: () => focusEvent(d.id) });
     };
-    const pl = d.place && S.world.places.find(p => p.id === d.place);
+    const pl = placeById(d.place);
     sh = openSheet({ title: isNew ? 'New event' : 'Edit event', body: h('div', null, catDl,
       field('Title', title), field('Date', start), h('label', { class: 'check' }, hasEnd, 'Lasts a while (has an end date)'), endBox,
       h('div', { class: 'cols2' }, field('Category', cat), field('Colour', sw)),
       field('Description', desc),
       S.chars.length ? field('Characters involved', charChips) : null,
-      S.world.places.length ? field('Place', place) : null),
+      everyPlace().length ? field('Place', place) : null),
     foot: [
       !isNew ? h('button', { class: 'btn danger', onclick: () => { const u = undoable(['events']); S.events = S.events.filter(x => x !== ev); save(); dirty = true; sh.close(); emit('data'); u(`Deleted “${ev.title}”`); } }, icon('trash', 16), 'Delete') : null,
       !isNew ? h('button', { class: 'btn', 'aria-label': 'Duplicate', title: 'Duplicate', onclick: () => { const cp = { ...JSON.parse(JSON.stringify(ev)), id: uid(), title: ev.title + ' (copy)' }; S.events.push(cp); save(); dirty = true; sh.close(); editEvent(cp); } }, icon('copy', 16)) : null,
-      pl ? h('button', { class: 'btn', onclick: () => { sh.close(); setTab('map'); MapView.flyTo(pl.lat, pl.lon, 8); } }, icon('map', 16), 'Map') : null,
+      pl ? h('button', { class: 'btn', onclick: () => { sh.close(); gotoPlace(pl, false); } }, icon('map', 16), 'Map') : null,
       h('div', { class: 'spacer' }),
       h('button', { class: 'btn primary', onclick: doSave }, 'Save')] });
     if (isNew) setTimeout(() => title.focus(), 60);
@@ -9642,9 +9707,9 @@ const Codex = (() => {
       const evs = S.events.filter(ev => ev.start === e.day || (ev.end != null && ev.start <= e.day && ev.end >= e.day));
       if (evs.length) out.append(h('div', { class: 'card' }, h('h3', null, icon('timeline', 15), 'On the timeline that day'), evs.map(ev => h('div', { class: 'list-row tap', onclick: () => Timeline.focusEvent(ev.id) }, h('div', { class: 'main' }, h('div', { class: 'title' }, ev.title), h('div', { class: 'sub' }, ev.cat || 'General')), icon('chev', 16)))));
     }
-    const pl = S.world.places.find(p => lc(p.name) === lc(e.title)), ch = S.chars.find(c => lc(c.name) === lc(e.title));
+    const pl = everyPlace().find(p => lc(p.name) === lc(e.title)), ch = S.chars.find(c => lc(c.name) === lc(e.title));
     if (pl || ch) out.append(h('div', { class: 'row wrap', style: 'margin:4px 0' },
-      pl ? h('button', { class: 'btn small', onclick: () => { setTab('map'); MapView.flyTo(pl.lat, pl.lon, MapView.placeWidth(pl)); } }, icon('pin', 14), 'On the map') : null,
+      pl ? h('button', { class: 'btn small', onclick: () => gotoPlace(pl, false) }, icon('pin', 14), worldOfPlace(pl) === S.world ? 'On the map' : 'On ' + worldOfPlace(pl).name) : null,
       ch ? h('button', { class: 'btn small', onclick: () => Chars.open(ch.id) }, icon('users', 14), 'Character sheet') : null));
     out.append(backlinksCard(e.title, e, 'Linked from') || '',
       h('div', { class: 'tiny faint', style: 'margin:14px 2px' }, `Edited ${ago(e.updated)} · created ${ago(e.created)}`));
@@ -9815,13 +9880,13 @@ const Saves = (() => {
   async function newWorld(name, seed) {
     await autoSave('Before starting a new world');
     const fresh = defaultState(), keep = S.meta;
-    fresh.meta.name = name || 'New World'; fresh.world.seed = seed || Math.random().toString(36).slice(2, 8);
+    fresh.meta.name = name || 'New World'; fresh.world.name = fresh.meta.name; fresh.world.seed = seed || Math.random().toString(36).slice(2, 8);
     // your conventions carry over: units, calendar, Earth overlay and appearance
     Object.assign(fresh.meta, { units: keep.units, weight: keep.weight, months: keep.months, epoch: keep.epoch, earth: keep.earth, theme: keep.theme, currencies: keep.currencies });
     fresh.species = JSON.parse(JSON.stringify(S.species));
     await switchTo(fresh);
   }
-  return { list, saveNow, autoSave, overwrite, load, rename, remove, exportSave, addFromState, newWorld, switchTo, defaultName };
+  return { list, saveNow, autoSave, overwrite, load, rename, remove, exportSave, addFromState, newWorld, switchTo, defaultName, thumb };
 })();
 const plural = (n, word) => `${fmtInt(n)} ${word}${n === 1 ? '' : 's'}`;
 function ago(t) {
@@ -9834,6 +9899,55 @@ function ago(t) {
 }
 async function quickSave() {
   try { const m = await Saves.saveNow(); toast(`Saved “${m.name}”`); } catch (e) { toast('Could not save: ' + (e && e.message || e)); }
+}
+function openWorldsSheet() {
+  let sh;
+  const listEl = h('div');
+  function draw() {
+    listEl.innerHTML = '';
+    for (const w of allWorlds()) {
+      const here = w === S.world, th = here ? Saves.thumb() || w.thumb : w.thumb;
+      listEl.append(h('div', { class: 'save-row' + (here ? '' : ' tap'), onclick: here ? null : e => { if (!e.target.closest('button')) go(w); } },
+        th ? h('img', { class: 'save-thumb', src: th, alt: '' }) : h('div', { class: 'save-thumb' }, icon('globe', 22)),
+        h('div', { class: 'main' },
+          h('div', { class: 'title' }, w.name, here ? h('span', { class: 'badge', style: 'margin-left:6px;vertical-align:1px' }, 'On the map') : null),
+          h('div', { class: 'sub' }, `${plural(w.places.length, 'place')} · ${fmtDist(w.radiusMi * Terrain.MI)} radius · seed ${w.seed}`)),
+        h('div', { class: 'acts' },
+          here ? null : h('button', { class: 'btn small primary', onclick: () => go(w) }, 'Go'),
+          h('button', { class: 'icon-btn', 'aria-label': 'More', onclick: () => menu(w) }, icon('more', 20)))));
+    }
+  }
+  const go = w => { sh.close(); switchWorld(w.id); };
+  function menu(w) {
+    let ms;
+    const here = w === S.world;
+    const act = (label, ic, fn, cls) => h('button', { class: 'btn block' + (cls ? ' ' + cls : ''), style: 'margin:5px 0;justify-content:flex-start', onclick: async () => { ms.close(); await fn(); draw(); refreshDate(); } }, icon(ic, 18), label);
+    ms = openSheet({ title: w.name, body: h('div', null,
+      act('Rename', 'edit', () => new Promise(res => {
+        let rs; const inp = h('input', { value: w.name, autocomplete: 'off' });
+        rs = openSheet({ title: 'Rename world', body: field('Name', Names.field(inp, () => 'region')), onClose: res, foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => { w.name = inp.value.trim() || w.name; save(); rs.close(); } }, 'Save')] });
+        setTimeout(() => inp.focus(), 60);
+      })),
+      here && !S.worlds.length ? null : here
+        ? h('p', { class: 'small muted' }, 'To delete this world, go to another one first.')
+        : act('Delete', 'trash', async () => {
+          if (!await confirmDlg(`Delete “${w.name}” and everything on its map (${plural(w.places.length, 'place')}, terrain edits, roads, territory)? Characters and events stay, but lose their link to its places. An automatic save is made first.`, { ok: 'Delete' })) return;
+          await Saves.autoSave(`Before deleting the world “${w.name}”`);
+          S.worlds = S.worlds.filter(x => x !== w); save(); toast(`“${w.name}” deleted`);
+        }, 'danger')) });
+  }
+  function newDlg() {
+    let ns; const nm = h('input', { placeholder: 'e.g. Kepler Reach', autocomplete: 'off' }), sd = h('input', { value: Math.random().toString(36).slice(2, 8), autocomplete: 'off' });
+    ns = openSheet({ title: 'New world', body: h('div', null, field('Name', Names.field(nm, () => 'region')), field('Map seed', sd, 'A different seed gives a different planet. Change its size, oceans and climate later under World generation.'),
+      h('p', { class: 'small muted' }, 'It starts as a blank map. Characters, the timeline, the codex, the calendar and species are shared with your other worlds.')),
+    foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => { const w = newWorld(nm.value.trim() || 'New world', sd.value.trim()); ns.close(); sh.close(); switchWorld(w.id); } }, 'Create and go')] });
+    setTimeout(() => nm.focus(), 60);
+  }
+  sh = openSheet({ title: 'Worlds', wide: true, body: h('div', null,
+    h('p', { class: 'small muted', style: 'margin-top:0' }, 'Each world is its own map, with its own terrain, places, roads and territory. Characters, the timeline and the codex are shared, so a character can be at a place on any world.'),
+    listEl),
+  foot: [h('button', { class: 'btn primary', onclick: newDlg }, icon('plus', 16), 'New world'), h('div', { class: 'spacer' }), h('button', { class: 'btn', onclick: () => sh.close() }, 'Done')] });
+  draw();
 }
 function openSavesSheet() {
   let sh;
@@ -9873,9 +9987,9 @@ function openSavesSheet() {
   }
   function newWorldDlg() {
     let ns; const nm = h('input', { placeholder: 'e.g. Kepler Reach', autocomplete: 'off' }), sd = h('input', { value: Math.random().toString(36).slice(2, 8), autocomplete: 'off' });
-    ns = openSheet({ title: 'New world', body: h('div', null, field('Name', Names.field(nm, () => 'region')), field('Map seed', sd, 'A different seed gives a different planet.'),
-      h('p', { class: 'small muted' }, 'Your current world is saved automatically first. Units, the calendar and species carry over.')),
-    foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => { ns.close(); sh.close(); Saves.newWorld(nm.value.trim() || 'New World', sd.value.trim()); } }, 'Create world')] });
+    ns = openSheet({ title: 'New campaign', body: h('div', null, field('Name', Names.field(nm, () => 'region')), field('Map seed', sd, 'A different seed gives a different planet.'),
+      h('p', { class: 'small muted' }, 'Starts over with a new map and no characters, events or codex. Your current campaign is saved automatically first, and units, the calendar and species carry over. To add another planet to this campaign instead, use Worlds.')),
+    foot: [h('button', { class: 'btn', onclick: () => { ns.close(); sh.close(); openWorldsSheet(); } }, icon('globe', 16), 'Worlds'), h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => { ns.close(); sh.close(); Saves.newWorld(nm.value.trim() || 'New World', sd.value.trim()); } }, 'Start campaign')] });
     setTimeout(() => nm.focus(), 60);
   }
   sh = openSheet({ title: 'Save & load', wide: true, body: h('div', null,
@@ -9889,7 +10003,7 @@ function openSavesSheet() {
     h('p', { class: 'tiny muted' }, 'Automatic saves are made before loading, starting a new world or clearing things; the newest 8 are kept. Export a save to a file to keep it off the device or move it to another one. Ctrl/⌘ + S saves on a keyboard.')),
   foot: [
     h('button', { class: 'btn', onclick: () => fileIn.click() }, icon('upload', 16), 'Import file'),
-    h('button', { class: 'btn', onclick: newWorldDlg }, icon('plus', 16), 'New world'),
+    h('button', { class: 'btn', onclick: newWorldDlg }, icon('plus', 16), 'New campaign'),
     h('div', { class: 'spacer' }), h('button', { class: 'btn', onclick: () => sh.close() }, 'Done')] });
   draw();
 }
@@ -9986,10 +10100,11 @@ const Settings = (() => {
   }
   function world() {
     const w = S.world;
-    return h('div', { class: 'card' }, h('h3', null, 'World'),
-      kv('Seed', w.seed), kv('Planet radius', fmtDist(w.radiusMi * Terrain.MI)), kv('Ocean coverage', w.oceanPct + '%'),
+    return h('div', { class: 'card' }, h('h3', null, S.worlds.length ? 'World on the map' : 'World'),
+      kv('Name', w.name), kv('Seed', w.seed), kv('Planet radius', fmtDist(w.radiusMi * Terrain.MI)), kv('Ocean coverage', w.oceanPct + '%'),
       kv('Places', S.world.places.length), kv('Sculpt strokes', w.sculpt.length), kv('Biome paint strokes', w.paint.length),
       h('div', { class: 'row wrap', style: 'margin-top:10px' },
+        h('button', { class: 'btn', onclick: openWorldsSheet }, icon('globe', 16), S.worlds.length ? `Worlds (${S.worlds.length + 1})…` : 'Worlds…'),
         h('button', { class: 'btn', onclick: () => MapView.worldSheet() }, icon('cog', 16), 'World generation…'),
         h('button', { class: 'btn', onclick: () => MapView.placesSheet() }, icon('pin', 16), 'Places…')));
   }
@@ -10025,7 +10140,7 @@ const Settings = (() => {
       h('p', { class: 'small muted', style: 'margin-top:0' }, `Changes are kept automatically on this device (${Store.kind}). Save & load keeps named snapshots and several worlds side by side. Export a file now and then: it is how you move a world to another device, and browsers can clear website data.`),
       h('div', { class: 'row wrap' },
         h('button', { class: 'btn primary', onclick: openSavesSheet }, icon('save', 16), 'Save & load…'),
-        h('button', { class: 'btn', onclick: exportData }, icon('download', 16), 'Export this world'),
+        h('button', { class: 'btn', onclick: exportData }, icon('download', 16), 'Export to a file'),
         h('button', { class: 'btn', onclick: () => file.click() }, icon('upload', 16), 'Import file'), file),
       h('div', { class: 'small muted', style: 'margin-top:10px' }, `${plural(S.chars.length, 'character')} · ${plural(S.events.length, 'event')} · ${plural(S.codex.length, 'codex entry').replace('entrys', 'entries')} · ${plural(S.world.places.length, 'place')} · ${plural(S.world.features.length, 'stamped feature')} · ${plural(S.world.sculpt.length + S.world.paint.length, 'brush stroke')}`),
       (() => { const el = h('div', { class: 'tiny muted', style: 'margin-top:4px' }); if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e => { if (e && e.usage) el.textContent = `Using ${fmtNum(e.usage / 1048576, 1)} MB of storage on this device${e.quota ? ' (' + fmtNum(e.quota / 1073741824, 1) + ' GB available)' : ''}.`; }).catch(() => {}); return el; })(),
@@ -10113,9 +10228,9 @@ function openSearch(initial = '') {
       () => Chars.open(c.id), Math.max(score(c.name, q) * 2, ...c.tags.map(t => score(t, q)), score(c.species, q) * 0.5), c);
     for (const c of S.chars) for (const it of c.inv.items) add('Items', 'bag', it.name + (+it.qty !== 1 ? ' ×' + fmtNum(+it.qty || 0, 2) : ''), 'Carried by ' + c.name, () => Chars.open(c.id, 'items'), score(it.name, q));
     const cq = parseCoords(q); if (cq) add('Map', 'target', `Go to ${fmtLL(cq)}`, 'Coordinates', () => { setTab('map'); MapView.flyTo(cq[0], cq[1], 60); }, 9);
-    for (const p of S.world.places) { const sy = p.sym && SYMBOLS.get(p.sym); add('Places', 'pin', p.name, (sy ? sy.name + ' · ' : '') + (PTYPES[p.type] || PTYPES.other).name + (p.pop ? ' · pop. ' + fmtInt(p.pop) : ''), () => { setTab('map'); MapView.flyTo(p.lat, p.lon, MapView.placeWidth(p)); },
+    for (const p of everyPlace()) { const sy = p.sym && SYMBOLS.get(p.sym), pw = worldOfPlace(p), far = pw !== S.world ? ' · on ' + pw.name : ''; add('Places', 'pin', p.name, (sy ? sy.name + ' · ' : '') + (PTYPES[p.type] || PTYPES.other).name + (p.pop ? ' · pop. ' + fmtInt(p.pop) : '') + far, () => gotoPlace(p, false),
       Math.max(score(p.name, q) * 2, q.length > 2 ? score(p.notes, q) * 0.5 : 0, q.length > 2 ? score((PTYPES[p.type] || PTYPES.other).name, q) * 0.6 : 0, q.length > 2 && sy ? score(sy.name, q) * 0.8 : 0, ...(p.tags || []).map(t => score(t, q)), ...(p.info ? Object.values(p.info).map(v => q.length > 2 ? score(v, q) * 0.5 : 0) : [0])));
-      for (const poi of p.poi || []) add('Places', 'bookmark', poi.name, 'In ' + p.name, () => { setTab('map'); MapView.flyTo(p.lat, p.lon, MapView.placeWidth(p)); setTimeout(() => MapView.openPlace(p), 450); }, score(poi.name, q) * 1.6); }
+      for (const poi of p.poi || []) add('Places', 'bookmark', poi.name, 'In ' + p.name + far, () => gotoPlace(p), score(poi.name, q) * 1.6); }
     for (const f of S.world.factions) add('Factions', 'flag', f.name, 'Faction', () => { setTab('map'); MapView.factionsSheet(); }, score(f.name, q) * 1.5);
     for (const m of S.world.mil) if (m.name) add('Military', 'flag', m.name, MapView.milLabel(m), () => { setTab('map'); MapView.showMil(m); }, score(m.name, q));
     for (const f of S.world.features) if (f.name) add('Map features', 'river', f.name, MapView.stampName(f.kind), () => { setTab('map'); MapView.zoomToFeature(f); }, score(f.name, q) * 2);
@@ -10216,6 +10331,7 @@ async function boot() {
   for (const b of $$('#tabbar button')) b.addEventListener('click', () => setTab(b.dataset.tab));
   $('#date-chip').addEventListener('click', openDateSheet);
   $('#save-btn').addEventListener('click', openSavesSheet);
+  $('#brand-btn').addEventListener('click', openWorldsSheet);
   $('#search-btn').addEventListener('click', () => openSearch());
   $('#dice-btn').addEventListener('click', () => Dice.sheet());
   document.addEventListener('keydown', e => {
@@ -10240,6 +10356,12 @@ async function boot() {
     } catch (e) { console.warn('Daily backup skipped', e); }
   }, 6000);
   setTab(S.ui.tab || 'map');
+  if (S.ui.after) {   // just crossed to this world
+    const a = S.ui.after, p = a.place && S.world.places.find(x => x.id === a.place);
+    delete S.ui.after; save();
+    if (a.hello) toast(`On ${S.world.name}`);
+    if (p) setTimeout(() => { MapView.flyTo(p.lat, p.lon, MapView.placeWidth(p)); if (a.open) setTimeout(() => MapView.openPlace(p), 450); }, 350);
+  }
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(e => console.warn('Service worker not registered', e));
 }

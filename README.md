@@ -34,14 +34,18 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 ## Saving, loading and backups
 
 - Every change is kept automatically on the device, in the browser's storage (IndexedDB).
+- **Worlds**: a campaign can have several worlds (planets, moons, other planes), each with its own map: terrain, sculpting, paint, places, roads and territory. Characters, the timeline, the codex, the calendar and species are shared by all of them.
+  - Tap the campaign's name at the top left (or Layers → Worlds, or Settings → Worlds) to see them. **Go** puts another world on the map, **New world** starts a blank planet from a fresh seed, and ⋯ renames or deletes one (an automatic save is made first).
+  - With more than one world, the top bar shows the world on the map, with the campaign underneath.
+  - A character can be at a place on any world, and an event can happen on any of them: place pickers group places by world, and other worlds' places are shown as "First Landing (Home world)". Opening one of them (from a character, an event, a [[link]] or search) takes you to that world and that place.
 - **Save & load** is the disk button at the top. Tap it (or press Ctrl/⌘ + S on a keyboard) to:
-  - **Save** a named snapshot of the whole world: map, edits, stamps, characters and timeline, with a small picture of the map.
+  - **Save** a named snapshot of the whole campaign: every world's map and edits, characters and timeline, with a small picture of the map.
   - **Load** any save. Whatever you had open is kept first as an automatic save, so loading never loses anything.
   - **Rename** a save, **save over** it with the current world, **export** it to a file, or **delete** it (the ⋯ button).
-  - Start a **New world** from a fresh seed. Your units, calendar and species carry over, and the old world becomes a save.
+  - Start a **New campaign** from a fresh seed. Your units, calendar and species carry over, and the old campaign becomes a save. (To add a planet to this campaign instead, use Worlds.)
   - **Import** a `.json` file as a new save, then load it if you want.
 - Automatic saves are also made before clearing sculpting, paint or stamps, before starting over, and once a day. The newest 8 are kept.
-- **Settings → Export this world** writes a `.json` file. On iPhone it opens the Share sheet, so choose **Save to Files**. Export now and then: it is how you move a world between devices, because each browser or Home Screen app keeps its own storage.
+- **Settings → Export to a file** writes a `.json` file of the whole campaign. On iPhone it opens the Share sheet, so choose **Save to Files**. Export now and then: it is how you move a world between devices, because each browser or Home Screen app keeps its own storage.
 
 ## Everywhere
 
