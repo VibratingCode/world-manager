@@ -486,22 +486,219 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .lm-cv.ship, .lm-thumb.ship { background: #05070a; }
 .lm-thumb.ship { height: 170px; }
 .lm-thumb.ship.sm { height: 84px; margin-top: 8px; border-radius: 10px; }
-.lm-tray { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 74px); z-index: 3; display: none; flex-direction: column; gap: 5px; padding: 0 10px; }
-.lm-row { display: flex; gap: 6px; align-items: center; overflow-x: auto; scrollbar-width: none; flex: none; }
-.lm-row .btn, .lm-row .chip { flex: none; background: var(--glass-strong); }
-.lm-row .btn.primary { background: var(--accent); color: var(--accent-ink); }
-.lm-row .chip.on { background: var(--accent); color: var(--accent-ink); }
-.lm-row input { flex: none; width: 96px; padding: 5px 9px; font-size: 14px; }
-.lm-modes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; background: var(--glass-strong); border-radius: 11px; padding: 3px; flex: none; }
-.lm-modes button { padding: 6px 0; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
-.lm-modes button.on { background: var(--accent); color: var(--accent-ink); }
-.lm-mod { touch-action: pan-x; }
-.lm-mod canvas { width: 44px; height: 26px; display: block; }
-.lm-tray-g { flex: none; font-size: 11px; font-weight: 700; color: #cfd6dc; padding: 0 2px 0 8px; }
-.lm-mod { flex: none; width: 72px; height: 62px; border-radius: 12px; background: var(--glass-strong); color: var(--text); font-size: 11px; font-weight: 600; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
-.lm-mod .ic { font-size: 19px; }
-.lm-mod.on { background: var(--accent); color: var(--accent-ink); }
 .lm-num { min-width: 30px; height: 30px; border-radius: 50%; background: var(--card2); display: grid; place-items: center; font-weight: 800; font-variant-numeric: tabular-nums; flex: none; }
+/* ---------- the ship console: always dark, whatever the app's theme ---------- */
+:root {
+  --hud-font: "Avenir Next Condensed", "Bahnschrift SemiCondensed", "Bahnschrift", "Roboto Condensed", "Arial Narrow", -apple-system, system-ui, sans-serif;
+  --hud-num: "DIN Alternate", "Bahnschrift", ui-monospace, Menlo, Consolas, monospace;
+}
+.lm.hud, body.ship-console #sheet-root, body.ship-console #toast-root {
+  --bg: #0a0f15; --bar: #0d131a; --card: #141c25; --card2: #1b2530; --line: rgba(165, 195, 220, .15);
+  --text: #e9eff5; --muted: #a9b7c4; --faint: #7c8b99; --lift: none;
+  --accent: #f2a93b; --accent-ink: #171004; --teal: #5ccfe6; --danger: #ff6a5f;
+  --glass: rgba(10, 15, 21, .82); --glass-strong: rgba(10, 15, 21, .95); --glass-line: rgba(165, 195, 220, .15);
+  --hud-raise: #18212b; --hud-edge: rgba(165, 195, 220, .26);
+  --hud-green: #5fe0a0; --hud-amber: #f2a93b; --hud-cyan: #5ccfe6; --hud-red: #ff6a5f;
+}
+.hud-left, .hud-right, .hud-tele, .hud-float, .hud-panel { display: none; }
+.lm.hud { display: block; background: #05070a; color: var(--text); font-family: var(--hud-font); font-stretch: 87.5%; overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.lm.hud::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: radial-gradient(ellipse at 50% 46%, transparent 58%, rgba(0, 0, 0, .42) 100%); }
+.lm.hud .lm-cv { position: absolute; inset: 0; width: 100%; height: 100%; }
+.lm.hud button { font-family: inherit; font-stretch: inherit; }
+.hic { display: inline-grid; place-items: center; flex: none; }
+.hic svg { display: block; }
+
+/* the cut-corner plate everything is made of */
+.cut { --c: 6px; --edge: var(--hud-edge); --face: var(--hud-raise); position: relative; isolation: isolate; background: var(--edge);
+  clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c)); transition: transform .1s, filter .12s; }
+.cut::after { content: ''; position: absolute; inset: 1px; z-index: -1; background: var(--face);
+  clip-path: polygon(calc(var(--c) - .5px) 0, 100% 0, 100% calc(100% - var(--c) + .5px), calc(100% - var(--c) + .5px) 100%, 0 100%, 0 calc(var(--c) - .5px)); }
+button.cut:active:not(:disabled) { transform: translateY(1px); filter: brightness(1.22); }
+button.cut:disabled { opacity: .36; }
+button.cut:focus-visible { --edge: var(--hud-amber); outline: none; }
+@media (hover: hover) { button.cut:hover:not(:disabled) { --edge: rgba(190, 215, 235, .6); } }
+.hud-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none; height: 40px; padding: 0 13px; color: var(--text); font-weight: 600; font-size: 14.5px; line-height: 1; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+.hud-btn.pri { --face: linear-gradient(#ffbd57, #ec9a2b); --edge: #ffd590; color: #181004; font-weight: 700; }
+.hud-btn.on { --edge: var(--hud-amber); --face: #2b2413; color: #ffd08a; }
+.hud-btn.dgr { --edge: rgba(255, 106, 95, .45); color: #ff8d84; }
+.hud-btn.sq { width: 44px; height: 44px; padding: 0; }
+
+/* header */
+.lm.hud .hud-top { position: absolute; z-index: 5; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; border: 0; pointer-events: none;
+  padding: calc(env(safe-area-inset-top) + 7px) calc(env(safe-area-inset-right) + 10px) 16px calc(env(safe-area-inset-left) + 10px);
+  background: linear-gradient(to bottom, rgba(3, 5, 8, .94), rgba(3, 5, 8, .62) 68%, rgba(3, 5, 8, 0)); }
+.lm.hud .hud-top.has-kind { flex-wrap: wrap; }
+.lm.hud .hud-top > * { pointer-events: auto; }
+.hud-back { width: 40px; height: 44px; display: grid; place-items: center; color: var(--text); flex: none; margin-left: -6px; }
+.hud-title { flex: 1; min-width: 0; text-align: left; display: block; color: inherit; padding: 2px 0; }
+.hud-name { font-weight: 700; font-size: 21px; line-height: 1.1; letter-spacing: .035em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f3f7fb; }
+.hud-sub { font-size: 14px; line-height: 1.25; color: var(--muted); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.hud-status { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 9px; flex: none; color: var(--muted); font-weight: 600; font-size: 14px; letter-spacing: .05em; text-transform: uppercase; }
+.hud-status i { width: 8px; height: 8px; background: var(--hud-green); box-shadow: 0 0 9px var(--hud-green); transform: rotate(45deg); }
+.hud-status.warn { color: #ffd08a; }
+.hud-status.warn i { background: var(--hud-amber); box-shadow: 0 0 9px var(--hud-amber); }
+.lm.hud .hud-top .seg { flex: 1 0 100%; background: rgba(10, 15, 21, .85); border-radius: 0; padding: 2px; margin-top: 2px; }
+.lm.hud .hud-top .seg button { border-radius: 0; min-height: 34px; font-size: 14px; letter-spacing: .05em; text-transform: uppercase; }
+.lm.hud .hud-top .seg button.on { background: #2b2413; color: #ffd08a; box-shadow: inset 0 -2px 0 var(--hud-amber); }
+.lm.hud .lm-hint { top: calc(var(--top, 70px) + 2px); bottom: auto; border-radius: 0; background: rgba(10, 15, 21, .92); border: 1px solid var(--hud-edge); box-shadow: none; font-size: 14.5px; letter-spacing: .02em; z-index: 4; }
+
+/* the rails down each side */
+.lm.hud .hud-left, .lm.hud .hud-right { display: flex; flex-direction: column; gap: 5px; position: absolute; z-index: 3; top: var(--top, 70px); transition: opacity .14s; }
+.lm.hud .hud-left { left: calc(env(safe-area-inset-left) + 8px); align-items: center; }
+.lm.hud .hud-right { right: calc(env(safe-area-inset-right) + 8px); }
+.hud-cap { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.hud-deck { --c: 5px; width: 40px; height: 38px; display: grid; place-items: center; color: var(--muted); font-family: var(--hud-num) !important; font-weight: 700; font-size: 16px; }
+.hud-deck.on { --face: linear-gradient(#ffbd57, #ec9a2b); --edge: #ffd590; color: #181004; }
+.hud-deck.add { color: var(--text); --face: rgba(14, 20, 27, .85); }
+.lm.hud .hud-right .hud-btn { --face: rgba(16, 23, 31, .9); }
+.lm.hud .hud-right .hud-btn.on { --face: #2b2413; }
+
+/* the dock */
+.lm.hud .hud-dock { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: #080c11; border-top: 1px solid var(--hud-edge); padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.hud-dock button { height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; position: relative; transition: color .15s; }
+.hud-dock button.on { color: var(--hud-amber); }
+@media (hover: hover) { .hud-dock button:hover { color: var(--text); } .hud-dock button.on:hover { color: var(--hud-amber); } }
+.hud-dock .ind { position: absolute; top: -1px; left: 0; height: 2px; width: calc(100% / var(--n, 5)); background: var(--hud-amber); box-shadow: 0 0 12px rgba(242, 169, 59, .85); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .24s cubic-bezier(.2, .8, .2, 1); }
+.hud-dock .build { --c: 8px; --face: linear-gradient(#ffbd57, #ec9a2b); --edge: #ffd590; color: #181004 !important; font-weight: 700; margin: 5px 4px; height: 52px; }
+.lm.hud.dragging .hud-dock::after { content: 'Drop here to cancel'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #0c1219; color: var(--muted); font-size: 15px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.lm.hud.over-cancel .hud-dock::after { background: #6e1d18; color: #fff; }
+
+/* the panel above the dock */
+.lm.hud.editing .hud-panel { display: block; position: absolute; z-index: 4; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 63px); background: rgba(9, 14, 20, .9); -webkit-backdrop-filter: blur(18px) saturate(1.25); backdrop-filter: blur(18px) saturate(1.25); border-top: 1px solid var(--hud-edge); padding: 7px 0 10px; transition: opacity .14s; }
+.lm.hud.dragging .hud-panel, .lm.hud.dragging .hud-float, .lm.hud.dragging .hud-left, .lm.hud.dragging .hud-right { opacity: 0; pointer-events: none; }
+.hud-phead { display: flex; align-items: center; gap: 10px; padding: 0 6px 5px 12px; min-height: 32px; }
+.hud-phead b { font-weight: 700; font-size: 15px; letter-spacing: .07em; text-transform: uppercase; color: #f3f7fb; flex: none; }
+.hud-phead .tip { flex: 1; min-width: 0; color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-fold { width: 36px; height: 32px; display: grid; place-items: center; color: var(--muted); flex: none; }
+.hud-fold.on { color: var(--hud-amber); }
+.hud-panel.folded .hud-pbody { display: none; }
+.hud-panel.folded { padding-bottom: 2px !important; }
+.hud-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding: 0 8px 7px; }
+.hud-tabs::-webkit-scrollbar, .hud-cards::-webkit-scrollbar, .hud-tools::-webkit-scrollbar { display: none; }
+.hud-tab { flex: none; height: 34px; padding: 0 9px; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 600; font-size: 14px; letter-spacing: .03em; border-bottom: 2px solid transparent; transition: color .12s; }
+.hud-tab.on { color: #f3f7fb; border-bottom-color: var(--hud-amber); }
+.hud-tab.on .hic { color: var(--hud-amber); }
+.hud-search { display: block; width: calc(100% - 24px); margin: 0 12px 8px; height: 38px; padding: 0 10px; background: #070b10; border: 1px solid var(--hud-edge); border-radius: 0; color: var(--text); font-family: var(--hud-font); font-size: 16px; }
+.hud-cards { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; padding: 0 12px 1px; -webkit-overflow-scrolling: touch; }
+.hud-card { --c: 8px; --face: #10171f; flex: none; width: 112px; height: 94px; display: block; text-align: left; touch-action: pan-x; color: var(--text); }
+.hud-card canvas { display: block; width: calc(100% - 2px); height: 63px; margin: 1px 1px 0; background: #06090d; object-fit: contain; }
+.hud-card .nm { display: block; padding: 5px 8px 0; font-weight: 600; font-size: 14px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-card .dm { position: absolute; top: 4px; right: 5px; padding: 1px 4px; background: rgba(4, 7, 10, .76); color: #c5d1dc; font-family: var(--hud-num); font-size: 11.5px; line-height: 1.25; }
+.hud-card.on { --edge: var(--hud-amber); --face: #2b2413; color: #ffd08a; }
+.hud-card.on canvas { box-shadow: 0 0 0 1px rgba(242, 169, 59, .4); }
+.hud-empty { padding: 14px 12px; color: var(--muted); font-size: 15px; }
+.hud-tools { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 0 12px 8px; }
+.hud-tools:last-child { padding-bottom: 0; }
+.hud-tools.even { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 5px; overflow: visible; }
+.hud-tools.even .hud-btn { padding: 0 4px; gap: 5px; font-size: 14px; letter-spacing: .03em; min-width: 0; }
+
+/* the module in hand */
+.lm.hud .hud-float { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); bottom: var(--b, 240px); align-items: stretch; gap: 5px; transition: opacity .14s; }
+.hud-float .hud-btn { --face: rgba(14, 20, 27, .94); }
+.hud-float .hud-btn.pri { --face: linear-gradient(#ffbd57, #ec9a2b); height: 44px; padding: 0 16px; font-size: 15.5px; }
+.hud-float .hud-btn.sq { height: 44px; }
+.hud-scale { --face: rgba(14, 20, 27, .94); display: flex; align-items: center; height: 44px; }
+.hud-scale button { width: 34px; height: 44px; display: grid; place-items: center; color: var(--text); }
+.hud-scale button:disabled { opacity: .34; }
+.hud-scale b { min-width: 34px; text-align: center; font-family: var(--hud-num); font-size: 14.5px; font-weight: 700; color: #f3f7fb; }
+
+/* inspector */
+.hud-insp { display: flex; gap: 10px; padding: 0 12px 8px; align-items: stretch; }
+.hud-thumb { flex: none; width: 92px; height: 70px; display: block; background: #06090d; border: 1px solid var(--hud-edge); }
+.hud-insp-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.hud-namebtn { display: flex; align-items: center; gap: 7px; width: 100%; color: #f3f7fb; font-weight: 700; font-size: 17px; line-height: 1.15; letter-spacing: .02em; text-align: left; min-height: 28px; }
+.hud-namebtn span:first-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-namebtn .hic { color: var(--muted); }
+.hud-select { -webkit-appearance: none; appearance: none; width: 100%; height: 36px; padding: 0 30px 0 10px; border: 1px solid var(--hud-edge); border-radius: 0; color: var(--text); font-family: var(--hud-font); font-size: 16px; background: #10171f url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='%23a9b7c4' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center; }
+.hud-dims { display: flex; gap: 8px; padding: 0 12px 8px; }
+.hud-dim { --face: #10171f; flex: 1; min-width: 0; display: flex; align-items: center; height: 42px; }
+.hud-dim button { width: 40px; height: 42px; flex: none; display: grid; place-items: center; color: var(--text); }
+.hud-dim button:active { color: var(--hud-amber); }
+.hud-dim div { flex: 1; min-width: 0; text-align: center; line-height: 1.05; }
+.hud-dim small { display: block; color: var(--muted); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+.hud-dim b { font-family: var(--hud-num); font-size: 15px; color: #f3f7fb; }
+
+/* readouts on wide screens */
+.hud-tele { position: absolute; z-index: 3; top: var(--top, 70px); right: 62px; width: 196px; background: rgba(9, 14, 20, .78); border: 1px solid var(--line); padding: 7px 11px; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.hud-tele div { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.hud-tele div:last-child { border-bottom: 0; }
+.hud-tele span { color: var(--muted); font-size: 13.5px; letter-spacing: .03em; }
+.hud-tele b { font-family: var(--hud-num); font-size: 15px; color: #f3f7fb; }
+@media (min-width: 1180px) { .lm.hud .hud-tele { display: block; } }
+
+/* wide screens and phones on their side: the panel becomes a sidebar */
+@media (min-width: 900px), (orientation: landscape) and (min-width: 640px) {
+  .lm.hud.editing .hud-panel { left: calc(env(safe-area-inset-left) + 10px); right: auto; top: var(--top, 70px); bottom: auto; max-height: calc(100% - var(--top, 70px) - 10px); width: 330px; border: 1px solid var(--hud-edge); display: flex; flex-direction: column; }
+  .lm.hud.editing .hud-panel.lib { bottom: 10px; }
+  .hud-pbody { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; scrollbar-width: thin; }
+  .hud-fold.fold { display: none; }
+  .hud-tabs { flex-wrap: wrap; flex: none; }
+  .hud-cards { flex: 1 1 auto; min-height: 0; flex-wrap: wrap; overflow-x: hidden; overflow-y: auto; align-content: flex-start; padding-bottom: 10px; scrollbar-width: thin; }
+  .hud-card { width: calc(50% - 4px); height: 118px; touch-action: pan-y; }
+  .hud-card canvas { height: 87px; }
+  .hud-tools { flex-wrap: wrap; overflow: visible; }
+  .lm.hud.editing .hud-left { left: calc(env(safe-area-inset-left) + 350px); }
+  .lm.hud .hud-dock { left: 50%; right: auto; bottom: 10px; width: 470px; transform: translateX(-50%); border: 1px solid var(--hud-edge); padding: 0; }
+  .lm.hud.editing .hud-dock { left: calc(50% + 170px); }
+  .lm.hud .hud-float { left: calc(50% + 170px); bottom: 84px; }
+  .hud-dock button { height: 58px; }
+}
+/* a phone on its side has little height to spare */
+@media (orientation: landscape) and (max-height: 500px) {
+  .hud-tabs { flex-wrap: nowrap; }
+  .hud-phead .tip { display: none; }
+  .hud-card { height: 100px; }
+  .hud-card canvas { height: 69px; }
+  .hud-dock button { height: 46px; font-size: 13px; }
+  .lm.hud .hud-float { bottom: 62px; }
+}
+
+/* sheets opened from the console */
+body.ship-console .sheet-backdrop { background: rgba(2, 4, 7, .62); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+body.ship-console .sheet { border-radius: 0; background: #0c1219; border: 1px solid var(--hud-edge); }
+body.ship-console .sheet-title { font-family: var(--hud-font); font-stretch: 87.5%; font-weight: 700; font-size: 22px; letter-spacing: .035em; text-transform: uppercase; }
+body.ship-console .sheet .btn, body.ship-console .sheet .chip { font-family: var(--hud-font); font-stretch: 87.5%; border-radius: 0; letter-spacing: .05em; text-transform: uppercase; font-size: 15px; }
+body.ship-console .sheet .btn.primary { background: linear-gradient(#ffbd57, #ec9a2b); }
+body.ship-console .sheet .grp-title { font-family: var(--hud-font); font-stretch: 87.5%; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #ffd08a; }
+body.ship-console .sheet .seg { border-radius: 0; background: #070b10; }
+body.ship-console .sheet .seg button { border-radius: 0; padding: 8px 5px; font-family: var(--hud-font); font-stretch: 87.5%; font-size: 14.5px; letter-spacing: .02em; }
+body.ship-console .sheet .seg button.on { background: #2b2413; color: #ffd08a; box-shadow: inset 0 -2px 0 var(--hud-amber); }
+body.ship-console .sheet input:not([type="checkbox"]), body.ship-console .sheet select, body.ship-console .sheet textarea { border-radius: 0; }
+body.ship-console .toast { border-radius: 0; background: rgba(9, 14, 20, .96); border: 1px solid var(--hud-edge); font-family: var(--hud-font); font-stretch: 87.5%; font-size: 15.5px; letter-spacing: .02em; }
+.hud-swatch { flex: none; width: 44px; height: 44px; display: block; background: #06090d; border: 1px solid var(--line); }
+.hud-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 2px 0 6px; }
+.hud-tile { background: #121a23; border: 1px solid var(--line); padding: 8px 10px; font-family: var(--hud-font); font-stretch: 87.5%; }
+.hud-tile b { display: block; font-family: var(--hud-num); font-size: 21px; line-height: 1.15; color: #f3f7fb; }
+.hud-tile span { color: var(--muted); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+.hud-issue { display: flex; align-items: center; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--line); min-height: 50px; font-size: 15.5px; }
+.hud-issue:last-child { border-bottom: 0; }
+.hud-issue > i { flex: none; width: 8px; height: 8px; transform: rotate(45deg); background: var(--hud-amber); box-shadow: 0 0 8px var(--hud-amber); }
+.hud-issue.ok > i { background: var(--hud-green); box-shadow: 0 0 8px var(--hud-green); }
+.hud-issue > span { flex: 1; min-width: 0; }
+
+/* ship pages in the codex */
+.ship-card, .ship-entry { --text: #e9eff5; --muted: #a9b7c4; --card2: #1b2530; --line: rgba(165, 195, 220, .15); background: #0b1016; color: var(--text); padding: 0; overflow: hidden; border-radius: 4px; position: relative; }
+.ship-hero { position: relative; cursor: pointer; display: block; }
+.ship-hero canvas, .ship-entry canvas { margin: 0; border-radius: 0; display: block; width: 100%; }
+.lm-thumb.ship.big { height: 196px; }
+.ship-hero-tag { position: absolute; left: 12px; top: 10px; font-family: var(--hud-font); font-stretch: 87.5%; font-weight: 600; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #ffd08a; }
+.ship-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-family: var(--hud-font); font-stretch: 87.5%; }
+.ship-stats div { padding: 8px 11px; border-left: 1px solid var(--line); }
+.ship-stats div:first-child { border-left: 0; }
+.ship-stats b { display: block; font-family: var(--hud-num); font-size: 18px; line-height: 1.15; color: #f3f7fb; }
+.ship-stats span { color: var(--muted); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+.print-prev { display: block; max-width: 100%; max-height: 46vh; max-height: 46dvh; width: auto; height: auto; margin: 2px auto 6px; box-shadow: 0 6px 34px rgba(0, 0, 0, .55); }
+.print-info { text-align: center; color: var(--muted); font-size: 13.5px; margin-bottom: 4px; }
+.ship-acts { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; padding: 10px 12px 2px; }
+.ship-acts .btn { border-radius: 2px; font-family: var(--hud-font); font-stretch: 87.5%; letter-spacing: .05em; text-transform: uppercase; }
+.ship-where { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px 12px; font-size: 14px; }
+.ship-where .btn { border-radius: 2px; }
+.ship-entry { margin: 10px 0; cursor: pointer; border: 1px solid var(--line); }
+.ship-entry.sel { border-color: var(--accent); }
+.ship-entry canvas { height: 118px !important; }
+.ship-entry-info { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 12px 8px; background: linear-gradient(to top, rgba(4, 7, 10, .92), rgba(4, 7, 10, 0)); font-family: var(--hud-font); font-stretch: 87.5%; }
+.ship-entry-info .nm { font-weight: 700; font-size: 18px; letter-spacing: .03em; text-transform: uppercase; color: #f3f7fb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ship-entry-info .ln { color: #b9c6d2; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .act-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 12px; padding: 0 18px 2px; }
 .act-row::-webkit-scrollbar { display: none; }
 .act-row .btn { flex: none; }
@@ -1815,6 +2012,7 @@ const ICONS = {
   flag: 'M5 21V4h11l-2 4 2 4H5',
   sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
   village: 'M3 21V11l5-4 5 4v10M13 21v-7l4-3 4 3v7M2 21h20M7 21v-4h2v4',
+  print: 'M7 9V3h10v6M7 17H3V9h18v8h-4M7 13.5h10V21H7z',
   ship: 'M12 2c3 2.6 4.5 6 4.5 10.5V17h-9v-4.5C7.5 8 9 4.6 12 2zM7.5 12.5 4 16v4l3.5-2.2M16.5 12.5 20 16v4l-3.5-2.2M10.5 17v4M13.5 17v4M12 8.5h.01',
 };
 function iconSVG(name, size = 20) {
@@ -6250,7 +6448,14 @@ const MapView = (() => {
     } catch (e) { console.error(e); toast('Could not make the image: ' + (e && e.message || e)); }
     finally { share.busy = false; renderPanel(); }
   }
-  function showShareResult(blob, w, hgt, title) {
+  // straight to the printer, by way of a page holding nothing but the image
+  function printImage(url) {
+    const fr = h('iframe', { title: 'Print', style: 'position:fixed;left:-9999px;width:10px;height:10px;border:0' });
+    document.body.append(fr);
+    const d = fr.contentDocument; d.open(); d.write('<!doctype html><title>Print</title><style>@page{margin:8mm}html,body{margin:0;height:100%}img{display:block;width:100%;height:100%;object-fit:contain}</style><img>'); d.close();
+    const im = d.querySelector('img'); im.onload = () => { fr.contentWindow.focus(); fr.contentWindow.print(); setTimeout(() => fr.remove(), 120000); }; im.src = url;
+  }
+  function showShareResult(blob, w, hgt, title, heading = 'Map image') {
     const url = URL.createObjectURL(blob);
     const ext = blob.type === 'image/jpeg' ? 'jpg' : 'png';
     const name = (title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'map') + '.' + ext;
@@ -6258,13 +6463,14 @@ const MapView = (() => {
     const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
     const save = () => { const a = h('a', { href: url, download: name }); document.body.append(a); a.click(); a.remove(); };
     let sh;
-    sh = openSheet({ title: 'Map image', wide: true, onClose: () => setTimeout(() => URL.revokeObjectURL(url), 2000), body: h('div', null,
+    sh = openSheet({ title: heading, wide: true, onClose: () => setTimeout(() => URL.revokeObjectURL(url), 2000), body: h('div', null,
       h('img', { src: url, alt: title, style: 'display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:10px;background:#0b1016' }),
       h('div', { class: 'tiny muted', style: 'margin-top:6px' }, `${w} × ${hgt} px · ${fmtNum(blob.size / 1024 / 1024, 1)} MB · ${name}`),
-      h('p', { class: 'small muted' }, canShare ? 'Share sends it to Photos, Messages, social apps or AirPrint.' : 'Save downloads the image; from there you can post or print it.')),
+      h('p', { class: 'small muted' }, canShare ? 'Share sends it to Photos, Messages, social apps or AirPrint.' : 'Print sends it to your printer. Save downloads the image.')),
     foot: [
       canShare ? h('button', { class: 'btn primary', onclick: async () => { try { await navigator.share({ files: [file], title }); } catch (e) { if (e && e.name !== 'AbortError') toast('Sharing failed: ' + e.message); } } }, icon('share', 16), 'Share…') : null,
       h('button', { class: 'btn' + (canShare ? '' : ' primary'), onclick: save }, icon('download', 16), 'Save image'),
+      navigator.standalone ? null : h('button', { class: 'btn', onclick: () => printImage(url) }, icon('print', 16), 'Print'),
       h('div', { class: 'spacer' }), h('button', { class: 'btn', onclick: () => sh.close() }, 'Done')] });
   }
 
@@ -7933,9 +8139,9 @@ const LocalMaps = (() => {
   const baseCache = new Map(), shipCache = new Map();
   function deckBase(s, Hh, d) {
     const dk = s.decks[d], key = `${s.seed}|${s.cls}|${s.decks.length}|${d}|${dk.ver | 0}|${dk.edit ? 'e' : 'g'}`;
-    if (baseCache.has(key)) return baseCache.get(key);
+    if (!s.temp && baseCache.has(key)) return baseCache.get(key);
     const b = dk.edit && dk.edit.W === Hh.W && dk.edit.H === Hh.H ? decodeDeck(dk.edit) : genDeck(Hh, s, d);
-    baseCache.set(key, b); if (baseCache.size > 24) baseCache.delete(baseCache.keys().next().value);
+    if (!s.temp) { baseCache.set(key, b); if (baseCache.size > 24) baseCache.delete(baseCache.keys().next().value); }
     return b;
   }
   // the biggest rectangle of whole cells inside a room, for laying out its furniture
@@ -8049,7 +8255,7 @@ const LocalMaps = (() => {
     const Hh = shipHull(s), d = s.cur, dk = s.decks[d];
     const key = `${s.seed}|${s.cls}|${s.decks.length}|${d}|${s.decks.map(x => (x.ver | 0) + (x.edit ? 'e' : '')).join(',')}|${Object.entries(dk.rooms).map(([k, v]) => (v.type ? k + v.type : '') + (v.nowin ? k + 'w' : '')).join('')}`;
     const winKey = dk.win ? JSON.stringify(dk.win) : '';
-    let G = shipCache.get(key + winKey);
+    let G = s.temp ? null : shipCache.get(key + winKey);
     if (G) { G.look = s.look; return G; }
     const { W, H } = Hh, N = W * H, base = deckBase(s, Hh, d), cell = base.cell, r = srng((s.seed * 31 + d * 977 + (dk.ver | 0)) >>> 0);
     const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]);
@@ -8128,7 +8334,7 @@ const LocalMaps = (() => {
         for (let i = 0; i < low.length;) { let j = i; while (j + 1 < low.length && low[j + 1] === low[j] + 1) j++; const n = j - i + 1, y = ((low[i] / W) | 0) + 1; G.nozzles.push({ x: low[i] % W + n / 2, y, w: Math.min(n * 0.78, 3.4) }); i = j + 1; }
       }
     }
-    shipCache.set(key + winKey, G); if (shipCache.size > 8) shipCache.delete(shipCache.keys().next().value);
+    if (!s.temp) { shipCache.set(key + winKey, G); if (shipCache.size > 8) shipCache.delete(shipCache.keys().next().value); }
     return G;
   }
   // the hull's outline: a smooth line about two thirds of a cell outside every solid cell (marching squares over the
@@ -8428,7 +8634,7 @@ const LocalMaps = (() => {
     const st = g.createPattern(starsCv(), 'repeat');
     if (st && st.setTransform && window.DOMMatrix) { st.setTransform(new DOMMatrix([1, 0, 0, 1, ox % 512, oy % 512])); g.fillStyle = st; g.fillRect(0, 0, w, hh); }
   }
-  function drawShip(g, G, k, dpr) {
+  function drawShip(g, G, k, dpr, opt = {}) {
     const P = shipPaths(G), Lk = LOOKS[G.look] || LOOKS.industrial, BP = !!Lk.bp, lw = px => px / k, hi = k > 18, mid = k > 7, grad = k > 13, glows = [];
     const tf = name => texFill(g, G.look, name, k, dpr), Hh = G.Hh, light = G.look === 'sleek';
     // the part of the plan on the canvas, so things off it are skipped
@@ -8457,7 +8663,7 @@ const LocalMaps = (() => {
       g.strokeStyle = Lk.faint; g.lineWidth = lw(1); g.stroke(gp); g.lineWidth = lw(1.6); g.stroke(gp5);
     }
     /* --- the outside: engine glow, engine bells, the hull, its lights --- */
-    if (!BP) {
+    if (!BP && !opt.noPlume) {
       g.globalCompositeOperation = 'lighter';
       for (const n of G.nozzles) { const yy = n.y + 1.6, rr = n.w * 1.9 + 0.6, gr = g.createRadialGradient(n.x, yy, 0, n.x, yy, rr); gr.addColorStop(0, Lk.plume[0]); gr.addColorStop(0.35, Lk.plume[1]); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(n.x, yy + rr * 0.3, rr * 0.75, rr * 1.15, 0, 0, TAU); g.fill(); }
       g.globalCompositeOperation = 'source-over';
@@ -8475,7 +8681,7 @@ const LocalMaps = (() => {
       g.save(); g.clip(P.hull, 'evenodd'); g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 0.45; g.stroke(P.hull); g.strokeStyle = 'rgba(255,255,255,.1)'; g.lineWidth = 0.16; g.stroke(P.hull); g.restore();
     }
     g.strokeStyle = BP ? Lk.line : Lk.hullEdge; g.lineWidth = BP ? lw(2) : Math.max(lw(1), 0.035); g.stroke(P.hull);
-    for (const [x, y, rgb] of P.lights) { ell(x, y, 0.09); F(`rgb(${rgb})`); glows.push([x, y, 0.9, rgb, 0.55]); }
+    if (!opt.noLights) for (const [x, y, rgb] of P.lights) { ell(x, y, 0.09); F(`rgb(${rgb})`); glows.push([x, y, 0.9, rgb, 0.55]); }
     /* --- floors --- */
     if (!BP) {
       g.fillStyle = Lk.gap; g.fill(P.inner);
@@ -8787,22 +8993,12 @@ const LocalMaps = (() => {
     if (!cache.has(key)) { cache.set(key, kind === 'city' ? genCity(p, C) : genDungeon(L)); if (cache.size > 6) cache.delete(cache.keys().next().value); }
     return cache.get(key);
   }
-  const TRAY = 250;   // what the build tools cover at the bottom of the screen
   const MARKS = { monster: ['👹', 'Monster'], treasure: ['💰', 'Treasure'], trap: ['⚠️', 'Trap'], npc: ['🧙', 'Person'], secret: ['🗝️', 'Secret'], loot: ['📦', 'Supplies'], note: ['📝', 'Note'] };
   const POIK = () => MapView.POI_KINDS;
   const deckOf = () => V.s.decks[V.s.cur];
   function pinsOf() {
     if (V.kind === 'city') return (V.p.poi || []).filter(q => q.mx != null).map(q => ({ x: q.mx, y: q.my, ic: (POIK()[q.kind] || POIK().other)[0], label: q.name, ref: q }));
     return ((V.kind === 'ship' ? deckOf().marks : V.m.dun.levels[V.m.dun.cur].marks) || []).map(q => ({ x: q.x, y: q.y, ic: (MARKS[q.kind] || MARKS.note)[0], label: q.label, ref: q }));
-  }
-  function fit() {
-    const G = V.G, w = V.cv.clientWidth, hh = V.cv.clientHeight;
-    if (!w || !hh) { V.k = 0; return; }
-    const m = G.kind === 'ship' ? 1 : 1.5, ext = G.kind === 'city' ? [-G.Vh * 0.82, -G.Vh * 0.82, G.Vh * 0.82, G.Vh * 0.82] : [G.box[0] - m, G.box[1] - m, G.box[2] + m, G.box[3] + m];
-    const bar = G.kind === 'ship' ? (V.edit && V.edit.tool === 'build' ? Math.min(TRAY, hh * 0.4) : Math.min(84, hh * 0.15)) : 0;   // a ship's engines stay clear of the toolbar
-    V.k = Math.min(w / (ext[2] - ext[0]), (hh - bar) / (ext[3] - ext[1]));
-    V.ox = w / 2 - (ext[0] + ext[2]) / 2 * V.k; V.oy = (hh - bar) / 2 - (ext[1] + ext[3]) / 2 * V.k;
-    V.kMin = V.k * 0.6;
   }
   const toWorld = (x, y) => [(x - V.ox) / V.k, (y - V.oy) / V.k];
   const toScreen = (x, y) => [x * V.k + V.ox, y * V.k + V.oy];
@@ -8840,21 +9036,20 @@ const LocalMaps = (() => {
         boxes.push(bx); label(g, t, x, y, big, { serif: true, weight: 700 });
       }
     } else if (G.kind === 'ship') {
-      // room names where they fit; named rooms get a little more room to spill over
-      const Lk = LOOKS[G.look] || LOOKS.industrial, keyed = (extras.deck && extras.deck.rooms) || {}, fs = clamp(k * 0.34, 9.5, 13.5);
-      if (k > 5) {
+      // room names on small plates where they fit; a named room gets a little more room to spill over
+      const Lk = LOOKS[G.look] || LOOKS.industrial, keyed = (extras.deck && extras.deck.rooms) || {}, fs = extras.fs || clamp(k * 0.3, 11, 13.5);
+      if ((k > 5 || extras.fs) && !extras.noNames) {
         for (const o of G.rooms) {
           if (!o || (o.type === 'lift' && k < 40)) continue;
-          // the full name if it fits, else without its number, else a size smaller
-          const own = keyed[o.id] && keyed[o.id].name, full = (own || o.label).toUpperCase(), room = o.R.w * k * 0.94 + (own ? 40 : 0);
-          let t = null, f = fs, tw = 0;
-          for (const [c, s] of [[full, fs], [own ? full : RT[o.type][0].toUpperCase(), fs], [own ? full : RT[o.type][0].toUpperCase(), fs * 0.82]]) {
-            g.font = `750 ${s}px -apple-system, system-ui, sans-serif`; tw = g.measureText(c).width;
-            if (tw <= room && o.R.h * k >= s * 1.5) { t = c; f = s; break; }
+          const own = keyed[o.id] && keyed[o.id].name, full = (own || o.label).toUpperCase(), short = own ? full : RT[o.type][0].toUpperCase(), room = o.R.w * k * 0.96 + (own ? 40 : 0);
+          let t = null, f = fs;
+          for (const [c, s] of [[full, fs], [short, fs], [short, fs * 0.88]]) {
+            g.font = `600 ${s}px ${HUDF}`;
+            if (g.measureText(c).width + 9 <= room && o.R.h * k >= s + 6) { t = c; f = s; break; }
           }
           if (!t) continue;
-          const [x, y] = sc(o.c[0], o.c[1]); label(g, t, x, y, f, { weight: 750, color: Lk.label, halo: Lk.halo });
-          if (keyed[o.id] && keyed[o.id].note && k > 24) { g.fillStyle = Lk.bp ? '#fff' : (Lk.accent || '#fc3'); g.beginPath(); g.arc(x + tw / 2 + 7, y - fs * 0.35, 3, 0, TAU); g.fill(); }
+          const [x, y] = sc(o.c[0], o.c[1]), w = plate(g, t, x, y, { size: f, color: Lk.label, bg: Lk.halo });
+          if (keyed[o.id] && keyed[o.id].note && k > 24) diamond(g, x + w / 2 + 7, y, 3.5, '242,169,59');
         }
       }
     } else {
@@ -8863,29 +9058,12 @@ const LocalMaps = (() => {
     }
     for (const pin of extras.pins || []) {
       const [x, y] = sc(pin.x, pin.y), rr = 13;
+      if (G.kind === 'ship') { shipPin(g, pin, x, y, extras.scale); continue; }
       g.beginPath(); g.arc(x, y, rr, 0, TAU); g.fillStyle = '#fffdf6'; g.shadowColor = 'rgba(0,0,0,.3)'; g.shadowBlur = 6; g.fill(); g.shadowBlur = 0;
       g.strokeStyle = pin.on ? '#e9a23b' : '#4b4136'; g.lineWidth = pin.on ? 3 : 1.5; g.stroke();
       g.font = '15px "Apple Color Emoji","Segoe UI Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#000'; g.fillText(pin.ic, x, y + 1);
       if (pin.label) label(g, pin.label, x, y + rr + 10, 12.5, { weight: 700 });
     }
-  }
-  // while painting a deck: a faint grid of the squares round the ship
-  function gridOverlay(g) {
-    const G = V.G, k = V.k; if (k < 6) return;
-    const [x0, y0] = toWorld(0, 0), [x1, y1] = toWorld(V.cv.clientWidth, V.cv.clientHeight);
-    const a = Math.max(Math.floor(x0), G.box[0] - 3), b = Math.min(Math.ceil(x1), G.box[2] + 3), c = Math.max(Math.floor(y0), G.box[1] - 3), d = Math.min(Math.ceil(y1), G.box[3] + 3);
-    if (a > b || c > d) return;
-    g.beginPath();
-    for (let x = a; x <= b; x++) { const sx = Math.round(x * k + V.ox) + 0.5; g.moveTo(sx, c * k + V.oy); g.lineTo(sx, d * k + V.oy); }
-    for (let y = c; y <= d; y++) { const sy = Math.round(y * k + V.oy) + 0.5; g.moveTo(a * k + V.ox, sy); g.lineTo(b * k + V.ox, sy); }
-    g.strokeStyle = 'rgba(255,255,255,.13)'; g.lineWidth = 1; g.stroke();
-  }
-  // while painting a deck: the cells the stroke covers so far
-  function strokeOverlay(g) {
-    const st = V.stroke; if (!st) return;
-    const col = st.t === 'erase' ? 'rgba(255,80,70,' : st.t === 'corr' ? 'rgba(120,200,255,' : 'rgba(255,200,80,';
-    g.fillStyle = col + '.35)'; g.strokeStyle = col + '.9)'; g.lineWidth = 1.5;
-    for (const [x, y] of st.cells.values()) { const [sx, sy] = toScreen(x, y); g.fillRect(sx, sy, V.k, V.k); g.strokeRect(sx + 0.75, sy + 0.75, V.k - 1.5, V.k - 1.5); }
   }
   // while a finger or the wheel is moving the view, the last full drawing is moved and scaled instead of redrawn
   // (a big town takes a fifth of a second to draw); the full drawing follows once things settle
@@ -8907,11 +9085,10 @@ const LocalMaps = (() => {
       V.snap = { c, k: V.k, ox: V.ox, oy: V.oy };
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (V.edit) gridOverlay(g);
     const pins = pinsOf().map(q => ({ ...q, on: V.drag && V.drag.pin && V.drag.pin.ref === q.ref }));
     overlay(g, V.G, V.k, V.ox, V.oy, V.kind === 'ship' ? { pins, deck: deckOf() } : { pins, names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms });
-    if (V.edit) gridOverlay(g);
-    if (V.edit && V.edit.tool === 'build') ghostOverlay(g);
-    if (V.stroke) strokeOverlay(g);
+    if (V.edit) editOverlay(g);
   }
   const redraw = fast => {
     if (!V) return;
@@ -8919,8 +9096,15 @@ const LocalMaps = (() => {
     if (!V.raf) V.raf = requestAnimationFrame(draw);
     if (fast) { clearTimeout(V.idle); V.idle = setTimeout(() => { if (V) { V.fast = false; if (!V.raf) V.raf = requestAnimationFrame(draw); } }, 160); }
   };
+  // only what's drawn over the plan has changed, so the last drawing of the plan will do
+  const redrawOv = () => { if (!V) return; V.fast = !!V.snap; if (!V.raf) V.raf = requestAnimationFrame(draw); };
   const persist = () => { if (V.ship) V.ship.updated = Date.now(); if (V.p) V.p.lmap = V.m; save(); emit('data'); };
-  function rebuild(refit) { V.G = layoutOf(V.p, V.m, V.kind, V.s); V.snap = null; if (refit) fit(); if (V.edit && V.edit.tool === 'build') aim(); renderChrome(); redraw(); }
+  function rebuild(refit) {
+    V.G = layoutOf(V.p, V.m, V.kind, V.s); V.snap = null;
+    if (refit) { renderChrome(); fit(); }
+    if (V.edit) aim();
+    renderChrome(); redraw(); keepFramed();
+  }
 
   /* ---------- ships and the codex: a ship is a codex entry, and a place on the map can show one ---------- */
   const guessCls = p => { const n = +p.pop || 0; return !n ? 'freighter' : n < 10 ? 'shuttle' : n < 40 ? 'scout' : n < 200 ? 'freighter' : n < 1000 ? 'frigate' : 'colony'; };
@@ -8963,67 +9147,554 @@ const LocalMaps = (() => {
     const el = h('div', { class: 'lm', role: 'dialog', 'aria-label': o.kind === 'ship' ? 'Deck plans' : 'Local map' });
     V = Object.assign({ el, cv, k: 0, ox: 0, oy: 0, mode: null, edit: null, stroke: null, ptrs: new Map(), raf: 0, ship: null, s: null }, o);
     if (V.kind === 'ship') attachShip();
-    el.append(h('div', { class: 'lm-top' }), cv, h('div', { class: 'lm-hint glass' }), h('div', { class: 'lm-tray' }), h('div', { class: 'lm-bar tools glass' }));
+    el.append(h('div', { class: 'lm-top' }), cv, h('div', { class: 'lm-hint glass' }), h('div', { class: 'hud-left' }), h('div', { class: 'hud-right' }), h('div', { class: 'hud-tele' }), h('div', { class: 'hud-float' }), h('div', { class: 'hud-panel' }), h('div', { class: 'lm-bar tools glass' }));
     document.body.append(el);
     wire(cv);
     V.G = layoutOf(V.p, V.m, V.kind, V.s);
     renderChrome(); fit(); draw();
     if (V.kind === 'ship' && V.s.cls === 'custom' && !V.G.cell.some(c => c >= 0)) startBuild();
+    if (V.kind === 'ship' && el.animate) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' });
     if (!V.k) requestAnimationFrame(() => redraw());
     V.onKey = e => {
-      if (!V || e.defaultPrevented || sheetStack.length) return;   // a sheet that Escape just closed has handled it
-      if (e.key === 'Escape') { e.preventDefault(); if (V.edit) { V.edit = null; V.stroke = null; renderChrome(); redraw(); } else close(); }
-      else if (V.edit && (e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); undoEdit(); }
+      if (!V || e.defaultPrevented || sheetStack.length || isTyping(e.target)) return;   // a sheet that Escape just closed has handled it
+      const E = V.edit, key = e.key.toLowerCase(), ctl = e.metaKey || e.ctrlKey;
+      if (key === 'escape') {
+        e.preventDefault();
+        if (!E) close(); else if (E.mod) dropModule(); else if (E.sel || E.selDoor) { E.sel = null; E.selDoor = null; renderPanel(); redrawOv(); } else finishBuild();
+        return;
+      }
+      if (!E) return;
+      if (ctl) { if (key === 'z') { e.preventDefault(); if (e.shiftKey) redoEdit(); else undoEdit(); } else if (key === 'y') { e.preventDefault(); redoEdit(); } return; }
+      if ('12345'.includes(key)) setTool(TOOLS[+key - 1][0]);
+      else if (key === 'm') toggleMirror();
+      else if (key === 'f') glideFit();
+      else if (key === 'r') { if (E.mod) turnModule(); else if (E.sel) turnSel(); }
+      else if (key === 'enter') { if (E.mod) placeModule(); }
+      else if (key === 'delete' || key === 'backspace') { e.preventDefault(); if (E.sel) removeSel(); else if (E.selDoor) { doorEdit((D, i) => D.doors.splice(i, 1)); E.selDoor = null; renderPanel(); } }
+      else if ((key === '+' || key === '=' || key === '-') && E.mod && !E.mod.cells) { E.scale = SIZES[clamp(SIZES.indexOf(E.scale) + (key === '-' ? -1 : 1), 0, SIZES.length - 1)]; aim(); renderChrome(); redrawOv(); }
     };
     document.addEventListener('keydown', V.onKey);
     // keep what was in the middle in the middle when the window changes size (or the phone turns)
     V.size = [cv.clientWidth, cv.clientHeight];
-    V.onResize = () => { const w = V.cv.clientWidth, hh = V.cv.clientHeight; if (V.k && V.size[0] && w && hh) { V.ox += (w - V.size[0]) / 2; V.oy += (hh - V.size[1]) / 2; } V.size = [w, hh]; V.snap = null; redraw(); };
+    V.onResize = () => { const w = V.cv.clientWidth, hh = V.cv.clientHeight; if (V.k && V.size[0] && w && hh) { V.ox += (w - V.size[0]) / 2; V.oy += (hh - V.size[1]) / 2; } V.size = [w, hh]; V.snap = null; if (V.kind === 'ship') { renderChrome(); if (V.atFit) fit(); } redraw(); };
     window.addEventListener('resize', V.onResize);
   }
   function close(silent) {
     if (!V) return;
-    const p = V.p, e = V.ship; document.removeEventListener('keydown', V.onKey); window.removeEventListener('resize', V.onResize);
+    const p = V.p, e = V.ship; document.removeEventListener('keydown', V.onKey); window.removeEventListener('resize', V.onResize); stopGlide(); document.body.classList.remove('ship-console');
     if (V.raf) cancelAnimationFrame(V.raf);
     clearTimeout(V.idle); V.el.remove(); V = null;
     if (!silent) { if (p) MapView.openPlace(p); else if (e) Codex.open(e.id); }
   }
   function setMode(mode) { V.mode = mode; renderChrome(); }
   function renderChrome() {
+    syncHud();
+    V.cv.classList.toggle('ship', V.kind === 'ship');
+    if (V.kind === 'ship') { renderHud(); return; }
     const { el, m, p } = V, top = el.querySelector('.lm-top'), bar = el.querySelector('.lm-bar'), hint = el.querySelector('.lm-hint');
-    const city = V.kind === 'city', ship = V.kind === 'ship';
-    const sub = city ? `${CITY[V.G.sz].name} · ${TSTYLE[V.G.style].name}` : ship ? `${SHIPS[V.s.cls].name} · deck ${V.s.cur + 1} of ${V.s.decks.length} · ${ROLE_NAME[V.G.role] || 'Deck'}` : `Level ${m.dun.cur + 1} of ${m.dun.levels.length}`;
-    V.cv.classList.toggle('ship', ship);
-    top.innerHTML = '';
-    top.append(h('button', { class: 'icon-btn', 'aria-label': p ? 'Back to the place' : 'Back to the codex', onclick: () => close() }, icon('back', 22)),
-      h('div', { class: 'lm-title' }, h('div', { class: 'lm-name', onclick: ship ? renameShip : null }, ship ? V.ship.title : p.name), h('div', { class: 'lm-sub' }, sub)));
-    if (p) top.append(seg([['city', 'Town'], ['dungeon', 'Dungeon'], ['ship', 'Ship']], V.kind, v => { V.kind = v; m.kind = v; if (v === 'ship') attachShip(); V.edit = null; persist(); V.mode = null; rebuild(true); }));
-    if (!city && !ship && m.dun.levels.length > 1) top.append(seg(m.dun.levels.map((_, i) => [i, 'L' + (i + 1)]), m.dun.cur, v => { m.dun.cur = v; persist(); V.mode = null; rebuild(true); }, 'lm-levels'));
-    if (ship) top.append(seg(V.s.decks.map((_, i) => [i, (V.s.decks.length > 4 ? 'D' : 'Deck ') + (i + 1)]).concat(V.s.decks.length < 8 ? [['add', '+']] : []), V.s.cur, v => { if (v === 'add') { V.s.decks.push(...freshDecks(1)); normShip(V.s); V.s.cur = V.s.decks.length - 1; toast(`Deck ${V.s.decks.length} added`); } else V.s.cur = v; V.stroke = null; persist(); V.mode = null; rebuild(true); }, 'lm-levels'));
-    const b = (ic, word, on, fn, off) => h('button', { class: on ? 'on' : '', onclick: fn, 'aria-label': word, disabled: off || null }, icon(ic, 22), h('span', { class: 'tl' }, word));
+    const city = V.kind === 'city', sub = city ? `${CITY[V.G.sz].name} · ${TSTYLE[V.G.style].name}` : `Level ${m.dun.cur + 1} of ${m.dun.levels.length}`;
+    top.className = 'lm-top'; bar.className = 'lm-bar tools glass'; delete bar.dataset.m; top.innerHTML = '';
+    top.append(h('button', { class: 'icon-btn', 'aria-label': 'Back to the place', onclick: () => close() }, icon('back', 22)),
+      h('div', { class: 'lm-title' }, h('div', { class: 'lm-name' }, p.name), h('div', { class: 'lm-sub' }, sub)));
+    top.append(seg([['city', 'Town'], ['dungeon', 'Dungeon'], ['ship', 'Ship']], V.kind, v => { V.kind = v; m.kind = v; if (v === 'ship') attachShip(); V.edit = null; persist(); V.mode = null; rebuild(true); }));
+    if (!city && m.dun.levels.length > 1) top.append(seg(m.dun.levels.map((_, i) => [i, 'L' + (i + 1)]), m.dun.cur, v => { m.dun.cur = v; persist(); V.mode = null; rebuild(true); }, 'lm-levels'));
+    const b = (ic, word, on, fn) => h('button', { class: on ? 'on' : '', onclick: fn, 'aria-label': word }, icon(ic, 22), h('span', { class: 'tl' }, word));
     bar.innerHTML = '';
-    const tray = el.querySelector('.lm-tray'), building = V.edit && V.edit.tool === 'build';
-    tray.style.display = building ? 'flex' : 'none'; hint.style.bottom = building ? 'auto' : ''; hint.style.top = building ? (V.cv.offsetTop + 8) + 'px' : '';
-    if (building) {
-      renderTray(tray);
-      const E = V.edit, n = shipChecks().warn.length;
-      bar.append(b('copy', 'Mirror', E.mirror, () => { E.mirror = !E.mirror; aim(); renderChrome(); redraw(); }), b('undo', 'Undo', false, undoEdit, !E.undo.length), b('redo', 'Redo', false, redoEdit, !E.redo.length), b('alert', n ? `Check ${n}` : 'Check', false, checkSheet), b('check', 'Done', false, () => { V.edit = null; renderChrome(); redraw(); }));
-      const lab = E.mod && E.mod.n;
-      hint.textContent = E.mode === 'add' ? (!E.mod ? 'Pick a module' : E.ghost ? `${lab}: tap it again to place, or drag on the plan` : `No room for ${lab} here`)
-        : E.mode === 'move' ? (E.mod ? `Drag ${lab} into place` : 'Drag a room or corridor to move it · tap it for more') : E.mode === 'doors' ? 'Tap a wall to add a door · drag a door to move it · tap a door to change it' : E.mode === 'windows' ? 'Tap or drag the outer wall'
-          : E.brush === 'fill' ? `Tap a gap to fill it with ${RT[E.type][0].toLowerCase()}, or a room to change it` : E.brush === 'fillc' ? 'Tap a gap to fill it with corridor' : E.brush === 'room' ? `Drag a box to make ${RT[E.type][0].toLowerCase()}` : E.brush === 'corr' ? 'Drag to draw corridor' : 'Drag to cut squares away';
-      hint.classList.add('show');
-      return;
-    }
-    bar.append(...[b('pin', 'Pin', V.mode && V.mode.t === 'add', () => setMode(V.mode && V.mode.t === 'add' ? null : { t: 'add' })),
+    bar.append(b('pin', 'Pin', V.mode && V.mode.t === 'add', () => setMode(V.mode && V.mode.t === 'add' ? null : { t: 'add' })),
       b('list', city ? 'Places' : 'Key', false, listSheet),
-      ship ? b('ship', 'Build', false, startBuild) : null,
-      ship && V.s.cls === 'custom' ? null : b('dice', 'Remake', false, remake),
+      b('dice', 'Remake', false, remake),
       b('sliders', 'Options', false, optionsSheet),
-      b('share', 'Image', false, exportImage)].filter(Boolean));
-    const msg = V.mode && V.mode.t === 'add' ? (city ? 'Tap the map to add a place here: an inn, shop, temple…' : ship ? 'Tap the plan to mark crew, cargo, a hazard…' : 'Tap the map to mark a monster, treasure, trap…')
+      b('share', 'Image', false, exportImage));
+    const msg = V.mode && V.mode.t === 'add' ? (city ? 'Tap the map to add a place here: an inn, shop, temple…' : 'Tap the map to mark a monster, treasure, trap…')
       : V.mode && V.mode.t === 'put' ? `Tap the map to put ${V.mode.q.name} there` : '';
     hint.textContent = msg; hint.classList.toggle('show', !!msg);
+  }
+
+  /* ===================== the ship console: a dark instrument panel over a full-screen plan ===================== */
+  const HUDF = '"Avenir Next Condensed","Bahnschrift SemiCondensed",Bahnschrift,"Roboto Condensed","Arial Narrow",-apple-system,system-ui,sans-serif';
+  const HUDN = '"DIN Alternate",Bahnschrift,ui-monospace,Menlo,Consolas,monospace';
+  const HUD_ICONS = {
+    add: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM16.5 13.5v6M13.5 16.5h6', select: 'M6 3.5 18 14.6l-5.7.7L9.6 21z',
+    door: 'M4 21V3h16v18M2 21h20M12 3v18M9.5 11v2.5M14.5 11v2.5', window: 'M3 8.5h18v7H3zM3 12h18M9 8.5v7M15 8.5v7', paint: 'M4 4h13v5H4zM17 6.5h3v5h-8.5v3M10 14.5h3v6h-3z',
+    mirror: 'M12 2v3M12 8v3M12 14v3M12 20v2M9 7 3 17h6zM15 7l6 10h-6z', fit: 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5M9 9h6v6H9z',
+    undo: 'M8 5 4 9l4 4M4 9h10.5a5 5 0 0 1 0 10H11', redo: 'M16 5l4 4-4 4M20 9H9.5a5 5 0 0 0 0 10H13', turn: 'M20 11.5a8 8 0 1 0-2.4 6M20 5v6.5h-6.5',
+    copy: 'M8.5 8.5H20V20H8.5zM4 15.5V4h11.5', trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5.5M14 11v5.5', notes: 'M5 3h14v18H5zM8 8h8M8 12h8M8 16h5',
+    rooms: 'M4 5h3.5v3.5H4zM11 6.8h9M4 10.3h3.5v3.5H4zM11 12h9M4 15.5h3.5V19H4zM11 17.2h9', mark: 'M12 2v5M12 17v5M2 12h5M17 12h5M12 8l4 4-4 4-4-4z',
+    print: 'M7 9V3h10v6M7 17H3V9h18v8h-4M7 13.5h10V21H7zM17.5 12h.5', sliders: 'M3 7h10M18.5 7H21M3 17h2.5M11 17h10M13 4.5h5.5v5H13zM5.5 14.5H11v5H5.5z', share: 'M12 3v12M7.5 7.5 12 3l4.5 4.5M4 14.5V21h16v-6.5',
+    wrench: 'M20.6 6.6a5.2 5.2 0 0 1-6.9 6.2L7 19.6a2 2 0 0 1-2.8-2.8L11 10a5.2 5.2 0 0 1 6.3-6.8l-3 3 2.9 2.9z', back: 'M15 5l-7 7 7 7', close: 'M6 6l12 12M18 6 6 18', check: 'M5 12.5l4.5 4.5L19 7.5',
+    plus: 'M12 5v14M5 12h14', minus: 'M5 12h14', search: 'M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM15.5 15.5 21 21', up: 'M6 15l6-6 6 6', down: 'M6 9l6 6 6-6', centre: 'M12 3v18M7.5 8 3 12l4.5 4M16.5 8l4.5 4-4.5 4',
+    clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7.5V12l3 2', hull: 'M12 2l5 8v9l-5 3-5-3v-9z', sections: 'M5 3h14v7H5zM5 14h14v7H5z', corridors: 'M10 3v7H3M14 3v7h7M3 14h7v7M21 14h-7v7',
+    command: 'M12 2l2.8 7.2L22 12l-7.2 2.8L12 22l-2.8-7.2L2 12l7.2-2.8z', bed: 'M3 19V6M3 15h18v4M21 15v-3a3 3 0 0 0-3-3h-7v6M6 11.5h2', crate: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',
+    flame: 'M12 2.5c.8 3.4 5.5 6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.2 1.2-3.7 2.4-4.8.1 2 .9 3 2 3 .2-3 .1-6 1.1-9.2z', fill: 'M5 11.5l7-7 7 7-7 7zM12 4.5v4M20.5 15c.9 1.5 1.5 2.4 1.5 3.2a1.5 1.5 0 0 1-3 0c0-.8.6-1.7 1.5-3.2z',
+    box: 'M4 4h4M12 4h4M20 4v4M20 12v4M20 20h-4M12 20H8M4 20v-4M4 12V8', corr: 'M3 8.5h18M3 15.5h18M6.5 12h3M14.5 12h3', erase: 'M14 4l6.5 6.5-8.5 8.5H7l-4-4zM8.5 9.5l6.5 6.5M12 20h9', edit: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
+    crew: 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4.5 21c.6-4.5 3.7-7 7.5-7s6.9 2.5 7.5 7', hazard: 'M12 3.5 22 20.5H2zM12 10v5M12 17.5v.5', hostile: 'M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4M12 6.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z',
+    gem: 'M7 4h10l4 5.5L12 21 3 9.5zM3 9.5h18M9 4 7.5 9.5 12 21l4.5-11.5L15 4', key: 'M8 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM12.5 12H21M17.5 12v3.5M21 12v2.5',
+  };
+  function hic(name, size = 22) { const s = document.createElement('span'); s.className = 'hic'; s.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="${HUD_ICONS[name] || ''}"/></svg>`; return s; }
+  const hudBtn = (ic, word, fn, o = {}) => h('button', { class: 'hud-btn cut' + (o.pri ? ' pri' : '') + (o.on ? ' on' : '') + (o.dgr ? ' dgr' : '') + (word ? '' : ' sq'), onclick: fn, disabled: o.off || null, title: o.title || word, 'aria-label': o.title || word }, ic ? hic(ic, o.size || 19) : null, word || null);
+  const TOOLS = [['add', 'Add', 'add'], ['move', 'Select', 'select'], ['doors', 'Doors', 'door'], ['windows', 'Windows', 'window'], ['paint', 'Paint', 'paint']];
+  const CATS = [['Recent', 'Recent', 'clock'], ['Whole ships', 'Hulls', 'hull'], ['Sections', 'Sections', 'sections'], ['Corridors', 'Corridors', 'corridors'], ['Command', 'Command', 'command'], ['Living', 'Living', 'bed'], ['Working', 'Working', 'crate'], ['Engines', 'Engines', 'flame']];
+  const SHIP_MARK = { npc: ['crew', 'Crew', '92,207,230'], loot: ['crate', 'Cargo', '227,193,92'], trap: ['hazard', 'Hazard', '242,169,59'], monster: ['hostile', 'Hostile', '255,106,95'], treasure: ['gem', 'Valuables', '127,224,168'], secret: ['key', 'Secret', '192,155,255'], note: ['notes', 'Note', '233,239,245'] };
+  const SMARKS = Object.fromEntries(Object.entries(SHIP_MARK).map(([k, v]) => [k, ['', v[1]]]));
+  const ICON2D = new Map(), iconPath = n => { let p = ICON2D.get(n); if (!p) ICON2D.set(n, (p = new Path2D(HUD_ICONS[n]))); return p; };
+
+  // what the console covers, so the plan can be framed in the clear part
+  function clearArea() {
+    const w = V.cv.clientWidth, hh = V.cv.clientHeight, A = { l: 0, t: 0, r: w, b: hh };
+    if (V.kind !== 'ship') return A;
+    const box = V.cv.getBoundingClientRect(), rect = s => { const e = V.el.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return r.width && r.height ? r : null; };
+    const top = rect('.lm-top'), dock = rect('.lm-bar'), panel = rect('.hud-panel'), left = rect('.hud-left'), right = rect('.hud-right'), tele = rect('.hud-tele'), float = V.el.classList.contains('dragging') ? null : rect('.hud-float');
+    if (top) A.t = top.bottom - box.top - 10;
+    if (dock) A.b = dock.top - box.top;
+    if (panel) { if (panel.width < w * 0.5) A.l = panel.right - box.left; else A.b = Math.min(A.b, panel.top - box.top); }
+    if (left) A.l = Math.max(A.l, left.right - box.left + 2);
+    if (right) A.r = Math.min(A.r, right.left - box.left - 2);
+    if (tele) A.r = Math.min(A.r, tele.left - box.left - 6);
+    if (float) A.b = Math.min(A.b, float.top - box.top - 4);
+    return A;
+  }
+  function fitTarget() {
+    const G = V.G, A = clearArea(), m = G.kind === 'ship' ? 0.6 : 1.5, ext = G.kind === 'city' ? [-G.Vh * 0.82, -G.Vh * 0.82, G.Vh * 0.82, G.Vh * 0.82] : [G.box[0] - m, G.box[1] - m, G.box[2] + m, G.box[3] + m];
+    if (V.edit) { A.t += 30; A.r -= 22; A.l += 8; }   // room for the dimension lines
+    const k = Math.min((A.r - A.l) / (ext[2] - ext[0]), (A.b - A.t) / (ext[3] - ext[1]));
+    return { k, ox: (A.l + A.r) / 2 - (ext[0] + ext[2]) / 2 * k, oy: (A.t + A.b) / 2 - (ext[1] + ext[3]) / 2 * k };
+  }
+  function fit() {
+    const w = V.cv.clientWidth, hh = V.cv.clientHeight;
+    if (!w || !hh) { V.k = 0; return; }
+    Object.assign(V, fitTarget()); V.kMin = V.k * 0.6; V.atFit = true;
+  }
+  // the camera moves rather than jumps
+  function stopGlide() { if (!V) return; cancelAnimationFrame(V.glideId); clearTimeout(V.glideEnd); V.glideId = 0; }
+  function glide(to, ms = 280) {
+    if (!V) return; stopGlide();
+    const from = { k: V.k, ox: V.ox, oy: V.oy }, t0 = performance.now();
+    if (!from.k) { Object.assign(V, to); redraw(); return; }
+    const step = now => { if (!V) return; const t = clamp((now - t0) / ms, 0, 1), e = 1 - (1 - t) ** 3; V.k = from.k * (to.k / from.k) ** e; V.ox = from.ox + (to.ox - from.ox) * e; V.oy = from.oy + (to.oy - from.oy) * e; redraw(t < 1); if (t < 1) V.glideId = requestAnimationFrame(step); };
+    V.glideId = requestAnimationFrame(step);
+    V.glideEnd = setTimeout(() => { if (V && V.glideId) { Object.assign(V, to); V.glideId = 0; redraw(); } }, ms + 200);   // a hidden page draws no frames
+  }
+  function glideFit() { if (!V) return; const T = fitTarget(); V.kMin = T.k * 0.6; V.atFit = true; glide(T); }
+  function keepFramed() { if (!V || !V.atFit || V.kind !== 'ship') return; const T = fitTarget(); if (Math.abs(T.k - V.k) / V.k > 0.01 || Math.abs(T.ox - V.ox) > 2 || Math.abs(T.oy - V.oy) > 2) { V.kMin = T.k * 0.6; glide(T, 240); } }
+  const dockTop = () => V.el.querySelector('.lm-bar').getBoundingClientRect().top - V.cv.getBoundingClientRect().top;
+  function setDragging(on) { V.el.classList.toggle('dragging', on); if (!on) { V.el.classList.remove('over-cancel'); keepFramed(); } }
+  function syncHud() {
+    const ship = V.kind === 'ship'; V.el.classList.toggle('hud', ship); document.body.classList.toggle('ship-console', ship);
+    if (!ship) { V.el.classList.remove('editing', 'dragging', 'over-cancel'); V.edit = null; }
+  }
+  function solidBox(G) {
+    let x0 = G.W, x1 = -1, y0 = G.H, y1 = -1;
+    for (let i = 0; i < G.solid.length; i++) if (G.solid[i]) { const x = i % G.W, y = (i / G.W) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    return x1 < 0 ? null : { x0, y0, x1: x1 + 1, y1: y1 + 1, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  }
+
+  /* ---------- real pictures of modules: floors, furniture, hull and all ---------- */
+  // a throwaway one-deck ship holding just these squares ([x, y, part, type])
+  function cellsShip(cells, key, look) {
+    const s = { cls: 'custom', look, seed: 424242, cur: 0, temp: true, decks: [{ rooms: {}, marks: [], edit: null, ver: seedOf(String(key)) }] }, Hh = shipHull(s), { W, H } = Hh;
+    const nx = Math.min(...cells.map(q => q[0])), ny = Math.min(...cells.map(q => q[1])), mx = Math.max(...cells.map(q => q[0])) - nx, my = Math.max(...cells.map(q => q[1])) - ny;
+    const ox = Hh.cx - (mx >> 1), oy = (H >> 1) - (my >> 1), cell = new Int16Array(W * H).fill(-1), types = [null], ids = {};
+    for (const [x, y, i, t] of cells) { let id = t === 'corr' ? 0 : ids[i]; if (id == null) { types.push(t); id = ids[i] = types.length - 1; } cell[(oy + y - ny) * W + ox + x - nx] = id; }
+    const D = { Hh, cell, types, doors: [], typeOf: id => types[id] };
+    autoDoors(D, false);
+    s.decks[0].edit = encodeDeck(D, W, H);
+    return { s, ox, oy, mx, my };
+  }
+  function drawCells(c, cells, key, look) {
+    const T = cellsShip(cells, key, look), G = shipLayout(T.s), eng = cells.some(q => q[3] === 'engine'), m = 0.95, x0 = T.ox - m, y0 = T.oy - m, bw = T.mx + 1 + 2 * m, bh = T.my + 1 + 2 * m + (eng ? 1.8 : 0);
+    const k = Math.min(c.width / bw, c.height / bh), g = c.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
+    g.setTransform(k, 0, 0, k, (c.width - bw * k) / 2 - x0 * k, (c.height - bh * k) / 2 - y0 * k);
+    G.look = look; drawShip(g, G, k, 1, { noLights: true }); g.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  const PV = new Map(), pvJobs = []; let pvTimer = 0;
+  function pvRun() { pvTimer = 0; const job = pvJobs.shift(); if (!job) return; try { job(); } catch (err) { console.warn(err); } if (pvJobs.length) pvTimer = setTimeout(pvRun, 6); }
+  // the picture on a module's card, drawn when there's a moment; a tall module lies on its side to fill the card
+  function modPreview(m) {
+    const look = V.s.look, key = look + '|' + m.n; let c = PV.get(key);
+    if (c) return c;
+    c = Object.assign(document.createElement('canvas'), { width: 240, height: 136 }); PV.set(key, c);
+    pvJobs.push(() => {
+      const raw = modCells(m, 0);
+      if (Math.max(...raw.map(q => q[1])) <= Math.max(...raw.map(q => q[0])) * 1.25) { drawCells(c, raw, m.n, look); return; }
+      const off = Object.assign(document.createElement('canvas'), { width: c.height, height: c.width }), g = c.getContext('2d');
+      drawCells(off, raw, m.n, look); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); g.translate(c.width, 0); g.rotate(Math.PI / 2); g.drawImage(off, 0, 0); g.setTransform(1, 0, 0, 1, 0, 0);
+    });
+    if (!pvTimer) pvTimer = setTimeout(pvRun, 0);
+    return c;
+  }
+  const typeMod = t => MODS.find(m => m.p.length === 1 && m.p[0][0] === t) || { n: RT[t][0], p: [[t, 0, 0, 3, 3]] };
+  const SWATCH = new Map();
+  // a small square picture of a kind of room, for lists
+  function typeSwatch(t) {
+    const look = V.s.look, key = look + '|' + t; let src = SWATCH.get(key);
+    if (!src) { src = Object.assign(document.createElement('canvas'), { width: 96, height: 96 }); const cs = []; for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) cs.push([x, y, 0, t]); drawCells(src, t === 'lift' || t === 'airlock' ? [[0, 0, 0, t]] : cs, 'sw' + t, look); SWATCH.set(key, src); }
+    const c = Object.assign(document.createElement('canvas'), { width: 96, height: 96, className: 'hud-swatch' }); c.getContext('2d').drawImage(src, 0, 0); return c;
+  }
+  // the module in hand, drawn for real so what you're placing looks like what you'll get
+  function ghostImage(E, gh) {
+    const look = V.s.look, dpr = Math.min(3, window.devicePixelRatio || 1), want = clamp(V.k * dpr, 12, 72), cur = E.gimg;
+    if (cur && cur.mod === E.mod && cur.rot === E.rot && cur.scale === E.scale && cur.look === look && want <= cur.gk * 1.7 && want >= cur.gk / 1.7) return cur;
+    const T = cellsShip(gh.c, `${E.mod.n}|${E.rot}|${E.scale}`, look), G = shipLayout(T.s), eng = gh.c.some(q => q[3] === 'engine'), m = 1.1, gk = want;
+    const c = Object.assign(document.createElement('canvas'), { width: Math.ceil((T.mx + 1 + 2 * m) * gk), height: Math.ceil((T.my + 1 + 2 * m + (eng ? 2 : 0)) * gk) }), g = c.getContext('2d');
+    g.setTransform(gk, 0, 0, gk, (m - T.ox) * gk, (m - T.oy) * gk); G.look = look; drawShip(g, G, gk, 1, { noPlume: true, noLights: true });
+    return (E.gimg = { mod: E.mod, rot: E.rot, scale: E.scale, look, c, gk, m, bw: T.mx + 1, bh: T.my + 1, shape: outlineOf(gh.c.map(q => [q[0], q[1]])) });
+  }
+
+  /* ---------- drawing over the plan ---------- */
+  // a small label: text on a dark plate
+  function plate(g, text, x, y, o = {}) {
+    const size = o.size || 12.5; g.font = `${o.weight || 600} ${size}px ${o.num ? HUDN : HUDF}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const w = g.measureText(text).width + (o.pad == null ? 9 : o.pad * 2), hh = size + 5;
+    g.fillStyle = o.bg || 'rgba(5, 8, 12, .82)'; g.fillRect(x - w / 2, y - hh / 2, w, hh);
+    if (o.edge) { g.strokeStyle = o.edge; g.lineWidth = 1; g.strokeRect(x - w / 2 + 0.5, y - hh / 2 + 0.5, w - 1, hh - 1); }
+    g.fillStyle = o.color || '#e9eff5'; g.fillText(text, x, y + 0.5);
+    return w;
+  }
+  // a drafting dimension: a line with slashed ends and its length on a plate
+  function dimLine(g, x0, y0, x1, y1, text, col = 'rgba(205, 225, 240, .9)') {
+    g.save(); g.strokeStyle = col; g.lineWidth = 1; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1);
+    for (const [x, y] of [[x0, y0], [x1, y1]]) { g.moveTo(x - 4, y + 4); g.lineTo(x + 4, y - 4); }
+    g.stroke(); plate(g, text, (x0 + x1) / 2, (y0 + y1) / 2, { num: true, size: 12, color: col, pad: 4 }); g.restore();
+  }
+  // the outline and the fill of a set of squares, in squares from (0, 0)
+  function outlineOf(list) {
+    const set = new Set(list.map(([x, y]) => x + ',' + y)), edge = new Path2D(), fill = new Path2D();
+    for (const [x, y] of list) {
+      fill.rect(x, y, 1, 1);
+      if (!set.has(x + ',' + (y - 1))) { edge.moveTo(x, y); edge.lineTo(x + 1, y); }
+      if (!set.has((x + 1) + ',' + y)) { edge.moveTo(x + 1, y); edge.lineTo(x + 1, y + 1); }
+      if (!set.has(x + ',' + (y + 1))) { edge.moveTo(x, y + 1); edge.lineTo(x + 1, y + 1); }
+      if (!set.has((x - 1) + ',' + y)) { edge.moveTo(x, y); edge.lineTo(x, y + 1); }
+    }
+    return { edge, fill };
+  }
+  function drawShape(g, sh, sx, sy, rgb, fillA, lw = 2, blur = 0, flip = false) {
+    g.save(); g.translate(sx, sy); if (flip) g.scale(-1, 1); g.scale(V.k, V.k);
+    if (fillA) { g.fillStyle = `rgba(${rgb},${fillA})`; g.fill(sh.fill); }
+    g.lineCap = 'square'; g.lineWidth = lw / V.k; g.strokeStyle = `rgb(${rgb})`; if (blur) { g.shadowColor = `rgba(${rgb},.9)`; g.shadowBlur = blur; } g.stroke(sh.edge);
+    g.restore();
+  }
+  // while building: a drafting grid of dots with a cross every five squares, counted out from the centre line
+  function gridOverlay(g) {
+    const G = V.G, k = V.k; if (k < 4) return;
+    const [x0, y0] = toWorld(0, 0), [x1, y1] = toWorld(V.cv.clientWidth, V.cv.clientHeight), cx = G.Hh.cx;
+    const a = Math.max(Math.floor(x0), Math.floor(G.box[0]) - 8), b = Math.min(Math.ceil(x1), Math.ceil(G.box[2]) + 8), c = Math.max(Math.floor(y0), Math.floor(G.box[1]) - 8), d = Math.min(Math.ceil(y1), Math.ceil(G.box[3]) + 8);
+    if (a > b || c > d) return;
+    const fine = new Path2D(), big = new Path2D(), r = clamp(k * 0.1, 2.5, 4.5);
+    for (let y = c; y <= d; y++) for (let x = a; x <= b; x++) {
+      const sx = Math.round(x * k + V.ox), sy = Math.round(y * k + V.oy);
+      if ((x - cx) % 5 === 0 && y % 5 === 0) { big.moveTo(sx - r, sy + 0.5); big.lineTo(sx + r + 1, sy + 0.5); big.moveTo(sx + 0.5, sy - r); big.lineTo(sx + 0.5, sy + r + 1); }
+      else if (k >= 8) fine.rect(sx, sy, 1, 1);
+    }
+    g.fillStyle = 'rgba(190, 215, 235, .24)'; g.fill(fine);
+    g.strokeStyle = 'rgba(190, 215, 235, .34)'; g.lineWidth = 1; g.stroke(big);
+  }
+  // the centre line, drawn as a drafter would: long and short dashes
+  function centreLine(g) {
+    const G = V.G, ax = Math.round((G.Hh.cx + 0.5) * V.k + V.ox) + 0.5, [, a] = toScreen(0, G.box[1] - 2.5), [, b] = toScreen(0, G.box[3] + 2);
+    g.save(); g.setLineDash([18, 5, 4, 5]); g.strokeStyle = 'rgba(242, 169, 59, .8)'; g.lineWidth = 1; g.beginPath(); g.moveTo(ax, a); g.lineTo(ax, b); g.stroke(); g.setLineDash([]);
+    plate(g, 'C/L', ax, b, { size: 12, color: '#ffd08a', edge: 'rgba(242, 169, 59, .6)', pad: 4 }); g.restore();
+  }
+  // the ship's overall length and beam, outside the hull
+  function shipDims(g) {
+    const sb = solidBox(V.G); if (!sb) return;
+    const [ax, ay] = toScreen(sb.x0, sb.y0), [bx, by] = toScreen(sb.x1, sb.y1), o = 1.5 * V.k + 8, c = 'rgba(190, 215, 235, .72)';
+    if (bx - ax > 46) dimLine(g, ax, ay - o, bx, ay - o, `${sb.w * CELL} m`, c);
+    if (by - ay > 46) dimLine(g, bx + o, ay, bx + o, by, `${sb.h * CELL} m`, c);
+  }
+  // while painting: the squares the stroke covers so far
+  function strokeOverlay(g) {
+    const st = V.stroke; if (!st) return;
+    const rgb = st.t === 'erase' ? '255,106,95' : st.t === 'corr' ? '92,207,230' : '242,169,59', list = [...st.cells.values()], sh = outlineOf(list);
+    drawShape(g, sh, V.ox, V.oy, rgb, 0.26, 2, 8);
+    if (V.edit.mirror) { const cx = V.G.Hh.cx, m = outlineOf(list.map(([x, y]) => [2 * cx - x, y])); drawShape(g, m, V.ox, V.oy, rgb, 0.12, 1); }
+    if (st.t === 'room' && st.first && st.last) {
+      const x0 = Math.min(st.first[0], st.last[0]), x1 = Math.max(st.first[0], st.last[0]) + 1, y0 = Math.min(st.first[1], st.last[1]), y1 = Math.max(st.first[1], st.last[1]) + 1, [ax, ay] = toScreen(x0, y0), [bx, by] = toScreen(x1, y1);
+      dimLine(g, ax, ay - 12, bx, ay - 12, `${(x1 - x0) * CELL} m`); dimLine(g, bx + 12, ay, bx + 12, by, `${(y1 - y0) * CELL} m`);
+    }
+  }
+  const diamond = (g, x, y, r, rgb, solid = true) => { g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r, y); g.lineTo(x, y + r); g.lineTo(x - r, y); g.closePath(); if (solid) { g.fillStyle = `rgba(${rgb},.95)`; g.fill(); g.strokeStyle = 'rgba(4,7,10,.9)'; g.lineWidth = 1.5; g.stroke(); } else { g.strokeStyle = `rgb(${rgb})`; g.lineWidth = 1.5; g.stroke(); } };
+  const sameDoor = (a, b) => a && b && a.x === b.x && a.y === b.y && a.v === b.v;
+  const doorMid = e => toScreen(e.v ? e.x : e.x + 0.5, e.v ? e.y + 0.5 : e.y);
+  function doorsOverlay(g) {
+    const E = V.edit;
+    for (const e of V.G.doors) { const [x, y] = doorMid(e), on = sameDoor(e, E.selDoor) || (V.doorDrag && sameDoor(e, V.doorDrag.e)); diamond(g, x, y, on ? 9 : 6, on ? '242,169,59' : '92,207,230'); if (on) { g.strokeStyle = 'rgba(242,169,59,.5)'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, 14, 0, TAU); g.stroke(); } }
+    const to = V.doorDrag && V.doorDrag.to; if (to) { const [x, y] = doorMid(to); diamond(g, x, y, 10, '110,235,170'); }
+    if (V.hoverWall && !V.doorDrag) { const [x, y] = doorMid(V.hoverWall); diamond(g, x, y, 8, '110,235,170', false); }
+  }
+  function windowsOverlay(g) {
+    const q = V.winDrag, base = new Path2D(), hit = new Path2D(), r = clamp(V.k * 0.3, 3, 14);
+    for (const [key, x, y] of outerEdges(V.G)) {
+      const [sx, sy] = toScreen(x, y), vert = key[0] === '1', p = q && q.keys.has(key) ? hit : base;
+      p.moveTo(sx - (vert ? 0 : r), sy - (vert ? r : 0)); p.lineTo(sx + (vert ? 0 : r), sy + (vert ? r : 0));
+    }
+    g.save(); g.lineCap = 'butt'; g.strokeStyle = 'rgba(92,207,230,.75)'; g.lineWidth = 2; g.stroke(base);
+    if (q) { g.strokeStyle = q.val ? 'rgb(110,235,170)' : 'rgb(255,106,95)'; g.lineWidth = 5; g.shadowColor = g.strokeStyle; g.shadowBlur = 8; g.stroke(hit); }
+    g.restore();
+  }
+  // the selected room or corridor: its outline, its size, and handles to pull
+  const boxOfCells = cells => { const xs = cells.map(q => q[0]), ys = cells.map(q => q[1]), x0 = Math.min(...xs), y0 = Math.min(...ys), x1 = Math.max(...xs) + 1, y1 = Math.max(...ys) + 1; return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 }; };
+  function selInfo() {
+    const E = V.edit; if (!E || !E.sel) return null;
+    const G = V.G, { W, cell } = G, q = E.sel;
+    if (q.id > 0) { const o = G.rooms[q.id]; if (!o) { E.sel = null; return null; } q.x = o.cells[0] % W; q.y = (o.cells[0] / W) | 0; return liftable(q.x, q.y); }
+    if (cell[q.y * W + q.x] !== 0) { E.sel = null; return null; }
+    return liftable(q.x, q.y);
+  }
+  // (a room too small on screen to grab keeps its size controls in the panel)
+  function handles(b) { if (Math.min(b.w, b.h) * V.k < 44) return []; const mx = (b.x0 + b.x1) / 2, my = (b.y0 + b.y1) / 2; return [['x', -1, b.x0, my], ['x', 1, b.x1, my], ['y', -1, mx, b.y0], ['y', 1, mx, b.y1]]; }
+  function handleAt(x, y) {
+    const L = selInfo(); if (!L || L.id <= 0) return null;
+    let best = null, bd = 26; const b = boxOfCells(L.cells);
+    for (const [ax, dir, hx, hy] of handles(b)) { const [sx, sy] = toScreen(hx, hy), d = Math.hypot(sx - x, sy - y); if (d < bd) { bd = d; best = { ax, dir, hx, hy }; } }
+    return best;
+  }
+  function selectionOverlay(g) {
+    const E = V.edit, Z = V.sizing;
+    if (V.hoverCell && !E.sel && !Z) { const H0 = liftable(V.hoverCell[0], V.hoverCell[1]); if (H0) drawShape(g, outlineOf(H0.cells.map(q => [q[0], q[1]])), V.ox, V.oy, '190,215,235', 0.05, 1); }
+    const L = selInfo(); if (!L) return;
+    let list = L.cells.map(q => [q[0], q[1]]);
+    if (Z && Z.D) { const { W } = Z.D.Hh; list = []; Z.D.cell.forEach((v, i) => { if (v === L.id) list.push([i % W, (i / W) | 0]); }); if (Z.del.length) drawShape(g, outlineOf(Z.del), V.ox, V.oy, '255,106,95', 0.3, 1); }
+    drawShape(g, outlineOf(list), V.ox, V.oy, '242,169,59', 0.13, 2, 10);
+    if (Z && Z.add.length) drawShape(g, outlineOf(Z.add), V.ox, V.oy, '110,235,170', 0.32, 1);
+    if (E.mirror && !Z) { const T = twinOf(L); if (T) { const { W } = V.G; drawShape(g, outlineOf(T.idx.map(i => [i % W, (i / W) | 0])), V.ox, V.oy, '242,169,59', 0.05, 1); } }
+    const b = boxOfCells(list), [ax, ay] = toScreen(b.x0, b.y0), [bx, by] = toScreen(b.x1, b.y1);
+    if (bx - ax > 30) dimLine(g, ax, ay - 24, bx, ay - 24, `${b.w * CELL} m`); if (by - ay > 30) dimLine(g, bx + 24, ay, bx + 24, by, `${b.h * CELL} m`);
+    if (L.id > 0) for (const [, , hx, hy] of handles(b)) { const [sx, sy] = toScreen(hx, hy); g.fillStyle = '#f2a93b'; g.fillRect(sx - 6, sy - 6, 12, 12); g.strokeStyle = '#050709'; g.lineWidth = 2; g.strokeRect(sx - 6, sy - 6, 12, 12); }
+  }
+  function ghostOverlay(g) {
+    const E = V.edit, gh = E.ghost; if (!gh || !E.mod) return;
+    const img = ghostImage(E, gh), k = V.k, G = V.G;
+    if (!E.gpos || E.gfor !== E.mod) { E.gpos = [gh.x, gh.y]; E.gfor = E.mod; }
+    const dx = gh.x - E.gpos[0], dy = gh.y - E.gpos[1], moving = Math.abs(dx) + Math.abs(dy) > 0.03;
+    if (moving) { E.gpos[0] += dx * 0.42; E.gpos[1] += dy * 0.42; animateOverlay(); } else E.gpos = [gh.x, gh.y];
+    const [sx, sy] = toScreen(E.gpos[0], E.gpos[1]), over = V.el.classList.contains('over-cancel'), rgb = over ? '255,106,95' : '110,235,170', w = img.c.width / img.gk * k, hh = img.c.height / img.gk * k;
+    g.save(); g.globalAlpha = over ? 0.3 : 0.94; g.drawImage(img.c, sx - img.m * k, sy - img.m * k, w, hh); g.restore();
+    drawShape(g, img.shape, sx, sy, rgb, 0.1, 2, 10);
+    if (symOn() && mirrorOf(gh)) {
+      const fx = toScreen(2 * G.Hh.cx - E.gpos[0] + 1, 0)[0];
+      g.save(); g.globalAlpha = over ? 0.3 : 0.94; g.translate(fx, sy); g.scale(-1, 1); g.drawImage(img.c, -img.m * k, -img.m * k, w, hh); g.restore();
+      drawShape(g, img.shape, fx, sy, rgb, 0.1, 1.5, 6, true);
+    }
+    // where it meets the ship, the seam lights up
+    if (!moving) {
+      const own = new Set(gh.c.map(q => q[0] + ',' + q[1])), seam = new Path2D(), { W, cell } = G;
+      for (const [x, y] of gh.c) for (const [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (own.has((x + i) + ',' + (y + j)) || cell[(gh.y + y + j) * W + gh.x + x + i] < 0) continue;
+        const ex = x + (i > 0 ? 1 : 0), ey = y + (j > 0 ? 1 : 0); seam.moveTo(ex, ey); if (i) seam.lineTo(ex, ey + 1); else seam.lineTo(ex + 1, ey);
+      }
+      g.save(); g.translate(sx, sy); g.scale(k, k); g.lineWidth = 3.5 / k; g.lineCap = 'round'; g.strokeStyle = '#7dffb8'; g.shadowColor = '#7dffb8'; g.shadowBlur = 12; g.stroke(seam); g.restore();
+    }
+    if (img.bw * k > 34) dimLine(g, sx, sy - 13, sx + img.bw * k, sy - 13, `${img.bw * CELL} m`);
+    if (img.bh * k > 34) dimLine(g, sx + img.bw * k + 13, sy, sx + img.bw * k + 13, sy + img.bh * k, `${img.bh * CELL} m`);
+    plate(g, E.mod.n, sx + img.bw * k / 2, sy - (img.bw * k > 34 ? 34 : 14), { size: 13.5, weight: 700 });
+  }
+  function animateOverlay() { if (V && !V.ovRaf) V.ovRaf = requestAnimationFrame(() => { if (V) { V.ovRaf = 0; redrawOv(); } }); }
+  // a brief flare when something is welded on or cut away
+  function flash(list, rgb = '110,235,170') { if (!V) return; (V.fx || (V.fx = [])).push({ ...outlineOf(list), t0: performance.now(), rgb }); animateOverlay(); }
+  function fxOverlay(g) {
+    if (!V.fx || !V.fx.length) return;
+    const now = performance.now(); V.fx = V.fx.filter(f => now - f.t0 < 560);
+    for (const f of V.fx) { const e = 1 - (now - f.t0) / 560; g.save(); g.translate(V.ox, V.oy); g.scale(V.k, V.k); g.fillStyle = `rgba(${f.rgb},${0.42 * e * e})`; g.fill(f.fill); g.lineCap = 'square'; g.lineWidth = (1.5 + 3 * e) / V.k; g.strokeStyle = `rgba(${f.rgb},${e})`; g.shadowColor = `rgba(${f.rgb},${e})`; g.shadowBlur = 22 * e; g.stroke(f.edge); g.restore(); }
+    if (V.fx.length) animateOverlay();
+  }
+  function editOverlay(g) {
+    const E = V.edit;
+    if (E.mirror) centreLine(g);
+    shipDims(g);
+    if (E.mode === 'windows') windowsOverlay(g);
+    if (E.mode === 'doors') doorsOverlay(g);
+    if (E.mode === 'move') selectionOverlay(g);
+    ghostOverlay(g);
+    if (V.stroke) strokeOverlay(g);
+    fxOverlay(g);
+  }
+  function shipPin(g, pin, x, y, u = 1) {
+    const M = SHIP_MARK[pin.ref.kind] || SHIP_MARK.note, rr = 15;
+    g.save(); g.translate(x, y); g.scale(u, u); g.beginPath(); g.moveTo(0, -rr); g.lineTo(rr, 0); g.lineTo(0, rr); g.lineTo(-rr, 0); g.closePath();
+    g.fillStyle = 'rgba(6, 9, 13, .94)'; g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 8; g.fill(); g.shadowBlur = 0; g.strokeStyle = pin.on ? '#ffd08a' : `rgb(${M[2]})`; g.lineWidth = pin.on ? 2.4 : 1.5; g.stroke();
+    g.scale(14 / 24, 14 / 24); g.translate(-12, -12); g.strokeStyle = `rgb(${M[2]})`; g.lineWidth = 2.2; g.lineCap = 'square'; g.stroke(iconPath(M[0])); g.restore();
+    if (pin.label) plate(g, pin.label, x, y + (rr + 11) * u, { size: 13 * u, pad: 5 * u });
+  }
+
+  /* ---------- the console itself ---------- */
+  function finishBuild() { V.edit = null; V.stroke = null; V.hoverWall = V.hoverCell = null; renderChrome(); glideFit(); }
+  function setTool(m) { const E = V.edit; if (!E || E.mode === m) return; E.mode = m; E.mod = null; E.ghost = null; E.sel = null; E.selDoor = null; E.searching = false; V.hoverWall = V.hoverCell = null; renderChrome(); redrawOv(); keepFramed(); }
+  function toggleMirror() { const E = V.edit; E.mirror = !E.mirror; aim(); renderChrome(); redrawOv(); }
+  function goDeck(i) {
+    const s = V.s; if (i === s.cur) return; const dir = i > s.cur ? 1 : -1; s.cur = i; V.stroke = null; V.mode = null;
+    if (V.edit) { V.edit.sel = null; V.edit.selDoor = null; }
+    persist(); rebuild(false);
+    if (V.cv.animate) V.cv.animate([{ opacity: 0.25, transform: `translateY(${dir * 16}px)` }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  }
+  function addDeck() { const s = V.s; s.decks.push(...freshDecks(1)); normShip(s); toast(`Deck ${s.decks.length} added`); goDeck(s.decks.length - 1); }
+  function renderHud() {
+    const { el, p } = V, s = V.s, E = V.edit, G = V.G, top = el.querySelector('.lm-top'), dock = el.querySelector('.lm-bar'), left = el.querySelector('.hud-left'), right = el.querySelector('.hud-right'), tele = el.querySelector('.hud-tele'), hint = el.querySelector('.lm-hint');
+    el.classList.toggle('editing', !!E);
+    const R = shipChecks(), nw = R.warn.length, role = ROLE_NAME[G.role];
+    /* header */
+    top.className = 'lm-top hud-top' + (p && !E ? ' has-kind' : ''); top.innerHTML = '';
+    if (!E) top.append(h('button', { class: 'hud-back', 'aria-label': p ? 'Back to the place' : 'Back to the codex', onclick: () => close() }, hic('back', 24)));
+    top.append(h('button', { class: 'hud-title', onclick: renameShip, title: 'Rename this ship' }, h('div', { class: 'hud-name' }, V.ship.title), h('div', { class: 'hud-sub' }, [SHIPS[s.cls].name, `Deck ${s.cur + 1} of ${s.decks.length}`, role].filter(Boolean).join(' · '))));
+    if (E) top.append(h('button', { class: 'hud-status' + (nw ? ' warn' : ''), onclick: checkSheet, title: 'Ship check' }, h('i'), nw ? `${nw} to check` : 'Clear'), hudBtn('check', 'Done', finishBuild, { pri: true, title: 'Finish building' }));
+    else if (p) top.append(seg([['city', 'Town'], ['dungeon', 'Dungeon'], ['ship', 'Ship']], V.kind, v => { V.kind = v; V.m.kind = v; if (v === 'ship') attachShip(); V.edit = null; persist(); V.mode = null; rebuild(true); }));
+    el.style.setProperty('--top', top.offsetHeight - 8 + 'px');
+    /* decks */
+    left.innerHTML = '';
+    left.append(h('span', { class: 'hud-cap' }, 'Deck'), ...s.decks.map((d, i) => h('button', { class: 'hud-deck cut' + (i === s.cur ? ' on' : ''), title: `Deck ${i + 1}`, 'aria-label': `Deck ${i + 1}`, onclick: () => goDeck(i) }, String(i + 1))));
+    if (s.decks.length < 8) left.append(h('button', { class: 'hud-deck cut add', title: 'Add a deck', 'aria-label': 'Add a deck', onclick: addDeck }, hic('plus', 17)));
+    /* actions down the right */
+    right.innerHTML = '';
+    if (E) right.append(hudBtn('undo', '', undoEdit, { off: !E.undo.length, title: 'Undo (Ctrl+Z)' }), hudBtn('redo', '', redoEdit, { off: !E.redo.length, title: 'Redo (Ctrl+Y)' }), hudBtn('mirror', '', toggleMirror, { on: E.mirror, title: 'Mirror both sides (M)' }));
+    right.append(hudBtn('fit', '', glideFit, { title: 'Frame the ship (F)' }));
+    /* dock */
+    dock.className = 'lm-bar hud-dock';
+    if (E) {
+      if (dock.dataset.m !== 'edit') { dock.dataset.m = 'edit'; dock.innerHTML = ''; dock.append(h('i', { class: 'ind' }), ...TOOLS.map(([m, l, ic], i) => h('button', { onclick: () => setTool(m), title: `${l} (${i + 1})`, 'aria-label': l }, hic(ic, 24), l))); }
+      const i = TOOLS.findIndex(t => t[0] === E.mode); dock.style.setProperty('--i', i); dock.style.setProperty('--n', TOOLS.length);
+      [...dock.querySelectorAll('button')].forEach((b, j) => b.classList.toggle('on', j === i));
+    } else {
+      dock.dataset.m = 'view'; dock.innerHTML = '';
+      const pinOn = V.mode && V.mode.t === 'add';
+      dock.append(h('button', { onclick: listSheet }, hic('rooms', 24), 'Rooms'), h('button', { class: pinOn ? 'on' : '', onclick: () => setMode(pinOn ? null : { t: 'add' }) }, hic('mark', 24), 'Mark'),
+        h('button', { class: 'build cut', onclick: startBuild }, hic('wrench', 22), 'Build'), h('button', { onclick: optionsSheet }, hic('sliders', 24), 'Options'), h('button', { onclick: exportImage }, hic('print', 24), 'Print'));
+    }
+    /* hint, for marking */
+    const msg = !E && V.mode && V.mode.t === 'add' ? 'Tap the plan to mark crew, cargo, a hazard…' : '';
+    hint.textContent = msg; hint.classList.toggle('show', !!msg);
+    /* readouts */
+    const sb = solidBox(G), roomsN = Object.entries(R.cnt).reduce((a, [t, n]) => a + (t === 'lift' ? 0 : n), 0);
+    tele.innerHTML = ''; for (const [a, b] of [['Length', sb ? `${sb.h * CELL} m` : '—'], ['Beam', sb ? `${sb.w * CELL} m` : '—'], ['Floor', `${fmtInt(R.floor * CELL * CELL)} m²`], ['Rooms', roomsN], ['Berths', R.bunks]]) tele.append(h('div', null, h('span', null, a), h('b', null, String(b))));
+    renderPanel();
+  }
+  function renderPanel() {
+    const { el } = V, E = V.edit, panel = el.querySelector('.hud-panel'), float = el.querySelector('.hud-float'), floated = float.style.display === 'flex';
+    float.innerHTML = ''; float.style.display = 'none';
+    if (!E) { panel.innerHTML = ''; V.panelMode = null; return; }
+    setTimeout(() => { if (V && floated !== (float.style.display === 'flex')) keepFramed(); });   // the toolbar came or went: leave room for it
+    const keep = [...panel.querySelectorAll('[data-sc]')].map(r => [r.dataset.sc, r.scrollLeft, r.scrollTop]);
+    panel.innerHTML = ''; panel.classList.toggle('folded', !!E.folded); panel.classList.toggle('lib', E.mode === 'add');
+    const foldBtn = h('button', { class: 'hud-fold fold', 'aria-label': E.folded ? 'Show the panel' : 'Hide the panel', onclick: () => { E.folded = !E.folded; renderPanel(); keepFramed(); } }, hic(E.folded ? 'up' : 'down', 18));
+    const head = (t, tip, ...more) => panel.append(h('div', { class: 'hud-phead' }, h('b', null, t), h('span', { class: 'tip' }, tip), more, foldBtn));
+    const body = h('div', { class: 'hud-pbody' });
+    const tools = (...kids) => h('div', { class: 'hud-tools', 'data-sc': 'tools' }, kids);
+    if (E.mode === 'add') {
+      const has = V.G.cell.some(c => c >= 0), rc = recent();
+      if (E.cat === 'Recent' && !rc.length) E.cat = has ? 'Corridors' : 'Whole ships';
+      const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+      head('Modules', !E.mod ? (coarse ? 'Tap one, or pull it up onto the plan' : 'Click one, or drag it onto the plan') : E.ghost ? (coarse ? 'Drag on the plan, or tap Place' : 'Click the plan, or press Place') : 'No room for this on the plan',
+        h('button', { class: 'hud-fold' + (E.searching ? ' on' : ''), 'aria-label': 'Search modules', onclick: () => { E.searching = !E.searching; E.q = ''; renderPanel(); if (E.searching) { const inp = panel.querySelector('.hud-search'); if (inp) inp.focus(); } } }, hic('search', 18)));
+      const grid = h('div', { class: 'hud-cards', 'data-sc': 'cards' });
+      const fill = () => {
+        grid.innerHTML = '';
+        const q = E.q.trim().toLowerCase(), list = q ? MODS.filter(m => (m.n + ' ' + m.g).toLowerCase().includes(q)) : E.cat === 'Recent' ? rc : MODS.filter(m => m.g === E.cat);
+        for (const m of list) {
+          const cs = modCells(m, 0, E.scale), bw = Math.max(...cs.map(c => c[0])) + 1, bh = Math.max(...cs.map(c => c[1])) + 1;
+          grid.append(h('button', { class: 'hud-card cut' + (E.mod === m ? ' on' : ''), title: m.n, onpointerdown: ev => tileDrag(ev, m), onclick: () => { if (performance.now() < (E.noClick || 0)) return; if (E.mod === m) { placeModule(); return; } E.mod = m; E.rot = 0; aim(); renderChrome(); redrawOv(); } }, modPreview(m), h('span', { class: 'nm' }, m.n), h('span', { class: 'dm' }, `${bw * CELL}×${bh * CELL}`)));
+        }
+        if (!list.length) grid.append(h('div', { class: 'hud-empty' }, 'Nothing by that name.'));
+      };
+      if (E.searching) { const inp = h('input', { class: 'hud-search', type: 'search', placeholder: 'Search modules', value: E.q, autocomplete: 'off' }); inp.addEventListener('input', () => { E.q = inp.value; fill(); }); body.append(inp); }
+      else body.append(h('div', { class: 'hud-tabs', 'data-sc': 'tabs' }, CATS.filter(c => c[0] !== 'Recent' || rc.length).map(([c, l, ic]) => h('button', { class: 'hud-tab' + (E.cat === c ? ' on' : ''), onclick: () => { E.cat = c; renderPanel(); } }, hic(ic, 16), l))));
+      body.append(grid); fill();
+      if (E.mod) {
+        const lib = !E.mod.cells, size = d => { E.scale = SIZES[clamp(SIZES.indexOf(E.scale) + d, 0, SIZES.length - 1)]; aim(); renderChrome(); redrawOv(); };
+        float.style.display = 'flex';
+        float.append(hudBtn('turn', '', turnModule, { title: 'Turn (R)' }),
+          lib ? h('div', { class: 'hud-scale cut' }, h('button', { 'aria-label': 'Smaller', title: 'Smaller (−)', disabled: E.scale === SIZES[0] || null, onclick: () => size(-1) }, hic('minus', 17)), h('b', null, '×' + E.scale), h('button', { 'aria-label': 'Bigger', title: 'Bigger (+)', disabled: E.scale === SIZES[SIZES.length - 1] || null, onclick: () => size(1) }, hic('plus', 17))) : null,
+          hudBtn('check', 'Place', placeModule, { pri: true, off: !E.ghost, title: 'Place (Enter)' }), hudBtn('close', '', dropModule, { title: 'Put it down (Esc)' }));
+      }
+    } else if (E.mode === 'move') {
+      const L = selInfo();
+      if (!L) { head('Select', 'Tap a room to select. Drag to move it.'); body.append(tools(hudBtn('centre', 'Centre on the line', centreDeck))); }
+      else {
+        const room = L.id > 0, o = room && V.G.rooms[L.id], cur = (room && deckOf().rooms[L.id]) || {}, b = boxOfCells(L.cells);
+        head(room ? 'Room' : 'Corridor', room ? `${fmtInt(o.n * CELL * CELL)} m² · pull a handle to resize` : `${L.idx.length * CELL} m of corridor`, h('button', { class: 'hud-fold', 'aria-label': 'Deselect', onclick: () => { E.sel = null; renderPanel(); redrawOv(); } }, hic('close', 18)));
+        const th = Object.assign(document.createElement('canvas'), { width: 184, height: 140, className: 'hud-thumb' });
+        try { drawCells(th, L.cells, 'sel' + L.cells.length + (L.cells[0] || [])[3], V.s.look); } catch (err) { console.warn(err); }
+        const main = h('div', { class: 'hud-insp-main' });
+        if (room) {
+          const groups = {}; for (const [t, v] of Object.entries(RT)) (groups[v[2]] || (groups[v[2]] = [])).push(t);
+          const type = h('select', { class: 'hud-select', 'aria-label': 'Kind of room' }, Object.entries(groups).map(([gn, ts]) => h('optgroup', { label: gn }, ts.map(t => h('option', { value: t }, RT[t][0]))))); type.value = o.type;
+          type.addEventListener('change', () => setRoomType(L, type.value));
+          main.append(h('button', { class: 'hud-namebtn', onclick: () => shipRoomSheet(L.id), title: 'Name, windows and notes' }, h('span', null, cur.name || o.label), hic('edit', 15)), type);
+        } else main.append(h('div', { class: 'hud-namebtn' }, h('span', null, 'Corridor')));
+        body.append(h('div', { class: 'hud-insp' }, th, main));
+        if (room) {
+          const dim = (word, ax, n) => h('div', { class: 'hud-dim cut' }, h('button', { 'aria-label': `Less ${word}`, onclick: () => { const c = selInfo(); if (c) resizeRoom(c, ax, false); } }, hic('minus', 17)), h('div', null, h('small', null, word), h('b', null, `${n * CELL} m`)), h('button', { 'aria-label': `More ${word}`, onclick: () => { const c = selInfo(); if (c) resizeRoom(c, ax, true); } }, hic('plus', 17)));
+          body.append(h('div', { class: 'hud-dims' }, dim('Width', 'x', b.w), dim('Length', 'y', b.h)));
+        }
+        body.append(h('div', { class: 'hud-tools even' }, hudBtn('turn', 'Turn', turnSel), hudBtn('copy', 'Copy', copySel), room ? hudBtn('notes', 'Notes', () => shipRoomSheet(L.id)) : null, hudBtn('trash', 'Remove', removeSel, { dgr: true })));
+      }
+    } else if (E.mode === 'doors') {
+      const d = E.selDoor && V.G.doors.find(q => sameDoor(q, E.selDoor));
+      if (!d) { E.selDoor = null; head('Doors', 'Tap a wall to add. Drag a door to move it.'); body.append(tools(hudBtn('door', 'Redo all doors', () => { const D = editable(); D.doors = D.doors.filter(e => e.k === 'hatch' || e.k === 'bay'); autoDoors(D); pushUndo(); commitDeck(D); toast('Doors laid out again'); }), hudBtn('plus', 'Add missing', fixDoors))); }
+      else {
+        const space = d.k === 'hatch' || d.k === 'bay';
+        head(space ? 'Outer hatch' : 'Door', 'Drag it along the walls to move it.', h('button', { class: 'hud-fold', 'aria-label': 'Deselect', onclick: () => { E.selDoor = null; renderPanel(); redrawOv(); } }, hic('close', 18)));
+        body.append(tools(...(space ? [] : [['door', 'Normal'], ['heavy', 'Heavy'], ['lock', 'Locked']].map(([k2, l]) => hudBtn(null, l, () => doorEdit((D, i) => { D.doors[i].k = k2; }), { on: d.k === k2 }))), hudBtn('trash', 'Remove', () => { doorEdit((D, i) => D.doors.splice(i, 1)); E.selDoor = null; renderPanel(); }, { dgr: true })));
+      }
+    } else if (E.mode === 'windows') {
+      const dk = deckOf(), st = !dk.win ? 'auto' : dk.win.none && !Object.keys(dk.win.set || {}).length ? 'none' : 'own';
+      const setWin = w => { pushUndo(); deckOf().win = w; persist(); rebuild(false); };
+      head('Windows', 'Tap or drag along the outer wall.');
+      body.append(tools(hudBtn(null, 'Automatic', () => setWin(null), { on: st === 'auto' }), hudBtn(null, 'All round', () => { const set = {}; for (const [k2] of outerEdges(V.G)) set[k2] = 1; setWin({ none: true, set }); }), hudBtn(null, 'None', () => setWin({ none: true, set: {} }), { on: st === 'none' })));
+    } else if (E.mode === 'paint') {
+      const nm = RT[E.type][0].toLowerCase();
+      head('Paint', { fill: `Tap a gap to fill it with ${nm}`, fillc: 'Tap a gap to fill it with corridor', room: `Drag a box to make ${nm}`, corr: 'Drag to draw corridor', erase: 'Drag to cut squares away' }[E.brush]);
+      body.append(h('div', { class: 'hud-tools', 'data-sc': 'brush' }, [['fill', 'Fill', 'fill'], ['fillc', 'Fill corridor', 'fill'], ['room', 'Room', 'box'], ['corr', 'Corridor', 'corr'], ['erase', 'Erase', 'erase']].map(([b2, l, ic]) => hudBtn(ic, l, () => { E.brush = b2; renderPanel(); }, { on: E.brush === b2 }))));
+      if (E.brush === 'room' || E.brush === 'fill') body.append(h('div', { class: 'hud-cards', 'data-sc': 'types' }, Object.keys(RT).map(t => { const m = typeMod(t); return h('button', { class: 'hud-card cut' + (E.type === t ? ' on' : ''), title: RT[t][0], onclick: () => { E.type = t; renderPanel(); } }, modPreview(m), h('span', { class: 'nm' }, RT[t][0])); })));
+    }
+    panel.append(body);
+    for (const [k2, a, b] of keep) { const r = panel.querySelector(`[data-sc="${k2}"]`); if (r) { r.scrollLeft = a; r.scrollTop = b; } }
+    if (E.mod && E.mode === 'add') float.style.setProperty('--b', (el.getBoundingClientRect().bottom - panel.getBoundingClientRect().top + 8) + 'px');
+    if (V.panelMode !== E.mode) { V.panelMode = E.mode; if (panel.animate) panel.animate([{ opacity: 0.35, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' }); }
+  }
+  function turnModule() { const E = V.edit; if (!E || !E.mod) return; E.rot = (E.rot + 1) % 4; aim(); redrawOv(); }
+  function dropModule() { const E = V.edit; if (!E) return; if (E.carry) { undoEdit(); E.redo.pop(); } E.mod = null; E.ghost = null; E.back = null; renderChrome(); redrawOv(); }
+  function cancelPlace() { const E = V.edit; if (E.carry) { undoEdit(); E.redo.pop(); E.mod = null; E.ghost = null; } else { E.target = null; aim(); } renderChrome(); redraw(); }
+  function turnSel() {
+    const L = selInfo(), E = V.edit; if (!L) return; const b = boxOfCells(L.cells), q = { ...E.sel };
+    pickUp(q.x, q.y); E.rot = 1; E.target = [b.x0 + b.w / 2, b.y0 + b.h / 2]; V.placing = true; aim(); V.placing = false; placeModule();
+  }
+  function copySel() { const L = selInfo(), E = V.edit; if (!L) return; const b = boxOfCells(L.cells); E.back = 'move'; E.mode = 'add'; E.sel = null; E.mod = { n: L.n, cells: L.cells }; E.rot = 0; E.target = [b.x1 + 2, b.y0 + b.h / 2]; aim(); renderChrome(); redrawOv(); }
+  function removeSel() { const L = selInfo(), E = V.edit; if (!L) return; const { x, y } = E.sel; flash(L.cells.map(q => [q[0], q[1]]), '255,106,95'); E.sel = null; removeAt(x + 0.5, y + 0.5); }
+  function setRoomType(L, t) {
+    const E = V.edit, dk = deckOf(), base = deckBase(V.s, shipHull(V.s), V.s.cur).types, T = E.mirror ? twinOf(L) : null; pushUndo(); dk.rooms = { ...dk.rooms };
+    const one = i => { const c = { ...(dk.rooms[i] || {}) }; if (t !== base[i]) c.type = t; else delete c.type; if (c.type || c.name || c.note || c.nowin) dk.rooms[i] = c; else delete dk.rooms[i]; };
+    one(L.id); if (T && T.id) one(T.id); persist(); rebuild(false);
+  }
+  function doorEdit(fn) {
+    const E = V.edit, e = E.selDoor; if (!e) return;
+    const D = editable(), i = D.doors.findIndex(q => sameDoor(q, e)); if (i < 0) return;
+    const f = E.mirror ? flipEdge(e) : null, j = f ? D.doors.findIndex(q => sameDoor(q, f)) : -1;
+    if (j >= 0 && j !== i) { fn(D, Math.max(i, j)); fn(D, Math.min(i, j)); } else fn(D, i);
+    pushUndo(); commitDeck(D);
+  }
+  // pulling a handle: one row of squares at a time, shown before it's committed
+  function sizeTo(q, x, y) {
+    const [wx, wy] = toWorld(x, y), n = Math.round(((q.ax === 'x' ? wx - q.hx : wy - q.hy)) * q.dir); if (n === q.n) return; q.n = n;
+    const E = V.edit, L = selInfo(); if (!L) return; const D = editable(), T = E.mirror ? twinOf(L) : null;
+    for (let i = 0; i < Math.abs(n); i++) { const snap = D.cell.slice(); if (!(stretch(D, L.id, q.ax, n > 0, q.dir) && (!T || !T.id || stretch(D, T.id, q.ax, n > 0, q.ax === 'x' ? -q.dir : q.dir)))) { D.cell.set(snap); break; } }
+    q.D = D; q.add = []; q.del = []; const { W } = D.Hh, old = V.G.cell;
+    D.cell.forEach((v, i) => { if (v !== old[i]) (v >= 0 ? q.add : q.del).push([i % W, (i / W) | 0]); });
+  }
+  function commitSizing(q) { if (!q.D || (!q.add.length && !q.del.length)) { redrawOv(); return; } const D = q.D; autoDoors(D); pushUndo(); commitDeck(D); if (q.add.length) flash(q.add); }
+  // the mouse, hovering: previews follow it without a press
+  function hoverAt(x, y) {
+    const E = V.edit, [wx, wy] = toWorld(x, y);
+    if (E.mode === 'add' && E.mod) { V.placing = true; aim(wx, wy); V.placing = false; redrawOv(); }
+    else if (E.mode === 'doors') { V.hoverWall = wallEdge(wx, wy); redrawOv(); }
+    else if (E.mode === 'move') { const cx = Math.floor(wx), cy = Math.floor(wy), G = V.G, on = cx >= 0 && cy >= 0 && cx < G.W && cy < G.H && G.cell[cy * G.W + cx] >= 0; const prev = V.hoverCell; V.hoverCell = on ? [cx, cy] : null; if (on !== !!prev || (on && prev && (prev[0] !== cx || prev[1] !== cy))) redrawOv(); }
+  }
+  function checkSheet() {
+    const R = shipChecks(), sb = solidBox(V.G), roomsN = Object.entries(R.cnt).reduce((a, [t, n]) => a + (t === 'lift' ? 0 : n), 0); let sh;
+    sh = openSheet({ title: 'Ship status', body: h('div', null,
+      h('div', { class: 'hud-tiles' }, [['Length', sb ? `${sb.h * CELL} m` : '—'], ['Beam', sb ? `${sb.w * CELL} m` : '—'], ['Decks', V.s.decks.length], ['Floor', `${fmtInt(R.floor * CELL * CELL)} m²`], ['Rooms', roomsN], ['Berths', R.bunks]].map(([a, b]) => h('div', { class: 'hud-tile' }, h('b', null, String(b)), h('span', null, a)))),
+      h('div', { class: 'grp-title' }, R.warn.length ? 'To look at' : 'All clear'),
+      R.warn.length ? R.warn.map(w => h('div', { class: 'hud-issue' }, h('i'), h('span', null, w.t), w.fix ? h('button', { class: 'btn small', onclick: () => { sh.close(); w.fix[1](); } }, w.fix[0]) : null))
+        : h('div', { class: 'hud-issue ok' }, h('i'), h('span', null, 'Every room has a door and the ship has what it needs.'))) });
   }
 
   /* ---------- building from modules: pick one, and it snaps onto the ship with its doors made ---------- */
@@ -9051,43 +9722,8 @@ const LocalMaps = (() => {
     ['Whole ships', 'Freighter', '🚛', [['bridge', 2, 0, 7, 4], ['corr', 5, 4, 1, 16], ['cabin', 2, 4, 3, 2], ['cabin', 6, 4, 3, 2], ['mess', 2, 6, 3, 2], ['medbay', 6, 6, 3, 2], ['cargo', 0, 8, 5, 6], ['cargo', 6, 8, 5, 6], ['cargo', 0, 14, 5, 6], ['cargo', 6, 14, 5, 6], ['engine', 0, 20, 3, 5], ['reactor', 3, 20, 5, 5], ['engine', 8, 20, 3, 5]]],
   ].map(([g, n, ic, p]) => ({ g, n, ic, p }));
   const SIZES = [0.5, 0.75, 1, 1.5, 2, 3];
-  const newEdit = mode => ({ scale: 1, tool: 'build', mode, cat: 'Recent', q: '', mod: null, rot: 0, mirror: true, ghost: null, target: null, brush: 'room', type: 'cabin', undo: [], redo: [] });
-  const modIcon = m => {
-    const c = Object.assign(document.createElement('canvas'), { width: 88, height: 52 }), g = c.getContext('2d'), cs = modCells(m, 0), w = Math.max(...cs.map(q => q[0])) + 1, hh = Math.max(...cs.map(q => q[1])) + 1, k = Math.min(84 / w, 48 / hh), ox = (88 - w * k) / 2, oy = (52 - hh * k) / 2;
-    for (const [x, y, i, t] of cs) { g.fillStyle = t === 'corr' ? '#6ec8ff' : ['#7fd99a', '#e3c15c', '#d99a7f', '#a7a0e6'][i % 4]; g.fillRect(ox + x * k, oy + y * k, Math.ceil(k), Math.ceil(k)); }
-    return c;
-  };
+  const newEdit = mode => ({ sel: null, selDoor: null, folded: false, searching: false, back: null, gimg: null, gpos: null, scale: 1, tool: 'build', mode, cat: 'Recent', q: '', mod: null, rot: 0, mirror: true, ghost: null, target: null, brush: 'room', type: 'cabin', undo: [], redo: [] });
   function recent() { const r = (S.ui.shipRecent || []).map(n => MODS.find(m => m.n === n)).filter(Boolean); return r; }
-  function renderTray(tray) {
-    const E = V.edit, keep = [...tray.querySelectorAll('.lm-row')].map(r => r.scrollLeft); tray.innerHTML = '';
-    const setMode = m => { E.mode = m; E.mod = null; E.ghost = null; renderChrome(); redraw(); };
-    tray.append(h('div', { class: 'lm-modes' }, [['add', 'Add'], ['move', 'Move'], ['doors', 'Doors'], ['windows', 'Windows'], ['paint', 'Paint']].map(([m, l]) => h('button', { class: E.mode === m ? 'on' : '', onclick: () => setMode(m) }, l))));
-    const row = (...kids) => { const r = h('div', { class: 'lm-row' }, ...kids); tray.append(r); return r; }, btn = (l, fn, off, on) => h('button', { class: 'btn small' + (on ? ' primary' : ''), onclick: fn, disabled: off || null }, l);
-    if (E.mode === 'add') {
-      const size = d => { E.scale = SIZES[clamp(SIZES.indexOf(E.scale) + d, 0, SIZES.length - 1)]; aim(); renderChrome(); redraw(); };
-      row(btn('Turn', () => { E.rot = (E.rot + 1) % 4; aim(); redraw(); }, !E.mod), btn('Smaller', () => size(-1), E.scale === SIZES[0]), h('span', { class: 'small', style: 'flex:none;font-weight:700' }, '×' + E.scale), btn('Bigger', () => size(1), E.scale === SIZES[SIZES.length - 1]), btn('Place', placeModule, !E.ghost, !!E.ghost));
-      const cats = ['Recent', ...new Set(MODS.map(m => m.g))];
-      if (E.cat === 'Recent' && !recent().length) E.cat = V.G.cell.some(c => c >= 0) ? 'Corridors' : 'Whole ships';
-      const search = h('input', { type: 'search', placeholder: 'Search', value: E.q, autocomplete: 'off' });
-      row(search, ...cats.map(c => h('button', { class: 'chip' + (E.cat === c && !E.q ? ' on' : ''), onclick: () => { E.cat = c; E.q = ''; renderChrome(); } }, c)));
-      const mods = h('div', { class: 'lm-row' }); tray.append(mods);
-      const fill = () => {
-        mods.innerHTML = ''; const q = E.q.toLowerCase(), list = q ? MODS.filter(m => (m.n + ' ' + m.g).toLowerCase().includes(q)) : E.cat === 'Recent' ? recent() : MODS.filter(m => m.g === E.cat);
-        for (const m of list) mods.append(h('button', { class: 'lm-mod' + (E.mod === m ? ' on' : ''), onpointerdown: ev => tileDrag(ev, m), onclick: () => { if (E.mod === m) { placeModule(); return; } E.mod = m; E.rot = 0; aim(); renderChrome(); redraw(); } }, modIcon(m), m.n));
-        if (!list.length) mods.append(h('span', { class: 'small muted' }, 'Nothing by that name'));
-      };
-      search.addEventListener('input', () => { E.q = search.value; fill(); }); fill();
-    } else if (E.mode === 'doors') row(btn('Redo all doors', () => { const D = editable(); D.doors = D.doors.filter(e => e.k === 'hatch' || e.k === 'bay'); autoDoors(D); pushUndo(); commitDeck(D); toast('Doors laid out again'); }), btn('Doors for rooms without one', fixDoors));
-    else if (E.mode === 'move') row(btn('Centre on the line', centreDeck));
-    else if (E.mode === 'windows') {
-      const setWin = w => { pushUndo(); deckOf().win = w; persist(); rebuild(false); };
-      row(btn('All round', () => { const G = V.G, set = {}; for (const [k] of outerEdges(G)) set[k] = 1; setWin({ none: true, set }); }), btn('None', () => setWin({ none: true, set: {} })), btn('Automatic', () => setWin(null)));
-    } else if (E.mode === 'paint') {
-      row(...[['fill', 'Fill in'], ['fillc', 'Fill corridor'], ['room', 'Room'], ['corr', 'Corridor'], ['erase', 'Erase']].map(([b2, l]) => btn(l, () => { E.brush = b2; renderChrome(); }, false, E.brush === b2)));
-      row(...Object.keys(RT).map(t => h('button', { class: 'chip' + (E.type === t && (E.brush === 'room' || E.brush === 'fill') ? ' on' : ''), onclick: () => { E.type = t; if (E.brush !== 'fill') E.brush = 'room'; renderChrome(); } }, RT[t][3] + ' ' + RT[t][0])));
-    }
-    [...tray.querySelectorAll('.lm-row')].forEach((r, i) => { r.scrollLeft = keep[i] || 0; });
-  }
   // every stretch of wall between floor and open space, as [key, x, y] at its middle
   function outerEdges(G) {
     const { W, H, cell } = G, out = [], at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]);
@@ -9109,24 +9745,32 @@ const LocalMaps = (() => {
     for (const k of q.keys) { w.set[k] = q.val; if (V.edit.mirror) { const [v, x, y] = k.split(':').map(Number), f = flipEdge({ v, x, y }); w.set[v + ':' + f.x + ':' + y] = q.val; } }
     persist(); rebuild(false);
   }
-  function trayShown(on) { V.el.querySelector('.lm-tray').style.visibility = on ? '' : 'hidden'; }
-  // while a module is being dragged: it sits above the finger so it can be seen, and the plan scrolls at the edges
+  // while a module is being dragged: it sits above the finger so it can be seen, the plan scrolls at the edges, and the dock takes it back
   function dragAim(x, y, type) {
-    const w = V.cv.clientWidth, hh = V.cv.clientHeight, e = 36;
-    if (x < e) V.ox += 7; else if (x > w - e) V.ox -= 7; if (y < e) V.oy += 7; else if (y > hh - e - 70) V.oy -= 7;
+    const w = V.cv.clientWidth, top = dockTop(), e = 34; let moved = false;
+    if (x < e) { V.ox += 7; moved = true; } else if (x > w - e) { V.ox -= 7; moved = true; }
+    if (y < e + 50) { V.oy += 7; moved = true; } else if (y > top - e && y <= top) { V.oy -= 7; moved = true; }
+    V.el.classList.toggle('over-cancel', y > top);
     const [wx, wy] = toWorld(x, y - (type === 'mouse' ? 0 : 70)); aim(wx, wy);
+    if (moved) redraw(true); else redrawOv();
   }
   function tileDrag(e0, m) {
-    const sy = e0.clientY, E = V.edit; let on = false;
+    const sx = e0.clientX, sy = e0.clientY, E = V.edit, wide = !!(window.matchMedia && matchMedia('(min-width: 900px), (orientation: landscape) and (min-width: 640px)').matches); let on = false;
     const pos = ev => { const r = V.cv.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
     const move = ev => {
-      if (!on && sy - ev.clientY > 12) { on = true; E.mod = m; E.rot = 0; V.placing = true; trayShown(false); }
-      if (on) { const [x, y] = pos(ev); dragAim(x, y, ev.pointerType); redraw(true); }
+      if (!V || V.edit !== E) return;
+      if (!on) {
+        const dx = ev.clientX - sx, dy = ev.clientY - sy, go = ev.pointerType === 'mouse' ? Math.hypot(dx, dy) > 8 : wide ? Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) : -dy > 12 && -dy > Math.abs(dx);
+        if (!go) return;
+        on = true; E.mod = m; E.rot = 0; V.placing = true; setDragging(true);
+      }
+      const [x, y] = pos(ev); dragAim(x, y, ev.pointerType);
     };
     const up = ev => {
       removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
-      if (!on) return; V.placing = false; trayShown(true); const [, y] = pos(ev);
-      if (ev.type === 'pointerup' && y < V.cv.clientHeight - 80) placeModule(); else { E.ghost = null; renderChrome(); redraw(); }
+      if (!on || !V) return;
+      E.noClick = performance.now() + 350; V.placing = false; const over = V.el.classList.contains('over-cancel'); setDragging(false);
+      if (ev.type === 'pointerup' && !over) placeModule(); else { E.mod = null; E.ghost = null; renderChrome(); redrawOv(); }
     };
     addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   }
@@ -9163,7 +9807,7 @@ const LocalMaps = (() => {
     const put = set => { let id = 0; if (!corr) { types.push(E.type); id = types.length - 1; } for (const i of set) cell[i] = id; };
     const A = flood(i0), m0 = y * W + 2 * cx - x, B = E.mirror && !A.has(m0) && gap(m0) ? flood(m0) : null;
     put(A); if (B) put(B);
-    autoDoors(D); pushUndo(); commitDeck(D);
+    autoDoors(D); pushUndo(); commitDeck(D); flash([...A, ...(B || [])].map(i => [i % W, (i / W) | 0]));
   }
   function fixDoors() { const D = editable(); autoDoors(D); pushUndo(); commitDeck(D); }
   /* ---------- checks: what the whole ship has, and what looks wrong ---------- */
@@ -9192,14 +9836,13 @@ const LocalMaps = (() => {
     if (s.decks.length > 1 && !cnt.lift) warn.push({ t: 'Several decks but no lift' });
     return { warn, cnt, bunks, floor };
   }
-  function checkSheet() {
-    const R = shipChecks(); let sh;
-    sh = openSheet({ title: 'Ship check', body: h('div', null,
-      h('div', { class: 'kv' }, ['Decks', V.s.decks.length, 'Floor', `${fmtInt(R.floor * CELL * CELL)} m²`, 'Rooms', Object.values(R.cnt).reduce((a, b) => a + b, 0), 'Beds and pods', R.bunks].flatMap((v, i) => [h('span', { class: i % 2 ? 'v' : 'k' }, String(v))])),
-      h('div', { class: 'grp-title' }, R.warn.length ? 'To look at' : 'All good'),
-      R.warn.length ? R.warn.map(w => h('div', { class: 'list-row' }, h('div', { class: 'main' }, h('div', { class: 'title' }, w.t)), w.fix ? h('button', { class: 'btn small', onclick: () => { sh.close(); w.fix[1](); } }, w.fix[0]) : null)) : h('div', { class: 'small muted' }, 'Every room has a door and the ship has what it needs.')) });
+  function startBuild() {
+    V.mode = null; V.edit = newEdit('add'); const E = V.edit, has = V.G.cell.some(c => c >= 0);
+    if (!has) { E.cat = 'Whole ships'; E.mod = MODS[0]; }
+    renderChrome();
+    const T = fitTarget(), A = clearArea(); V.kMin = T.k * 0.6; E.target = [((A.l + A.r) / 2 - T.ox) / T.k, ((A.t + A.b) / 2 - T.oy) / T.k];
+    aim(); renderChrome(); glide(T);
   }
-  function startBuild() { V.mode = null; V.edit = newEdit('add'); if (!V.G.cell.some(c => c >= 0)) { V.edit.cat = 'Whole ships'; V.edit.mod = MODS[0]; } fit(); V.snap = null; aim(); renderChrome(); redraw(); }
   // the module's squares, turned: [x, y, part, type], starting at 0, 0
   function modCells(m, rot, f = 1) {
     let c = m.cells ? m.cells.map(q => q.slice()) : []; const taken = new Set();
@@ -9252,28 +9895,11 @@ const LocalMaps = (() => {
   function aim(tx, ty) {
     const E = V.edit; if (!E || E.tool !== 'build') return;
     if (tx != null) E.target = [tx, ty];
-    if (!E.target) E.target = toWorld(V.cv.clientWidth / 2, (V.cv.clientHeight - TRAY) / 2);
+    if (!E.target) { const A = clearArea(); E.target = toWorld((A.l + A.r) / 2, (A.t + A.b) / 2); }
     E.ghost = E.mod && E.mode !== 'paint' ? findSnap(E.mod, E.rot, E.target[0], E.target[1]) : null;
   }
-  function ghostOverlay(g) {
-    const E = V.edit, gh = E.ghost;
-    if (E.mirror) { const ax = (V.G.Hh.cx + 0.5) * V.k + V.ox; g.save(); g.setLineDash([8, 6]); g.strokeStyle = 'rgba(255,190,70,.9)'; g.lineWidth = 2; g.beginPath(); g.moveTo(ax, 0); g.lineTo(ax, V.cv.clientHeight); g.stroke(); g.restore(); }
-    if (E.mode === 'windows') {
-      const q = V.winDrag;
-      for (const [k, x, y] of outerEdges(V.G)) { const [sx, sy] = toScreen(x, y), hit = q && q.keys.has(k); g.beginPath(); g.arc(sx, sy, hit ? 6 : 3, 0, TAU); g.fillStyle = hit ? (q.val ? 'rgba(110,235,150,.95)' : 'rgba(255,90,80,.95)') : 'rgba(255,255,255,.55)'; g.fill(); }
-    }
-    if (E.mode === 'doors') {
-      for (const e of V.G.doors) { const [x, y] = toScreen(e.v ? e.x : e.x + 0.5, e.v ? e.y + 0.5 : e.y); g.beginPath(); g.arc(x, y, 8, 0, TAU); g.fillStyle = V.doorDrag && V.doorDrag.e.x === e.x && V.doorDrag.e.y === e.y && V.doorDrag.e.v === e.v ? 'rgba(255,190,70,.9)' : 'rgba(110,200,255,.7)'; g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke(); }
-      const to = V.doorDrag && V.doorDrag.to; if (to) { const [x, y] = toScreen(to.v ? to.x : to.x + 0.5, to.v ? to.y + 0.5 : to.y); g.beginPath(); g.arc(x, y, 11, 0, TAU); g.fillStyle = 'rgba(110,235,150,.9)'; g.fill(); g.stroke(); }
-    }
-    if (!gh) return;
-    const cellAt = (x, y, t) => { const [sx, sy] = toScreen(x, y); g.fillStyle = t === 'corr' ? 'rgba(110,200,255,.55)' : 'rgba(110,235,150,.5)'; g.fillRect(sx, sy, V.k, V.k); g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1; g.strokeRect(sx + 0.5, sy + 0.5, V.k - 1, V.k - 1); };
-    for (const [x, y, , t] of gh.c) cellAt(gh.x + x, gh.y + y, t);
-    if (E.mirror) { const mc = mirrorOf(gh); if (mc) for (const [x, y, , t] of mc) cellAt(x, y, t); }
-    const [lx, ly] = toScreen(gh.x + Math.max(...gh.c.map(q => q[0])) / 2 + 0.5, gh.y + Math.max(...gh.c.map(q => q[1])) / 2 + 0.5); label(g, E.mod.n, lx, ly, 13, { weight: 750, color: '#fff', halo: 'rgba(0,0,0,.8)' });
-  }
   // doors for any room without one: onto a corridor if it can, else into a neighbour; airlocks and hangars also open to space
-  function autoDoors(D) {
+  function autoDoors(D, mirror = !!(V && V.edit && V.edit.mirror)) {
     const { W, H } = D.Hh, { cell, doors } = D, has = new Set(), corr = {}, room = {}, out = {}, push = (o, id, e) => (o[id] || (o[id] = [])).push(e);
     for (const e of doors) { const a = e.v ? cell[e.y * W + e.x - 1] : cell[(e.y - 1) * W + e.x], b = cell[e.y * W + e.x]; if (a >= 0 && b >= 0 && a !== b) { has.add(a); has.add(b); } else if (a !== b) { has.add('o' + Math.max(a, b)); } }
     for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
@@ -9286,30 +9912,37 @@ const LocalMaps = (() => {
       const t = D.typeOf(+id), e = mid(corr[id] || room[id]); has.add(+id);
       if (!corr[id]) { const a = e.v ? cell[e.y * W + e.x - 1] : cell[(e.y - 1) * W + e.x], b = cell[e.y * W + e.x]; has.add(a); has.add(b); }
       doors.push({ ...e, k: HEAVY.has(t) ? 'heavy' : 'door' });
-      if (V.edit && V.edit.mirror) { const f = flipEdge(e), a = f.v ? cell[f.y * W + f.x - 1] : cell[(f.y - 1) * W + f.x], b = cell[f.y * W + f.x]; if (a !== b && a >= 0 && b >= 0 && !(has.has(a) && has.has(b)) && !doors.some(q => q.x === f.x && q.y === f.y && q.v === f.v)) { doors.push({ ...f, k: HEAVY.has(t) ? 'heavy' : 'door' }); has.add(a); has.add(b); } }
+      if (mirror) { const f = flipEdge(e), a = f.v ? cell[f.y * W + f.x - 1] : cell[(f.y - 1) * W + f.x], b = cell[f.y * W + f.x]; if (a !== b && a >= 0 && b >= 0 && !(has.has(a) && has.has(b)) && !doors.some(q => q.x === f.x && q.y === f.y && q.v === f.v)) { doors.push({ ...f, k: HEAVY.has(t) ? 'heavy' : 'door' }); has.add(a); has.add(b); } }
     }
     for (const id of Object.keys(out)) {
       const t = D.typeOf(+id); if ((t !== 'airlock' && t !== 'hangar') || has.has('o' + id)) continue;
       const es = out[id].filter(e => e.v); if (!es.length) continue;
       if (t === 'airlock') {
         const e = mid(es); doors.push({ ...e, k: 'hatch' });
-        if (V.edit && V.edit.mirror) { const f = flipEdge(e), a = cell[f.y * W + f.x - 1], b = cell[f.y * W + f.x]; if ((a < 0) !== (b < 0)) { doors.push({ ...f, k: 'hatch' }); has.add('o' + Math.max(a, b)); } }
+        if (mirror) { const f = flipEdge(e), a = cell[f.y * W + f.x - 1], b = cell[f.y * W + f.x]; if ((a < 0) !== (b < 0)) { doors.push({ ...f, k: 'hatch' }); has.add('o' + Math.max(a, b)); } }
       }
       else { const col = es.filter(e => e.x === es[0].x), a = Math.max(0, (col.length >> 1) - 1); for (const e of col.slice(a, a + 3)) doors.push({ ...e, k: 'bay' }); }
     }
   }
   function placeModule() {
-    const E = V.edit, gh = E && E.ghost; if (!gh) { if (E && E.carry) { undoEdit(); toast('No room there, so it went back'); } else if (E && E.mod) toast('No room for that here'); return; }
-    const D = editable(), { W } = D.Hh, mc = symOn() ? mirrorOf(gh) : null, keep = E.mod.keep, twin = E.mod.twin;
-    const put = (list, keep) => { const ids = {}; for (const [x, y, i, t] of list) { if (t === 'corr') ids[i] = 0; else if (ids[i] == null && keep) ids[i] = keep; else if (ids[i] == null) { D.types.push(t); ids[i] = D.types.length - 1; } D.cell[y * W + x] = ids[i]; } };
-    put(gh.c.map(([x, y, i, t]) => [gh.x + x, gh.y + y, i, t]), keep); if (mc) put(mc, twin);
+    const E = V.edit, gh = E && E.ghost;
+    if (!gh) { if (E && E.carry) { undoEdit(); E.redo.pop(); toast('No room there, so it went back'); } else if (E && E.mod) toast('No room for that here'); return; }
+    const D = editable(), { W } = D.Hh, mod = E.mod, mc = symOn() ? mirrorOf(gh) : null, keep = mod.keep, twin = mod.twin;
+    const put = (list, keepId) => { const ids = {}; for (const [x, y, i, t] of list) { if (t === 'corr') ids[i] = 0; else if (ids[i] == null && keepId) ids[i] = keepId; else if (ids[i] == null) { D.types.push(t); ids[i] = D.types.length - 1; } D.cell[y * W + x] = ids[i]; } return ids; };
+    const placed = gh.c.map(([x, y, i, t]) => [gh.x + x, gh.y + y, i, t]), ids = put(placed, keep); if (mc) put(mc, twin);
     autoDoors(D); if (E.carry) E.carry = false; else pushUndo();
-    if (!E.mod.cells) { S.ui.shipRecent = [E.mod.n, ...(S.ui.shipRecent || []).filter(n => n !== E.mod.n)].slice(0, 12); }
+    if (!mod.cells) S.ui.shipRecent = [mod.n, ...(S.ui.shipRecent || []).filter(n => n !== mod.n)].slice(0, 12);
     const bw = Math.max(...gh.c.map(q => q[0])), bh = Math.max(...gh.c.map(q => q[1]));
-    E.target = [gh.x + bw / 2 + 0.5, gh.y + bh / 2 + 0.5]; if (E.mod.g === 'Whole ships' || E.mod.cells) E.mod = null;
+    E.target = [gh.x + bw / 2 + 0.5, gh.y + bh / 2 + 0.5];
+    if (mod.g === 'Whole ships') { E.mod = null; E.cat = 'Living'; }
+    if (mod.cells) { E.mod = null; E.sel = { id: ids[placed[0][2]], x: placed[0][0], y: placed[0][1] }; if (E.back) { E.mode = E.back; E.back = null; } }
     commitDeck(D);
-    const [a, b] = toScreen(gh.x, gh.y), [c, d] = toScreen(gh.x + bw + 1, gh.y + bh + 1);
-    if (a < 10 || b < 10 || c > V.cv.clientWidth - 10 || d > V.cv.clientHeight - TRAY) { fit(); V.snap = null; aim(); redraw(); }
+    flash(placed.map(q => [q[0], q[1]])); if (mc) flash(mc.map(q => [q[0], q[1]]));
+    // zoomed in by hand, the view pans just enough to keep it in sight (otherwise the camera is already following)
+    if (!V.atFit) {
+      const A = clearArea(), [a, b] = toScreen(gh.x, gh.y), [c, d] = toScreen(gh.x + bw + 1, gh.y + bh + 1);
+      if (a < A.l || b < A.t || c > A.r || d > A.b) glide({ k: V.k, ox: V.ox + (a < A.l ? A.l - a + 12 : c > A.r ? A.r - c - 12 : 0), oy: V.oy + (b < A.t ? A.t - b + 12 : d > A.b ? A.b - d - 12 : 0) });
+    }
   }
   // a corridor's straight piece between its junctions
   function corridorPiece(cell, W, i0) {
@@ -9345,7 +9978,7 @@ const LocalMaps = (() => {
   function pickUp(x, y) {
     const L = liftable(x, y), E = V.edit; if (!L) return false;
     const D = editable(), T = E.mirror ? twinOf(L) : null; for (const i of L.idx) D.cell[i] = -1; if (T) for (const i of T.idx) D.cell[i] = -1;
-    pushUndo(); E.carry = true; E.mod = { n: L.n, cells: L.cells, keep: L.id > 0 ? L.id : 0, twin: T ? T.id || 1 : 0 }; if (T && !T.id) E.mod.twin = true; E.rot = 0; commitDeck(D);
+    pushUndo(); E.sel = null; E.carry = true; E.mod = { n: L.n, cells: L.cells, keep: L.id > 0 ? L.id : 0, twin: T ? T.id || 1 : 0 }; if (T && !T.id) E.mod.twin = true; E.rot = 0; commitDeck(D);
     return true;
   }
   // one row or column on or off a room; x-changes happen on the mirrored side of its twin
@@ -9375,17 +10008,6 @@ const LocalMaps = (() => {
     if (!ok) { toast(grow ? 'Something is in the way' : 'It can’t get any smaller'); return false; }
     autoDoors(D); pushUndo(); commitDeck(D); return true;
   }
-  function moduleSheet(x, y) {
-    const L = liftable(x, y), E = V.edit; if (!L) return; let sh;
-    const act = (l, fn, cls) => h('button', { class: 'btn block' + (cls ? ' ' + cls : ''), style: 'margin:5px 0', onclick: () => { sh.close(); fn(); } }, l);
-    const again = rot => { pickUp(x, y); E.rot = rot; E.target = [x, y]; aim(); renderChrome(); redraw(); };
-    sh = openSheet({ title: L.n, body: h('div', null,
-      L.id > 0 ? h('div', { class: 'row wrap', style: 'gap:6px;margin-bottom:6px' }, [['Wider', 'x', 1], ['Narrower', 'x', 0], ['Longer', 'y', 1], ['Shorter', 'y', 0]].map(([l, ax, g]) => h('button', { class: 'btn small', onclick: () => { const c = liftable(x, y); if (c) resizeRoom(c, ax, !!g); } }, l))) : null,
-      act('Turn it', () => { again(1); if (E.ghost) placeModule(); }),
-      act('Copy it', () => { E.mode = 'add'; E.mod = { n: L.n, cells: L.cells }; E.rot = 0; E.target = [x + 2, y]; aim(); renderChrome(); redraw(); }),
-      L.id > 0 ? act('Name, kind, windows and notes', () => shipRoomSheet(L.id)) : null,
-      act('Remove', () => removeAt(x + 0.5, y + 0.5), 'danger')) });
-  }
   // the wall nearest a point, within reach
   function wallEdge(wx, wy, reach = 0.8, keep) {
     const { W, H, cell } = V.G, at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]), cx = Math.floor(wx), cy = Math.floor(wy); let best = null, bd = reach;
@@ -9402,17 +10024,8 @@ const LocalMaps = (() => {
     if (D.doors.some(q => q.x === to.x && q.y === to.y && q.v === to.v)) { toast('There is already a door there'); return; }
     D.doors[i] = { x: to.x, y: to.y, v: to.v, k: (to.a < 0 || to.b < 0) ? 'hatch' : e.k === 'hatch' || e.k === 'bay' ? doorKind(D, to.a, to.b) : e.k };
     if (V.edit.mirror) { const f0 = flipEdge(e), j = D.doors.findIndex(q => q.x === f0.x && q.y === f0.y && q.v === f0.v), f1 = flipEdge(to); if (j >= 0 && j !== i && !D.doors.some(q => q.x === f1.x && q.y === f1.y && q.v === f1.v)) D.doors[j] = { ...D.doors[j], x: f1.x, y: f1.y, v: f1.v, k: D.doors[i].k }; }
-    pushUndo(); commitDeck(D);
+    V.edit.selDoor = { x: to.x, y: to.y, v: to.v }; pushUndo(); commitDeck(D);
   }
-  function doorSheet(e) {
-    let sh; const space = (e.k === 'hatch' || e.k === 'bay');
-    const set = fn => { const D = editable(), i = D.doors.findIndex(q => q.x === e.x && q.y === e.y && q.v === e.v); if (i < 0) return; const f = V.edit.mirror ? flipEdge(e) : null, j = f ? D.doors.findIndex(q => q.x === f.x && q.y === f.y && q.v === f.v) : -1; if (j >= 0 && j !== i) { fn(D, Math.max(i, j)); fn(D, Math.min(i, j)); } else fn(D, i); pushUndo(); commitDeck(D); sh.close(); };
-    sh = openSheet({ title: 'Door', body: h('div', null,
-      space ? null : field('Kind', seg([['door', 'Normal'], ['heavy', 'Heavy'], ['lock', 'Locked']], e.k, v => set((D, i) => { D.doors[i].k = v; }))),
-      h('div', { class: 'small muted', style: 'margin:6px 0' }, 'Drag a door along the walls to move it.'),
-      h('button', { class: 'btn block danger', onclick: () => set((D, i) => D.doors.splice(i, 1)) }, 'Remove door')) });
-  }
-
   /* ---------- painting a deck ---------- */
   function strokeTo(x, y) {
     const st = V.stroke, Hh = shipHull(V.s), [wx, wy] = toWorld(x, y), cx = Math.floor(wx), cy = Math.floor(wy);
@@ -9464,19 +10077,19 @@ const LocalMaps = (() => {
       for (const i of st.cells.keys()) { const x = i % W, y = (i / W) | 0; if (cell[i - 1] === 0) es.push({ x, y, v: 1 }); if (cell[i + 1] === 0) es.push({ x: x + 1, y, v: 1 }); if (cell[i - W] === 0) es.push({ x, y, v: 0 }); if (cell[i + W] === 0) es.push({ x, y: y + 1, v: 0 }); }
       if (es.length) { es.sort((a, b) => a.v - b.v || a.x - b.x || a.y - b.y); D.doors.push({ ...es[(es.length - 1) >> 1], k: HEAVY.has(st.type) ? 'heavy' : 'door' }); }
     }
-    pushUndo(); commitDeck(D);
+    pushUndo(); commitDeck(D); flash([...st.cells.values()], st.t === 'erase' ? '255,106,95' : st.t === 'corr' ? '92,207,230' : '110,235,170');
   }
   function addDoor(wx, wy) {
     const w = wallEdge(wx, wy); if (!w) { toast('Tap on or near a wall'); return; }
     const D = editable(); if (D.doors.some(q => q.x === w.x && q.y === w.y && q.v === w.v)) return;
-    D.doors.push({ x: w.x, y: w.y, v: w.v, k: doorKind(D, w.a, w.b) });
+    D.doors.push({ x: w.x, y: w.y, v: w.v, k: doorKind(D, w.a, w.b) }); V.edit.selDoor = { x: w.x, y: w.y, v: w.v };
     if (V.edit.mirror) { const f = flipEdge(w), { W } = D.Hh, a = f.v ? D.cell[f.y * W + f.x - 1] : D.cell[(f.y - 1) * W + f.x], b = D.cell[f.y * W + f.x]; if (a !== b && !D.doors.some(q => q.x === f.x && q.y === f.y && q.v === f.v)) D.doors.push({ x: f.x, y: f.y, v: f.v, k: doorKind(D, a, b) }); }
     pushUndo(); commitDeck(D);
   }
 
   /* ---------- gestures: drag to pan, pinch or wheel to zoom, tap for details, drag a pin to move it ---------- */
   function hitPin(x, y) { let best = null, bd = 22; for (const q of pinsOf()) { const [sx, sy] = toScreen(q.x, q.y), d = Math.hypot(sx - x, sy - y); if (d < bd) { bd = d; best = q; } } return best; }
-  function zoomAt(x, y, f, fast = true) { const nk = clamp(V.k * f, V.kMin || 0.02, V.G.kind === 'city' ? 40 : V.G.kind === 'ship' ? 240 : 120); f = nk / V.k; V.ox = x - (x - V.ox) * f; V.oy = y - (y - V.oy) * f; V.k = nk; redraw(fast); }
+  function zoomAt(x, y, f, fast = true) { V.atFit = false; const nk = clamp(V.k * f, V.kMin || 0.02, V.G.kind === 'city' ? 40 : V.G.kind === 'ship' ? 240 : 120); f = nk / V.k; V.ox = x - (x - V.ox) * f; V.oy = y - (y - V.oy) * f; V.k = nk; redraw(fast); }
   function wire(cv) {
     const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
     cv.addEventListener('contextmenu', e => { if (V && V.edit) e.preventDefault(); });
@@ -9484,41 +10097,54 @@ const LocalMaps = (() => {
       try { cv.setPointerCapture(e.pointerId); } catch (_) {}
       const [x, y] = pos(e); V.ptrs.set(e.pointerId, [x, y]);
       if (V.ptrs.size === 1) {
-        if (V.edit && V.edit.mode === 'paint' && !V.edit.brush.startsWith('fill') && !e.button) { V.drag = null; V.stroke = { cells: new Map(), last: null, first: null, t: V.edit.brush, type: V.edit.type }; strokeTo(x, y); redraw(true); return; }
-        if (V.edit && V.edit.mode === 'doors' && !e.button) { const dr = doorAt(x, y); if (dr) { V.drag = null; V.doorDrag = { e: dr, x0: x, y0: y, moved: false, to: null }; redraw(true); return; } }
-        if (V.edit && V.edit.mode === 'move' && !e.button) { const [wx, wy] = toWorld(x, y), cx = Math.floor(wx), cy = Math.floor(wy), G = V.G; if (cx >= 0 && cy >= 0 && cx < G.W && cy < G.H && G.cell[cy * G.W + cx] >= 0) { V.drag = null; V.pick = { x0: x, y0: y, cx, cy }; return; } }
-        if (V.edit && V.edit.mode === 'windows' && !e.button) { V.drag = null; V.winDrag = { keys: new Set(), val: null }; winTo(x, y); redraw(true); return; }
-        if (V.edit && V.edit.tool === 'build' && V.edit.mod && !e.button) { V.drag = null; V.placing = true; V.placeStart = [x, y]; V.placeMoved = false; const [wx, wy] = toWorld(x, y); aim(wx, wy); redraw(true); return; }
-        const pin = V.edit ? null : hitPin(x, y); V.drag = { x0: x, y0: y, lx: x, ly: y, moved: false, pin, t0: performance.now() };
-      } else { V.placing = false; trayShown(true); V.winDrag = null; V.pick = null; V.doorDrag = null; if (V.stroke) { V.stroke = null; redraw(true); } V.drag = null; const [a, b] = [...V.ptrs.values()]; V.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; }
+        stopGlide();
+        const E = V.edit;
+        if (E && !e.button) {
+          if (E.mode === 'paint' && !E.brush.startsWith('fill')) { V.drag = null; V.stroke = { cells: new Map(), last: null, first: null, t: E.brush, type: E.type }; strokeTo(x, y); redrawOv(); return; }
+          if (E.mode === 'doors') { const dr = doorAt(x, y); if (dr) { V.drag = null; V.doorDrag = { e: dr, x0: x, y0: y, moved: false, to: null }; redrawOv(); return; } }
+          if (E.mode === 'move' && !E.mod) {
+            const hd = handleAt(x, y); if (hd) { V.drag = null; V.sizing = { ...hd, n: 0, D: null, add: [], del: [] }; return; }
+            const [wx, wy] = toWorld(x, y), cx = Math.floor(wx), cy = Math.floor(wy), G = V.G;
+            if (cx >= 0 && cy >= 0 && cx < G.W && cy < G.H && G.cell[cy * G.W + cx] >= 0) { V.drag = null; V.pick = { x0: x, y0: y, cx, cy }; return; }
+          }
+          if (E.mode === 'windows') { V.drag = null; V.winDrag = { keys: new Set(), val: null }; winTo(x, y); redrawOv(); return; }
+          if (E.mod) { V.drag = null; V.placing = true; V.placeStart = [x, y]; V.placeMoved = false; const [wx, wy] = toWorld(x, y); aim(wx, wy); redrawOv(); return; }
+        }
+        const pin = E ? null : hitPin(x, y); V.drag = { x0: x, y0: y, lx: x, ly: y, moved: false, pin, t0: performance.now() };
+      } else { V.placing = false; setDragging(false); V.winDrag = null; V.pick = null; V.doorDrag = null; V.sizing = null; if (V.stroke) { V.stroke = null; redrawOv(); } V.drag = null; const [a, b] = [...V.ptrs.values()]; V.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; }
     });
     cv.addEventListener('pointermove', e => {
-      if (!V || !V.ptrs.has(e.pointerId)) return;
-      const [x, y] = pos(e); V.ptrs.set(e.pointerId, [x, y]);
+      if (!V) return;
+      const [x, y] = pos(e);
+      if (!V.ptrs.has(e.pointerId)) { if (V.edit && !V.ptrs.size && e.pointerType === 'mouse') hoverAt(x, y); return; }
+      V.ptrs.set(e.pointerId, [x, y]);
       if (V.pinch && V.ptrs.size >= 2) {
         const [a, b] = [...V.ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         V.ox += mx - V.pinch.mx; V.oy += my - V.pinch.my; zoomAt(mx, my, d / V.pinch.d); V.pinch = { d, mx, my }; return;
       }
-      if (V.pick) { if (Math.hypot(x - V.pick.x0, y - V.pick.y0) > 8) { const q = V.pick; V.pick = null; if (pickUp(q.cx, q.cy)) { V.placing = true; V.placeMoved = true; trayShown(false); } } return; }
-      if (V.doorDrag) { const q = V.doorDrag; if (Math.hypot(x - q.x0, y - q.y0) > 8) q.moved = true; if (q.moved) { const [wx, wy] = toWorld(x, y); q.to = wallEdge(wx, wy, 1.5); } redraw(true); return; }
-      if (V.winDrag) { winTo(x, y); redraw(true); return; }
-      if (V.placing) { if (!V.placeMoved && V.placeStart && Math.hypot(x - V.placeStart[0], y - V.placeStart[1]) < 8) return; V.placeMoved = true; trayShown(false); dragAim(x, y, e.pointerType); redraw(true); return; }
-      if (V.stroke) { strokeTo(x, y); redraw(true); return; }
+      if (V.sizing) { sizeTo(V.sizing, x, y); redrawOv(); return; }
+      if (V.pick) { if (Math.hypot(x - V.pick.x0, y - V.pick.y0) > 8) { const q = V.pick; V.pick = null; if (pickUp(q.cx, q.cy)) { V.placing = true; V.placeMoved = true; setDragging(true); dragAim(x, y, e.pointerType); } } return; }
+      if (V.doorDrag) { const q = V.doorDrag; if (Math.hypot(x - q.x0, y - q.y0) > 8) q.moved = true; if (q.moved) { const [wx, wy] = toWorld(x, y); q.to = wallEdge(wx, wy, 1.5); } redrawOv(); return; }
+      if (V.winDrag) { winTo(x, y); redrawOv(); return; }
+      if (V.placing) { if (!V.placeMoved && V.placeStart && Math.hypot(x - V.placeStart[0], y - V.placeStart[1]) < 8) return; V.placeMoved = true; setDragging(true); dragAim(x, y, e.pointerType); return; }
+      if (V.stroke) { strokeTo(x, y); redrawOv(); return; }
       const D = V.drag; if (!D) return;
       if (!D.moved && Math.hypot(x - D.x0, y - D.y0) > 6) D.moved = true;
       if (!D.moved) return;
       if (D.pin) { const [wx, wy] = toWorld(x, y); if (V.kind === 'city') { D.pin.ref.mx = +wx.toFixed(1); D.pin.ref.my = +wy.toFixed(1); } else { D.pin.ref.x = +wx.toFixed(2); D.pin.ref.y = +wy.toFixed(2); } }
-      else { V.ox += x - D.lx; V.oy += y - D.ly; }
+      else { V.ox += x - D.lx; V.oy += y - D.ly; V.atFit = false; }
       D.lx = x; D.ly = y; redraw(true);
     });
     const end = e => {
       if (!V || !V.ptrs.has(e.pointerId)) return;
       V.ptrs.delete(e.pointerId);
       if (V.ptrs.size < 2) V.pinch = null;
+      if (!V.ptrs.size && !V.placing && V.edit && V.edit.carry && !V.pinch) { placeModule(); return; }   // two fingers interrupted a move: put it down where it is
+      if (V.sizing) { const q = V.sizing; V.sizing = null; if (e.type !== 'pointercancel') commitSizing(q); else redrawOv(); return; }
       if (V.winDrag) { const q = V.winDrag; V.winDrag = null; if (e.type === 'pointercancel') redraw(); else { commitWindows(q); redraw(); } return; }
-      if (V.pick) { const q = V.pick; V.pick = null; if (e.type !== 'pointercancel') moduleSheet(q.cx, q.cy); return; }
-      if (V.doorDrag) { const q = V.doorDrag; V.doorDrag = null; if (e.type === 'pointercancel') { redraw(); return; } if (q.moved && q.to) moveDoor(q.e, q.to); else if (!q.moved) doorSheet(q.e); else redraw(); return; }
-      if (V.placing) { V.placing = false; trayShown(true); if (e.type !== 'pointercancel' && !V.ptrs.size) placeModule(); else redraw(); return; }
+      if (V.pick) { const q = V.pick; V.pick = null; if (e.type !== 'pointercancel') { V.edit.sel = { id: V.G.cell[q.cy * V.G.W + q.cx], x: q.cx, y: q.cy }; renderPanel(); redrawOv(); } return; }
+      if (V.doorDrag) { const q = V.doorDrag; V.doorDrag = null; if (e.type === 'pointercancel') { redrawOv(); return; } if (q.moved && q.to) moveDoor(q.e, q.to); else { if (!q.moved) V.edit.selDoor = { x: q.e.x, y: q.e.y, v: q.e.v }; renderPanel(); redrawOv(); } return; }
+      if (V.placing) { V.placing = false; const over = V.el.classList.contains('over-cancel'); setDragging(false); if (e.type === 'pointercancel' || over) cancelPlace(); else placeModule(); return; }
       if (V.stroke) { const st = V.stroke; V.stroke = null; if (e.type !== 'pointercancel' && !V.ptrs.size) applyStroke(st); else redraw(); return; }
       const D = V.drag; V.drag = null;
       if (!D || e.type === 'pointercancel') { redraw(); return; }
@@ -9531,7 +10157,13 @@ const LocalMaps = (() => {
   }
   function onTap(x, y, pin) {
     const [wx, wy] = toWorld(x, y);
-    if (V.edit) { if (V.edit.mode === 'doors') addDoor(wx, wy); else if (V.edit.mode === 'paint') fillAt(wx, wy); return; }
+    if (V.edit) {
+      const E = V.edit;
+      if (E.mode === 'doors') { if (E.selDoor) { E.selDoor = null; renderPanel(); redrawOv(); } else addDoor(wx, wy); }
+      else if (E.mode === 'paint') fillAt(wx, wy);
+      else if (E.mode === 'move' && E.sel) { E.sel = null; renderPanel(); redrawOv(); }
+      return;
+    }
     if (V.mode && V.mode.t === 'put') { const q = V.mode.q; q.mx = +wx.toFixed(1); q.my = +wy.toFixed(1); persist(); setMode(null); redraw(); toast(`${q.name} is on the map`); return; }
     if (V.mode && V.mode.t === 'add') { setMode(null); pinSheet(null, wx, wy); return; }
     if (pin) { pinSheet(pin.ref); return; }
@@ -9544,15 +10176,15 @@ const LocalMaps = (() => {
 
   /* ---------- sheets: pins, districts, rooms, lists, options ---------- */
   function pinSheet(q, wx, wy) {
-    const city = V.kind === 'city', ship = V.kind === 'ship', isNew = !q, KINDS = city ? POIK() : MARKS;
+    const city = V.kind === 'city', ship = V.kind === 'ship', isNew = !q, KINDS = city ? POIK() : ship ? SMARKS : MARKS;
     const d = q ? { ...q } : city ? { id: uid(), name: '', kind: 'inn', note: '', mx: +wx.toFixed(1), my: +wy.toFixed(1) } : { id: uid(), kind: ship ? 'npc' : 'monster', label: '', note: '', x: +wx.toFixed(2), y: +wy.toFixed(2) };
     const name = h('input', { value: (city ? d.name : d.label) || '', placeholder: city ? 'e.g. The Rusty Anchor' : ship ? 'e.g. Chief engineer Okafor' : 'e.g. Goblin guards', autocomplete: 'off' });
-    const kind = h('select', null, Object.entries(KINDS).map(([k, v]) => h('option', { value: k }, v[0] + '  ' + v[1]))); kind.value = KINDS[d.kind] ? d.kind : Object.keys(KINDS)[0];
+    const kind = h('select', null, Object.entries(KINDS).map(([k, v]) => h('option', { value: k }, (v[0] ? v[0] + '  ' : '') + v[1]))); kind.value = KINDS[d.kind] ? d.kind : Object.keys(KINDS)[0];
     let noteV = d.note || '';
     const note = mdEditor(noteV, v => { noteV = v; }, { minHeight: '100px', placeholder: city ? 'Who runs it, prices, rumours… [[links]] work' : 'What is here, how it behaves, what it guards… {2d6} rolls work' });
     let sh;
     const list = city ? (V.p.poi = V.p.poi || []) : ship ? deckOf().marks : V.m.dun.levels[V.m.dun.cur].marks;
-    sh = openSheet({ title: isNew ? (city ? `Add to ${V.p.name}` : 'Mark the map') : (city ? d.name : d.label || KINDS[d.kind][1]), body: h('div', null, field('Name', name), field('Kind', kind), field('Notes', note)), foot: [
+    sh = openSheet({ title: isNew ? (city ? `Add to ${V.p.name}` : ship ? 'Mark the plan' : 'Mark the map') : (city ? d.name : d.label || KINDS[d.kind][1]), body: h('div', null, field('Name', name), field('Kind', kind), field('Notes', note)), foot: [
       !isNew ? h('button', { class: 'btn danger', onclick: () => {
         const u = undoable([ship ? 'codex' : 'world.places']); const i = list.indexOf(q);
         if (city) { delete q.mx; delete q.my; } else if (i >= 0) list.splice(i, 1);
@@ -9606,7 +10238,7 @@ const LocalMaps = (() => {
     const dk = deckOf(), o = V.G.rooms[id], cur = dk.rooms[id] || {};
     const name = h('input', { value: cur.name || '', placeholder: o.label, autocomplete: 'off' }), nowin = h('input', { type: 'checkbox', checked: !!cur.nowin });
     const groups = {}; for (const [t, v] of Object.entries(RT)) (groups[v[2]] || (groups[v[2]] = [])).push(t);
-    const type = h('select', null, Object.entries(groups).map(([gname, ts]) => h('optgroup', { label: gname }, ts.map(t => h('option', { value: t }, RT[t][3] + '  ' + RT[t][0]))))); type.value = o.type;
+    const type = h('select', null, Object.entries(groups).map(([gname, ts]) => h('optgroup', { label: gname }, ts.map(t => h('option', { value: t }, RT[t][0]))))); type.value = o.type;
     let noteV = cur.note || '';
     const note = mdEditor(noteV, v => { noteV = v; }, { minHeight: '130px', placeholder: 'Who works here, what is stored, what is wrong with it… {2d6} rolls and [[links]] work' });
     let sh;
@@ -9619,7 +10251,7 @@ const LocalMaps = (() => {
   }
   function listSheet() {
     let sh;
-    const go = (x, y, k) => { sh.close(); const w = V.cv.clientWidth, hh = V.cv.clientHeight; V.k = Math.max(V.k, k); V.ox = w / 2 - x * V.k; V.oy = hh / 2 - y * V.k; redraw(); };
+    const go = (x, y, k) => { sh.close(); const A = clearArea(); V.k = Math.max(V.k, k); V.ox = (A.l + A.r) / 2 - x * V.k; V.oy = (A.t + A.b) / 2 - y * V.k; redraw(); };
     let body;
     if (V.kind === 'city') {
       const pois = V.p.poi || [], on = pois.filter(q => q.mx != null), off = pois.filter(q => q.mx == null);
@@ -9633,10 +10265,10 @@ const LocalMaps = (() => {
         V.G.wards.map((w, i) => h('div', { class: 'list-row tap', onclick: () => go(w.c[0], w.c[1], 0.8) }, h('div', { class: 'main' }, h('div', { class: 'title' }, (V.m.city.names || {})[i] || w.name), (V.m.city.notes || {})[i] ? h('div', { class: 'sub' }, mdPlain(V.m.city.notes[i]).slice(0, 90)) : null), icon('chev', 16))));
     } else if (V.kind === 'ship') {
       const dk = deckOf(), rs = V.G.rooms.filter(o => o && o.type !== 'lift');
-      body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Tap a room on the plan to name it, change what it is or write notes.'),
-        rs.map(o => { const rm = dk.rooms[o.id] || {}; return h('div', { class: 'list-row tap', onclick: () => { go(o.c[0], o.c[1], 36); shipRoomSheet(o.id); } }, h('span', { class: 'poi-ic' }, RT[o.type][3]),
+      body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Tap a room to fly to it and write its notes.'),
+        rs.map(o => { const rm = dk.rooms[o.id] || {}; return h('div', { class: 'list-row tap', onclick: () => { go(o.c[0], o.c[1], 36); shipRoomSheet(o.id); } }, typeSwatch(o.type),
           h('div', { class: 'main' }, h('div', { class: 'title' }, rm.name || o.label), h('div', { class: 'sub' }, [rm.name ? RT[o.type][0] : null, rm.note ? mdPlain(rm.note).slice(0, 90) : null].filter(Boolean).join(' · ') || `${o.n * 4} m²`)), icon('chev', 16)); }),
-        (dk.marks || []).length ? [h('div', { class: 'grp-title' }, 'Marks'), dk.marks.map(q => h('div', { class: 'list-row tap', onclick: () => go(q.x, q.y, 36) }, h('span', { class: 'poi-ic' }, (MARKS[q.kind] || MARKS.note)[0]), h('div', { class: 'main' }, h('div', { class: 'title' }, q.label || (MARKS[q.kind] || MARKS.note)[1])), icon('chev', 16)))] : null);
+        (dk.marks || []).length ? [h('div', { class: 'grp-title' }, 'Marks'), dk.marks.map(q => { const M = SHIP_MARK[q.kind] || SHIP_MARK.note; return h('div', { class: 'list-row tap', onclick: () => go(q.x, q.y, 36) }, h('span', { class: 'poi-ic', style: `color:rgb(${M[2]})` }, hic(M[0], 22)), h('div', { class: 'main' }, h('div', { class: 'title' }, q.label || M[1]), h('div', { class: 'sub' }, M[1])), icon('chev', 16)); })] : null);
     } else {
       const L = V.m.dun.levels[V.m.dun.cur];
       body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Tap a room on the map to write its key.'),
@@ -9681,7 +10313,8 @@ const LocalMaps = (() => {
             if (!(await confirmDlg(`Clear deck ${s.cur + 1} so you can paint it from scratch? Its rooms, names, notes and marks go.`, { ok: 'Clear deck' }))) return;
             const u = undoable(['codex']), dk = deckOf(); dk.edit = encodeDeck({ cell: new Int16Array(Hh.W * Hh.H).fill(-1), types: [null], doors: [] }, Hh.W, Hh.H); dk.rooms = {}; dk.marks = []; dk.ver = (dk.ver | 0) + 1;
             persist(); sh.close(); V.edit = newEdit('add'); V.edit.cat = 'Whole ships'; rebuild(false); u(`Deck ${s.cur + 1} cleared. Paint rooms and corridors onto it`, reopen);
-          } }, icon('brush', 16), 'Clear this deck')));
+          } }, icon('brush', 16), 'Clear this deck'),
+          s.cls === 'custom' ? null : h('button', { class: 'btn', onclick: () => { sh.close(); remake(); } }, icon('dice', 16), 'Generate a new ship')));
     } else if (V.kind === 'city') {
       const C = V.m.city, set = (k, v) => { C[k] = v; persist(); rebuild(true); };
       body = h('div', null,
@@ -9703,22 +10336,175 @@ const LocalMaps = (() => {
     sh = openSheet({ title: V.kind === 'city' ? 'Town plan' : V.kind === 'ship' ? 'Ship' : 'Dungeon', body, foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => sh.close() }, 'Done')] });
   }
   async function exportImage() {
-    const G = V.G, city = G.kind === 'city', ship = G.kind === 'ship', title = city ? V.p.name : ship ? `${V.ship.title} · deck ${V.s.cur + 1}` : `${V.p.name} · level ${V.m.dun.cur + 1}`;
-    const mg = ship ? 2 : 3, bw = city ? 0 : G.box[2] - G.box[0] + mg, bh = city ? 0 : G.box[3] - G.box[1] + mg;
-    const ext = city ? G.Vh * 1.64 : Math.max(bw, bh), size = ship ? 2600 : 2400, k = size / ext, w = city ? size : bw * k, hh = city ? size : bh * k;
+    if (V.kind === 'ship') { printSheet(V.ship); return; }
+    const G = V.G, city = G.kind === 'city', title = city ? V.p.name : `${V.p.name} · level ${V.m.dun.cur + 1}`;
+    const bw = city ? 0 : G.box[2] - G.box[0] + 3, bh = city ? 0 : G.box[3] - G.box[1] + 3;
+    const ext = city ? G.Vh * 1.64 : Math.max(bw, bh), size = 2400, k = size / ext, w = city ? size : bw * k, hh = city ? size : bh * k;
     const c = document.createElement('canvas'); c.width = Math.round(w); c.height = Math.round(hh + 70);
     const g = c.getContext('2d');
     g.fillStyle = bgOf(G); g.fillRect(0, 0, c.width, c.height);
-    const ox = city ? w / 2 : (mg / 2 - G.box[0]) * k, oy = city ? hh / 2 : (mg / 2 - G.box[1]) * k;
-    paint(g, G, w, hh, k, ox, oy, 1, ship ? { pins: pinsOf(), deck: deckOf(), ty: 70 } : { pins: pinsOf(), names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms, ty: 70 });
+    const ox = city ? w / 2 : (1.5 - G.box[0]) * k, oy = city ? hh / 2 : (1.5 - G.box[1]) * k;
+    paint(g, G, w, hh, k, ox, oy, 1, { pins: pinsOf(), names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms, ty: 70 });
     g.setTransform(1, 0, 0, 1, 0, 0);
-    g.fillStyle = ship ? (LOOKS[G.look] || LOOKS.industrial).label : PAPER.label; if (ship && !LOOKS[G.look].bp && G.look === 'sleek') g.fillStyle = '#eef3f8';
-    g.font = '700 38px Georgia, "Times New Roman", serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(title, 28, 38);
+    g.fillStyle = PAPER.label; g.font = '700 38px Georgia, "Times New Roman", serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(title, 28, 38);
     if (city) { g.font = '600 20px -apple-system, system-ui, sans-serif'; g.textAlign = 'right'; g.fillText(`${CITY[G.sz].name} plan · ${fmtDist(G.Vh * 1.64)} across`, c.width - 28, 38); }
-    if (ship) { g.font = '600 20px -apple-system, system-ui, sans-serif'; g.textAlign = 'right'; g.fillText(`${SHIPS[V.s.cls].name} · ${ROLE_NAME[G.role] || 'Deck'} · 1 square = ${CELL} m`, c.width - 28, 38); }
     let blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
     if (!blob) { toast('Could not make the image'); return; }
     MapView.showShareResult(blob, c.width, c.height, title);
+  }
+
+  /* ---------- print: a drawing of the ship, ready to save, share or print ---------- */
+  const PRINT_FMT = { page: ['Page', 1810, 2560], land: ['Landscape', 2560, 1810], square: ['Square', 2160, 2160], post: ['4:5', 2160, 2700], story: ['Story', 1620, 2880], wide: ['16:9', 2880, 1620] };
+  function shipFigures(s) {
+    let floor = 0, rooms = 0, berths = 0;
+    s.decks.forEach((d, i) => {
+      const G = shipLayout({ ...s, cur: i });
+      for (const v of G.cell) if (v >= 0) floor++;
+      for (const o of G.rooms) if (o && o.type !== 'lift') rooms++;
+      for (const p of G.props) if (p.k === 'bed' || p.k === 'bunk' || p.k === 'pod') berths++; else if (p.k === 'bed2') berths += 2;
+    });
+    const sb = solidBox(shipLayout(s));
+    return { len: sb ? sb.h * CELL : 0, beam: sb ? sb.w * CELL : 0, decks: s.decks.length, floor: floor * CELL * CELL, rooms, berths };
+  }
+  // a whole drawing sheet: framed and zoned like an engineer's drawing with a title block, or edge to edge with a caption
+  function composePrint(s, title, o, ow, oh) {
+    const out = Object.assign(document.createElement('canvas'), { width: ow, height: oh }), g = out.getContext('2d'), u = Math.min(ow, oh) / 1080;
+    const look = SLOOK[o.look] ? o.look : s.look, blue = look === 'blueprint', clean = o.style === 'clean', paper = o.style === 'paper' && !blue;
+    const bg = paper ? '#f6f4ee' : blue ? '#123f7a' : '#090d13', ink = paper ? '#14171b' : '#eef3f8', dim = paper ? '#59626b' : blue ? 'rgba(225,240,255,.85)' : '#a9b7c4', hair = paper ? 'rgba(20,25,30,.45)' : blue ? 'rgba(225,240,255,.55)' : 'rgba(190,215,235,.36)', amber = paper ? '#a9690b' : blue ? '#ffffff' : '#f2a93b';
+    const list = o.what === 'all' ? s.decks.map((_, i) => i) : [s.cur], fig = shipFigures(s);
+    const plans = list.map(i => { const G = shipLayout({ ...s, cur: i, look }); G.look = look; return { i, G, dk: s.decks[i] }; });
+    const text = (t, x, y, size, col, o2 = {}) => { g.font = `${o2.weight || 600} ${size}px ${o2.num ? HUDN : HUDF}`; g.fillStyle = col; g.textAlign = o2.align || 'left'; g.textBaseline = o2.base || 'alphabetic'; if (o2.max) g.fillText(t, x, y, o2.max); else g.fillText(t, x, y); };
+    g.fillStyle = bg; g.fillRect(0, 0, ow, oh);
+    let A, band = 0, inner = null;
+    if (clean) {
+      const Lk = LOOKS[look], gr = g.createRadialGradient(ow / 2, oh * 0.45, 0, ow / 2, oh / 2, Math.hypot(ow, oh) * 0.7); gr.addColorStop(0, Lk.bg[0]); gr.addColorStop(1, Lk.bg[1]); g.fillStyle = gr; g.fillRect(0, 0, ow, oh);
+      if (!blue) { const st = g.createPattern(starsCv(), 'repeat'); if (st && st.setTransform && window.DOMMatrix) { st.setTransform(new DOMMatrix([u * 1.6, 0, 0, u * 1.6, 0, 0])); g.fillStyle = st; g.fillRect(0, 0, ow, oh); } }
+      A = { x: 26 * u, y: 26 * u, w: ow - 52 * u, h: oh - 52 * u - 120 * u };
+    } else {
+      // the frame, with zone marks between its two lines
+      const m = 26 * u, z = 24 * u; inner = { x: m + z, y: m + z, w: ow - 2 * (m + z), h: oh - 2 * (m + z) }; band = 188 * u;
+      g.strokeStyle = ink; g.lineWidth = Math.max(1, 2.4 * u); g.strokeRect(m, m, ow - 2 * m, oh - 2 * m);
+      g.strokeStyle = hair; g.lineWidth = Math.max(1, 1.2 * u); g.strokeRect(inner.x, inner.y, inner.w, inner.h);
+      const cols = Math.max(4, Math.round(ow / (270 * u))), rows = Math.max(4, Math.round(oh / (270 * u))), z2 = z / 2;
+      g.beginPath();
+      for (let i = 0; i <= cols; i++) { const x = inner.x + inner.w * i / cols; g.moveTo(x, m); g.lineTo(x, m + z); g.moveTo(x, oh - m - z); g.lineTo(x, oh - m); }
+      for (let i = 0; i <= rows; i++) { const y = inner.y + inner.h * i / rows; g.moveTo(m, y); g.lineTo(m + z, y); g.moveTo(ow - m - z, y); g.lineTo(ow - m, y); }
+      g.stroke();
+      for (let i = 0; i < cols; i++) { const x = inner.x + inner.w * (i + 0.5) / cols; for (const y of [m + z2, oh - m - z2]) text(String(i + 1), x, y, 14 * u, dim, { num: true, align: 'center', base: 'middle' }); }
+      for (let i = 0; i < rows; i++) { const y = inner.y + inner.h * (i + 0.5) / rows; for (const x of [m + z2, ow - m - z2]) text(String.fromCharCode(65 + i % 26), x, y, 14 * u, dim, { num: true, align: 'center', base: 'middle' }); }
+      A = { x: inner.x, y: inner.y, w: inner.w, h: inner.h - band };
+    }
+    // every deck at one scale, in whichever grid lets them be biggest
+    const lab = plans.length > 1 || !clean ? 44 * u : 0, pad = (clean ? 10 : 30) * u, dimP = clean ? 0 : 58 * u, bw = Math.max(...plans.map(q => q.G.box[2] - q.G.box[0])), bh = Math.max(...plans.map(q => q.G.box[3] - q.G.box[1]));
+    let best = { k: 0, c: 1, r: 1 };
+    for (let c = 1; c <= plans.length; c++) { const r = Math.ceil(plans.length / c), k = Math.min((A.w / c - 2 * pad - dimP) / bw, (A.h / r - lab - 2 * pad - dimP) / bh); if (k > best.k) best = { k, c, r }; }
+    const k = Math.max(0.5, best.k), cw = A.w / best.c, ch = A.h / best.r, fs = clamp(k * 0.3, 12 * u, 21 * u);
+    plans.forEach((q, n) => {
+      const cx0 = A.x + cw * (n % best.c), cy0 = A.y + ch * Math.floor(n / best.c), B = q.G.box, sb = solidBox(q.G);
+      const ox = cx0 + (cw - dimP * 0.4) / 2 - (B[0] + B[2]) / 2 * k, oy = cy0 + lab + (ch - lab + dimP * 0.4) / 2 - (B[1] + B[3]) / 2 * k;
+      g.save(); g.beginPath(); g.rect(cx0, cy0, cw, ch); g.clip();
+      if (!clean && !blue) {
+        // a faint drafting grid behind the ship, counted from its centre line
+        const axis = q.G.Hh.cx, x0 = Math.floor(B[0] - 4), x1 = Math.ceil(B[2] + 4), y0 = Math.floor(B[1] - 3), y1 = Math.ceil(B[3] + 3), r = Math.max(2, 3.2 * u), p = new Path2D();
+        for (let y = y0; y <= y1; y++) if (y % 5 === 0) for (let x = x0; x <= x1; x++) if ((x - axis) % 5 === 0) { const a = x * k + ox, b = y * k + oy; p.moveTo(a - r, b); p.lineTo(a + r, b); p.moveTo(a, b - r); p.lineTo(a, b + r); }
+        g.strokeStyle = hair; g.lineWidth = Math.max(1, 0.9 * u); g.stroke(p);
+      }
+      g.setTransform(k, 0, 0, k, ox, oy); drawShip(g, q.G, k, 1, { noPlume: !clean }); g.setTransform(1, 0, 0, 1, 0, 0);
+      overlay(g, q.G, k, ox, oy, { deck: q.dk, pins: o.pins ? (q.dk.marks || []).map(m => ({ x: m.x, y: m.y, label: m.label, ref: m })) : [], fs, scale: u, noNames: !o.names });
+      // overall length and beam, drawn as a drafter would
+      if (!clean && sb) {
+        const ax = sb.x0 * k + ox, ay = sb.y0 * k + oy, bx = sb.x1 * k + ox, by = sb.y1 * k + oy, off = 1.1 * k + 16 * u, t = 6 * u, dl = (x0, y0, x1, y1, tx) => {
+          g.strokeStyle = ink; g.lineWidth = Math.max(1, 1.1 * u); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); for (const [x, y] of [[x0, y0], [x1, y1]]) { g.moveTo(x - t, y + t); g.lineTo(x + t, y - t); } g.stroke();
+          plate(g, tx, (x0 + x1) / 2, (y0 + y1) / 2, { num: true, size: 17 * u, color: ink, bg, pad: 6 * u });
+        };
+        dl(ax, ay - off, bx, ay - off, `${sb.w * CELL} m`); dl(bx + off, ay, bx + off, by, `${sb.h * CELL} m`);
+      }
+      if (lab) {
+        const role = ROLE_NAME[q.G.role];
+        g.fillStyle = amber; g.fillRect(cx0 + 16 * u, cy0 + 19 * u, 18 * u, 3 * u);
+        text(`DECK ${q.i + 1}${role ? ' · ' + role.toUpperCase() : ''}`, cx0 + 42 * u, cy0 + 21 * u, 24 * u, clean ? '#eef3f8' : ink, { weight: 700, base: 'middle', max: cw - 60 * u });
+      }
+      g.restore();
+    });
+    // a bar in metres, as long as a round number allows
+    const scaleBar = (right, y, maxW, col, back) => {
+      const pm = k / CELL, len = [1000, 500, 200, 100, 50, 20, 10, 5, 2].find(n => n * pm <= maxW) || 2, w = len * pm, x = right - w, bh2 = 11 * u;
+      for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? back : col; g.fillRect(x + w * i / 4, y, w / 4, bh2); }
+      g.strokeStyle = col; g.lineWidth = Math.max(1, 1.2 * u); g.strokeRect(x, y, w, bh2);
+      text('0', x, y + bh2 + 22 * u, 18 * u, col, { num: true }); text(`${len} m`, right, y + bh2 + 22 * u, 18 * u, col, { num: true, align: 'right' });
+    };
+    const when = `${S.meta.name} · ${Cal.fmt(S.meta.today)}${Earth.on() ? ' · ' + Earth.fmt(S.meta.today) : ''}`;
+    const role = ROLE_NAME[plans[0].G.role], what = plans.length > 1 ? `All ${plans.length} decks` : [`Deck ${list[0] + 1} of ${s.decks.length}`, role].filter(Boolean).join(' · ');
+    const sub = `${SHIPS[s.cls].name} · ${what}`;
+    if (clean) {
+      const gh = 210 * u, gr = g.createLinearGradient(0, oh - gh, 0, oh); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.72)'); g.fillStyle = gr; g.fillRect(0, oh - gh, ow, gh);
+      const tw = ow * 0.62 - 40 * u;
+      text(title.toUpperCase(), 40 * u, oh - 92 * u, 58 * u, '#fff', { weight: 700, max: tw });
+      text(sub, 40 * u, oh - 56 * u, 26 * u, 'rgba(255,255,255,.9)', { max: tw });
+      text(when, 40 * u, oh - 28 * u, 19 * u, 'rgba(255,255,255,.7)', { max: tw });
+      scaleBar(ow - 40 * u, oh - 78 * u, ow * 0.28, '#fff', 'rgba(0,0,0,.6)');
+    } else {
+      // the title block
+      const by = inner.y + inner.h - band, x0 = inner.x, x1 = inner.x + inner.w, wide = inner.w, c1 = x0 + wide * 0.47, c2 = x0 + wide * 0.78;
+      g.strokeStyle = ink; g.lineWidth = Math.max(1, 1.8 * u); g.beginPath(); g.moveTo(x0, by); g.lineTo(x1, by); g.stroke();
+      g.strokeStyle = hair; g.lineWidth = Math.max(1, 1.1 * u); g.beginPath(); g.moveTo(c1, by); g.lineTo(c1, by + band); g.moveTo(c2, by); g.lineTo(c2, by + band); g.stroke();
+      const tmax = c1 - x0 - 44 * u; let ts = 60 * u; g.font = `700 ${ts}px ${HUDF}`; const mw = g.measureText(title.toUpperCase()).width; if (mw > tmax) ts = Math.max(30 * u, ts * tmax / mw);
+      text(title.toUpperCase(), x0 + 22 * u, by + band * 0.40, ts, ink, { weight: 700, max: tmax });
+      text(sub, x0 + 22 * u, by + band * 0.62, 26 * u, ink, { max: tmax });
+      text(when, x0 + 22 * u, by + band * 0.82, 19 * u, dim, { max: tmax });
+      const rowsF = [['Length', `${fig.len} m`], ['Beam', `${fig.beam} m`], ['Floor', `${fmtInt(fig.floor)} m²`], ['Decks', fig.decks], ['Rooms', fig.rooms], ['Berths', fig.berths]], cw2 = (c2 - c1 - 28 * u) / 2, rh = band / 3;
+      rowsF.forEach(([a, b], n) => { const x = c1 + 16 * u + cw2 * (n > 2 ? 1 : 0), yy = by + rh * (n % 3); text(a, x, yy + rh * 0.34, 17 * u, dim, { base: 'middle' }); text(String(b), x, yy + rh * 0.72, 25 * u, ink, { num: true, weight: 700, base: 'middle', max: cw2 - 8 * u }); });
+      const rr = x1 - 22 * u;
+      scaleBar(rr, by + band * 0.16, x1 - c2 - 44 * u, ink, bg);
+      text(`1 square = ${CELL} m`, rr, by + band * 0.62, 18 * u, dim, { align: 'right' });
+      const ax = c2 + 34 * u, ay = by + band * 0.72, as = 18 * u; g.fillStyle = ink; g.beginPath(); g.moveTo(ax, ay - as); g.lineTo(ax + as * 0.62, ay + as * 0.7); g.lineTo(ax, ay + as * 0.32); g.lineTo(ax - as * 0.62, ay + as * 0.7); g.closePath(); g.fill();
+      text('FORE', ax + 22 * u, ay + 6 * u, 18 * u, ink, { weight: 700 });
+      text('World Manager', rr, by + band * 0.88, 16 * u, dim, { align: 'right' });
+    }
+    for (const q of plans) q.G.look = s.look;
+    return out;
+  }
+  function printSheet(e) {
+    const s = (e.ship = normShip(e.ship));
+    const o = Object.assign({ fmt: 'page', style: 'spec', what: s.decks.length > 1 ? 'all' : 'deck', names: true, pins: true, hi: false, look: '' }, S.ui.shipPrint || {});
+    if (!PRINT_FMT[o.fmt]) o.fmt = 'page';
+    document.body.classList.add('ship-console');
+    const prev = h('canvas', { class: 'print-prev', 'aria-label': 'Preview of the drawing' }), info = h('div', { class: 'print-info' }), title = h('input', { value: e.title, autocomplete: 'off' });
+    const name = () => title.value.trim() || e.title;
+    const outSize = () => { let [, w, hh] = PRINT_FMT[o.fmt]; if (o.hi) { w *= 2; hh *= 2; } const big = Math.sqrt(w * hh / 15e6); if (big > 1) { w = Math.floor(w / big); hh = Math.floor(hh / big); } return [w, hh]; };   // inside Safari's canvas limit
+    let tm = 0;
+    const drawPrev = () => {
+      tm = 0; if (!prev.isConnected) return;
+      const [, w, hh] = PRINT_FMT[o.fmt], sc = 1100 / Math.max(w, hh), c = composePrint(s, name(), o, Math.round(w * sc), Math.round(hh * sc));
+      prev.width = c.width; prev.height = c.height; prev.getContext('2d').drawImage(c, 0, 0);
+      const [ow, oh] = outSize(); info.textContent = `${PRINT_FMT[o.fmt][0]} · ${fmtInt(ow)} × ${fmtInt(oh)} px`;
+    };
+    const change = (k2, v) => { o[k2] = v; S.ui.shipPrint = { ...o }; save(); clearTimeout(tm); tm = setTimeout(drawPrev, 80); };
+    title.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(drawPrev, 200); });
+    const check = (k2, word) => { const c = h('input', { type: 'checkbox', checked: !!o[k2] }); c.addEventListener('change', () => change(k2, c.checked)); return h('label', { class: 'check' }, c, word); };
+    const go = h('button', { class: 'btn primary' }, icon('print', 16), 'Create image');
+    go.addEventListener('click', () => {
+      go.disabled = true; go.textContent = 'Drawing…';
+      setTimeout(async () => {
+        try {
+          const [ow, oh] = outSize(), c = composePrint(s, name(), o, ow, oh);
+          let blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+          if (!blob) throw new Error('the browser could not encode the image');
+          MapView.showShareResult(blob, c.width, c.height, name() + (o.what === 'all' ? '' : ` deck ${s.cur + 1}`), 'Ship drawing');
+        } catch (err) { console.error(err); toast('Could not make the image: ' + (err && err.message || err)); }
+        go.disabled = false; go.innerHTML = ''; go.append(icon('print', 16), 'Create image');
+      }, 30);
+    });
+    let sh;
+    sh = openSheet({ title: 'Print', wide: true, onClose: () => { clearTimeout(tm); if (!V) document.body.classList.remove('ship-console'); }, body: h('div', null, prev, info,
+      field('Title', title),
+      field('Size', seg(Object.entries(PRINT_FMT).map(([k2, v]) => [k2, v[0]]), o.fmt, v => change('fmt', v))),
+      field('Style', seg([['spec', 'Spec sheet'], ['paper', 'White paper'], ['clean', 'Clean']], o.style, v => change('style', v)), 'Spec sheet is a framed drawing with a title block. White paper is the same with less ink. Clean runs edge to edge with a caption.'),
+      s.decks.length > 1 ? field('Decks', seg([['all', `All ${s.decks.length}`], ['deck', `Deck ${s.cur + 1}`]], o.what, v => change('what', v))) : null,
+      field('Look', seg([['', 'As built'], ...Object.entries(SLOOK)], o.look || '', v => change('look', v))),
+      check('names', 'Room names'), check('pins', 'Marks'), check('hi', 'Double resolution (for large prints)')),
+    foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn', onclick: () => sh.close() }, 'Close'), go] });
+    setTimeout(drawPrev, 30);
   }
 
   /* ---------- previews: the card on a place's page, and on a ship's codex entry ---------- */
@@ -9747,26 +10533,28 @@ const LocalMaps = (() => {
     return el;
   }
   function shipCard(e) {
-    const s = (e.ship = normShip(e.ship)), Hh = shipHull(s), pl = placeOfShip(e), w = pl && worldOfPlace(pl);
-    const cv = h('canvas', { class: 'lm-thumb ship' }), go = () => openShip(e);
-    const el = h('div', { class: 'card lm-card' },
-      h('div', { class: 'row tap', role: 'button', tabindex: 0, onclick: go, onkeydown: ev => { if (ev.key === 'Enter') go(); } }, icon('ship', 18),
-        h('div', { class: 'grow' }, h('div', { style: 'font-weight:700' }, 'Deck plans'), h('div', { class: 'small muted' }, `${SHIPS[s.cls].name} · ${s.cls === 'custom' ? '' : Hh.L * CELL + ' m long · '}${s.decks.length} deck${s.decks.length > 1 ? 's' : ''} · ${SLOOK[s.look]}`)), icon('chev', 16)),
-      h('div', { class: 'tap', onclick: go }, cv),
-      h('div', { class: 'row wrap', style: 'margin-top:10px;gap:6px' },
-        pl ? [h('span', { class: 'small grow' }, icon('pin', 13), ' ', pl.name, w && w !== S.world ? ` · on ${w.name}` : ''),
+    const s = (e.ship = normShip(e.ship)), pl = placeOfShip(e), w = pl && worldOfPlace(pl), st = shipFigures(s), cv = h('canvas', { class: 'lm-thumb ship big' }), go = () => openShip(e);
+    const el = h('div', { class: 'card ship-card' },
+      h('div', { class: 'ship-hero', role: 'button', tabindex: 0, 'aria-label': 'Open the deck plans', onclick: go, onkeydown: ev => { if (ev.key === 'Enter') go(); } }, cv, h('div', { class: 'ship-hero-tag' }, `${SHIPS[s.cls].name} · ${SLOOK[s.look]}`)),
+      h('div', { class: 'ship-stats' }, [['Length', `${st.len} m`], ['Beam', `${st.beam} m`], ['Decks', s.decks.length], ['Rooms', st.rooms]].map(([a, b]) => h('div', null, h('b', null, String(b)), h('span', null, a)))),
+      h('div', { class: 'ship-acts' }, h('button', { class: 'btn primary', onclick: go }, 'Deck plans'), h('button', { class: 'btn', onclick: () => openShip(e, true) }, icon('brush', 16), 'Build'), h('button', { class: 'btn', onclick: () => printSheet(e) }, icon('print', 16), 'Print')),
+      h('div', { class: 'ship-where' },
+        pl ? [h('span', { class: 'grow', style: 'min-width:0' }, icon('pin', 13), ' ', pl.name, w && w !== S.world ? ` · on ${w.name}` : ''),
           h('button', { class: 'btn small', onclick: () => gotoPlace(pl) }, 'Show'),
           h('button', { class: 'btn small', onclick: () => putOnMap(e) }, w === S.world ? 'Move' : 'Bring here'),
           h('button', { class: 'btn small', onclick: () => offMap(e) }, 'Off the map')]
-          : [h('span', { class: 'small muted grow' }, 'Not on the map'), h('button', { class: 'btn small', onclick: () => putOnMap(e) }, icon('pin', 14), 'Put on the map')]),
-      h('button', { class: 'btn block', style: 'margin-top:8px', onclick: () => openShip(e, true) }, icon('brush', 16), 'Build and edit'));
+          : [h('span', { class: 'muted grow' }, 'Not on the map'), h('button', { class: 'btn small', onclick: () => putOnMap(e) }, icon('pin', 14), 'Put on the map')]));
     setTimeout(() => { if (cv.isConnected) thumb(cv, shipLayout(s)); }, 40);
     return el;
   }
-  // a little picture for a ship in a list
-  function shipThumb(e) { const cv = h('canvas', { class: 'lm-thumb ship sm' }); setTimeout(() => { if (cv.isConnected) { e.ship = normShip(e.ship); thumb(cv, shipLayout(e.ship)); } }, 60); return cv; }
+  function shipEntryCard(e, on, go) {
+    const cv = h('canvas', { class: 'lm-thumb ship' });
+    const el = h('div', { class: 'card ship-entry' + (on ? ' sel' : ''), role: 'button', tabindex: 0, onclick: go, onkeydown: ev => { if (ev.key === 'Enter') go(); } }, cv, h('div', { class: 'ship-entry-info' }, h('div', { class: 'nm' }, e.title), h('div', { class: 'ln' }, shipLine(e))));
+    setTimeout(() => { if (cv.isConnected) { e.ship = normShip(e.ship); thumb(cv, shipLayout(e.ship)); } }, 60);
+    return el;
+  }
   const shipLine = e => { const s = (e.ship = normShip(e.ship)), pl = placeOfShip(e), w = pl && worldOfPlace(pl); return [SHIPS[s.cls].name, `${s.decks.length} deck${s.decks.length > 1 ? 's' : ''}`, pl ? (lc(pl.name) === lc(e.title) ? (w && w !== S.world ? `on ${w.name}` : 'on the map') : w && w !== S.world ? `at ${pl.name} on ${w.name}` : `at ${pl.name}`) : null].filter(Boolean).join(' · '); };
-  return { open, card, openShip, shipCard, shipThumb, shipLine, normShip, get isOpen() { return !!V; }, debug: { genCity, genDungeon, cityPaths, drawCity, state, layoutOf, shipLayout, shipHull, genDeck, drawShip, view: () => V && { k: V.k, ox: V.ox, oy: V.oy, G: V.G } } };
+  return { open, card, openShip, shipCard, shipEntryCard, normShip, get isOpen() { return !!V; }, debug: { genCity, genDungeon, cityPaths, drawCity, state, layoutOf, shipLayout, shipHull, genDeck, drawShip, view: () => V && { k: V.k, ox: V.ox, oy: V.oy, G: V.G } } };
 })();
 
 const Chars = (() => {
@@ -11502,7 +12290,8 @@ const Codex = (() => {
     drawCards();
   }
   function entryCard(e) {
-    const k = kindOf(e), snip = e.kind === 'ship' && e.body.trim() === CODEX_TEMPLATES.ship.trim() ? '' : mdPlain(e.body).slice(0, 170), t = mdTasks(e.body);
+    if (e.kind === 'ship') return LocalMaps.shipEntryCard(e, e.id === sel, () => open(e.id));
+    const k = kindOf(e), snip = mdPlain(e.body).slice(0, 170), t = mdTasks(e.body);
     const top = e.kind === 'session' ? `${e.num ? 'Session ' + e.num + ' · ' : ''}${Cal.fmt(e.day)}` : (e.pinned ? '★ ' : '') + k[0];
     return h('div', { class: 'card entry' + (e.id === sel ? ' sel' : ''), onclick: () => open(e.id) },
       h('div', { class: 'kind-tag', style: { color: k[2] } }, top),
@@ -11510,7 +12299,6 @@ const Codex = (() => {
       snip ? h('div', { class: 'snip' }, snip) : null,
       e.kind === 'quest' && t.n ? h('div', { class: 'row', style: 'margin-top:7px' }, h('div', { class: 'progress grow' }, h('i', { style: `width:${t.done / t.n * 100}%;background:${QUEST_STATES[e.status][1]}` })), h('span', { class: 'tiny muted num' }, `${t.done}/${t.n}`)) : null,
       e.kind === 'session' && e.chars.length ? h('div', { class: 'mini-av', style: 'margin-top:7px' }, e.chars.map(charById).filter(Boolean).slice(0, 10).map(c => avatar(c, 24))) : null,
-      e.kind === 'ship' ? [h('div', { class: 'small muted', style: 'margin-top:3px' }, LocalMaps.shipLine(e)), LocalMaps.shipThumb(e)] : null,
       e.tags.length ? h('div', { class: 'chips', style: 'margin-top:6px;gap:4px' }, e.tags.map(tg => h('span', { class: 'badge' }, '#' + tg))) : null);
   }
   function emptyState(m) {
