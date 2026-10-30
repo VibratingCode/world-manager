@@ -486,6 +486,11 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .lm-cv.ship, .lm-thumb.ship { background: #05070a; }
 .lm-thumb.ship { height: 170px; }
 .lm-thumb.ship.sm { height: 84px; margin-top: 8px; border-radius: 10px; }
+.lm-tray { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 78px); z-index: 3; display: none; gap: 6px; align-items: center; overflow-x: auto; padding: 6px 10px; scrollbar-width: none; }
+.lm-tray-g { flex: none; font-size: 11px; font-weight: 700; color: #cfd6dc; padding: 0 2px 0 8px; }
+.lm-mod { flex: none; width: 72px; height: 62px; border-radius: 12px; background: var(--glass-strong); color: var(--text); font-size: 11px; font-weight: 600; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+.lm-mod .ic { font-size: 19px; }
+.lm-mod.on { background: var(--accent); color: var(--accent-ink); }
 .lm-num { min-width: 30px; height: 30px; border-radius: 50%; background: var(--card2); display: grid; place-items: center; font-weight: 800; font-variant-numeric: tabular-nums; flex: none; }
 .act-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 12px; padding: 0 18px 2px; }
 .act-row::-webkit-scrollbar { display: none; }
@@ -7603,6 +7608,7 @@ const LocalMaps = (() => {
     freighter: { name: 'Freighter', L: [30, 40], B: [13, 15], decks: 2, wing: [0, 1], shapes: ['brick', 'hammer'] },
     frigate: { name: 'Frigate', L: [42, 52], B: [15, 17], decks: 3, wing: [3, 5], shapes: ['dart', 'hammer'] },
     colony: { name: 'Colony ship', L: [60, 76], B: [19, 23], decks: 4, wing: [0, 2], shapes: ['spine', 'brick', 'hammer'] },
+    custom: { name: 'Custom', L: [70, 70], B: [41, 41], decks: 1, wing: [0, 0], shapes: ['brick'] },   // starts empty, built from modules
   };
   const SLOOK = { industrial: 'Industrial', sleek: 'Sleek', military: 'Military', blueprint: 'Blueprint' };
   const CELL = 2;   // metres to a square
@@ -7637,6 +7643,7 @@ const LocalMaps = (() => {
   const FORE = { command: ['comms', 'captain', 'armoury'], crew: ['rec', 'armoury', 'storage'], habitat: ['observation', 'rec', 'lab'], cryo: ['lab', 'medbay', 'storage'],
     cargo: ['cargo', 'workshop', 'escape'], engineering: ['weapons', 'armoury', 'storage'], scout: ['comms', 'lab'], flight: ['storage'] };
   function rolesFor(cls, D) {
+    if (cls === 'custom') return Array(D).fill('custom');
     if (D === 1) return [cls === 'shuttle' ? 'flight' : 'scout'];
     const base = ROLES[cls].length > 1 ? ROLES[cls] : ['command', 'cargo'], mids = cls === 'colony' ? ['habitat', 'cryo'] : cls === 'frigate' ? ['crew'] : ['habitat'];
     const out = ['command'];
@@ -7698,6 +7705,7 @@ const LocalMaps = (() => {
     for (let d = 0; d < D; d++) {
       const m = new Uint8Array(W * H), top = D > 1 && d === 0, bot = D > 2 && d === D - 1;
       for (let y = 0; y < L; y++) {
+        if (s.cls === 'custom') break;
         if (top && y >= L - sl) continue;   // the bridge deck stops short of the engines
         if (bot && y < Math.round(nl * 0.6)) continue;
         let w = hw[y]; if (top && M >= 6 && y >= nl) w = Math.max(minW, w - 1);
@@ -7718,7 +7726,7 @@ const LocalMaps = (() => {
     const nz = [], nN = M >= 9 ? ri(3, 5) : M >= 5 ? ri(2, 3) : ri(1, 2), spanS = 2 * ws + 1, sp = spanS / nN;
     for (let i = 0; i < nN; i++) nz.push({ x: cx - ws + sp * (i + 0.5), y: y0 + L, w: Math.min(sp * 0.78, 3.4) });
     if (wing >= 3) { const y = L - 1, x = hw[y] + wing; nz.push({ x: cx - x + 0.5, y: y0 + L, w: 0.9 }, { x: cx + x + 0.5, y: y0 + L, w: 0.9 }); }
-    const Hh = { W, H, cx, y0, L, M, wing, nl, sl, hw, shape, decks, wingM, lifts, nozzles: nz, roles: rolesFor(s.cls, D) };
+    const Hh = { W, H, cx, y0, L, M, wing, nl, sl, hw, shape, decks, wingM, lifts, nozzles: s.cls === 'custom' ? [] : nz, roles: rolesFor(s.cls, D) };
     hullCache.set(key, Hh); if (hullCache.size > 8) hullCache.delete(hullCache.keys().next().value);
     return Hh;
   }
@@ -8071,7 +8079,17 @@ const LocalMaps = (() => {
     let bx0 = W, by0 = H, bx1 = 0, by1 = 0;
     for (let i = 0; i < N; i++) if (solid[i]) { const x = i % W, y = (i / W) | 0; if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
     G = { kind: 'ship', W, H, cell, rooms, doors, props, windows, strips, pipes, solid, Hh, deck: d, decks: s.decks.length, role: Hh.roles[d], cls: s.cls, look: s.look,
-      box: bx1 >= bx0 ? [bx0 - 1, by0 - 1, bx1 + 2, by1 + 3.2] : [0, 0, W, H] };
+      box: bx1 >= bx0 ? [bx0 - 1, by0 - 1, bx1 + 2, by1 + 3.2] : [Hh.cx - 11, (H >> 1) - 14, Hh.cx + 12, (H >> 1) + 14] };
+    // a custom ship's engine bells go wherever its engine rooms meet open space at the stern
+    G.nozzles = Hh.nozzles;
+    if (s.cls === 'custom') {
+      G.nozzles = [];
+      for (const o of rooms) {
+        if (!o || o.type !== 'engine') continue;
+        const low = o.cells.filter(i => at(i % W, ((i / W) | 0) + 1) < 0 && !solid[i + W]).sort((a, b) => a - b);
+        for (let i = 0; i < low.length;) { let j = i; while (j + 1 < low.length && low[j + 1] === low[j] + 1) j++; const n = j - i + 1, y = ((low[i] / W) | 0) + 1; G.nozzles.push({ x: low[i] % W + n / 2, y, w: Math.min(n * 0.78, 3.4) }); i = j + 1; }
+      }
+    }
     shipCache.set(key, G); if (shipCache.size > 8) shipCache.delete(shipCache.keys().next().value);
     return G;
   }
@@ -8403,10 +8421,10 @@ const LocalMaps = (() => {
     /* --- the outside: engine glow, engine bells, the hull, its lights --- */
     if (!BP) {
       g.globalCompositeOperation = 'lighter';
-      for (const n of Hh.nozzles) { const yy = n.y + 1.6, rr = n.w * 1.9 + 0.6, gr = g.createRadialGradient(n.x, yy, 0, n.x, yy, rr); gr.addColorStop(0, Lk.plume[0]); gr.addColorStop(0.35, Lk.plume[1]); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(n.x, yy + rr * 0.3, rr * 0.75, rr * 1.15, 0, 0, TAU); g.fill(); }
+      for (const n of G.nozzles) { const yy = n.y + 1.6, rr = n.w * 1.9 + 0.6, gr = g.createRadialGradient(n.x, yy, 0, n.x, yy, rr); gr.addColorStop(0, Lk.plume[0]); gr.addColorStop(0.35, Lk.plume[1]); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(n.x, yy + rr * 0.3, rr * 0.75, rr * 1.15, 0, 0, TAU); g.fill(); }
       g.globalCompositeOperation = 'source-over';
     }
-    for (const n of Hh.nozzles) {
+    for (const n of G.nozzles) {
       const y0 = n.y + 0.35, y1 = n.y + 1.45, a = n.w / 2, b = n.w * 0.62;
       g.beginPath(); g.moveTo(n.x - a, y0); g.lineTo(n.x + a, y0); g.lineTo(n.x + b, y1); g.lineTo(n.x - b, y1); g.closePath(); F(cyl(n.x - b, y0, b * 2, 1, Lk.metal || '#888', true));
       if (!BP) { ell(n.x, y1, b, 0.16); F('#120d0b'); ell(n.x, y1, b * 0.62, 0.1); F(Lk.plume[0]); }
@@ -8742,7 +8760,7 @@ const LocalMaps = (() => {
     const G = V.G, w = V.cv.clientWidth, hh = V.cv.clientHeight;
     if (!w || !hh) { V.k = 0; return; }
     const m = G.kind === 'ship' ? 1 : 1.5, ext = G.kind === 'city' ? [-G.Vh * 0.82, -G.Vh * 0.82, G.Vh * 0.82, G.Vh * 0.82] : [G.box[0] - m, G.box[1] - m, G.box[2] + m, G.box[3] + m];
-    const bar = G.kind === 'ship' ? Math.min(84, hh * 0.15) : 0;   // a ship's engines stay clear of the toolbar
+    const bar = G.kind === 'ship' ? (V.edit && V.edit.tool === 'build' ? Math.min(170, hh * 0.3) : Math.min(84, hh * 0.15)) : 0;   // a ship's engines stay clear of the toolbar
     V.k = Math.min(w / (ext[2] - ext[0]), (hh - bar) / (ext[3] - ext[1]));
     V.ox = w / 2 - (ext[0] + ext[2]) / 2 * V.k; V.oy = (hh - bar) / 2 - (ext[1] + ext[3]) / 2 * V.k;
     V.kMin = V.k * 0.6;
@@ -8853,6 +8871,7 @@ const LocalMaps = (() => {
     const pins = pinsOf().map(q => ({ ...q, on: V.drag && V.drag.pin && V.drag.pin.ref === q.ref }));
     overlay(g, V.G, V.k, V.ox, V.oy, V.kind === 'ship' ? { pins, deck: deckOf() } : { pins, names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms });
     if (V.edit) gridOverlay(g);
+    if (V.edit && V.edit.tool === 'build') ghostOverlay(g);
     if (V.stroke) strokeOverlay(g);
   }
   const redraw = fast => {
@@ -8862,7 +8881,7 @@ const LocalMaps = (() => {
     if (fast) { clearTimeout(V.idle); V.idle = setTimeout(() => { if (V) { V.fast = false; if (!V.raf) V.raf = requestAnimationFrame(draw); } }, 160); }
   };
   const persist = () => { if (V.ship) V.ship.updated = Date.now(); if (V.p) V.p.lmap = V.m; save(); emit('data'); };
-  function rebuild(refit) { V.G = layoutOf(V.p, V.m, V.kind, V.s); V.snap = null; if (refit) fit(); renderChrome(); redraw(); }
+  function rebuild(refit) { V.G = layoutOf(V.p, V.m, V.kind, V.s); V.snap = null; if (refit) fit(); if (V.edit && V.edit.tool === 'build') aim(); renderChrome(); redraw(); }
 
   /* ---------- ships and the codex: a ship is a codex entry, and a place on the map can show one ---------- */
   const guessCls = p => { const n = +p.pop || 0; return !n ? 'freighter' : n < 10 ? 'shuttle' : n < 40 ? 'scout' : n < 200 ? 'freighter' : n < 1000 ? 'frigate' : 'colony'; };
@@ -8905,11 +8924,12 @@ const LocalMaps = (() => {
     const el = h('div', { class: 'lm', role: 'dialog', 'aria-label': o.kind === 'ship' ? 'Deck plans' : 'Local map' });
     V = Object.assign({ el, cv, k: 0, ox: 0, oy: 0, mode: null, edit: null, stroke: null, ptrs: new Map(), raf: 0, ship: null, s: null }, o);
     if (V.kind === 'ship') attachShip();
-    el.append(h('div', { class: 'lm-top' }), cv, h('div', { class: 'lm-hint glass' }), h('div', { class: 'lm-bar tools glass' }));
+    el.append(h('div', { class: 'lm-top' }), cv, h('div', { class: 'lm-hint glass' }), h('div', { class: 'lm-tray' }), h('div', { class: 'lm-bar tools glass' }));
     document.body.append(el);
     wire(cv);
     V.G = layoutOf(V.p, V.m, V.kind, V.s);
     renderChrome(); fit(); draw();
+    if (V.kind === 'ship' && V.s.cls === 'custom' && !V.G.cell.some(c => c >= 0)) startBuild();
     if (!V.k) requestAnimationFrame(() => redraw());
     V.onKey = e => {
       if (!V || e.defaultPrevented || sheetStack.length) return;   // a sheet that Escape just closed has handled it
@@ -8944,6 +8964,23 @@ const LocalMaps = (() => {
     if (ship && V.s.decks.length > 1) top.append(seg(V.s.decks.map((_, i) => [i, 'Deck ' + (i + 1)]), V.s.cur, v => { V.s.cur = v; V.stroke = null; persist(); V.mode = null; rebuild(true); }, 'lm-levels'));
     const b = (ic, word, on, fn, off) => h('button', { class: on ? 'on' : '', onclick: fn, 'aria-label': word, disabled: off || null }, icon(ic, 22), h('span', { class: 'tl' }, word));
     bar.innerHTML = '';
+    const tray = el.querySelector('.lm-tray'), building = V.edit && V.edit.tool === 'build';
+    tray.style.display = building ? 'flex' : 'none'; hint.style.bottom = building ? 'calc(env(safe-area-inset-bottom) + 158px)' : '';
+    if (building) {
+      const E = V.edit, keep = tray.scrollLeft; tray.innerHTML = '';
+      let grp = null;
+      for (const m of MODS) {
+        if (m.g !== grp) { grp = m.g; tray.append(h('span', { class: 'lm-tray-g' }, grp)); }
+        tray.append(h('button', { class: 'lm-mod' + (E.mod === m ? ' on' : ''), onclick: () => { E.mod = E.mod === m ? null : m; E.rot = 0; E.remove = false; aim(); renderChrome(); redraw(); } }, h('span', { class: 'ic' }, m.ic), m.n));
+      }
+      tray.scrollLeft = keep;
+      bar.append(b('redo', 'Turn', false, () => { E.rot = (E.rot + 1) % 4; aim(); redraw(); }, !E.mod), b('copy', 'Mirror', E.mirror, () => { E.mirror = !E.mirror; renderChrome(); redraw(); }),
+        b('check', 'Place', false, placeModule, !E.ghost), b('trash', 'Remove', E.remove, () => { E.remove = !E.remove; if (E.remove) { E.mod = null; E.ghost = null; } renderChrome(); redraw(); }),
+        b('undo', 'Undo', false, undoEdit, !E.undo.length), b('close', 'Done', false, () => { V.edit = null; renderChrome(); redraw(); }));
+      hint.textContent = E.remove ? 'Tap a module to take it off' : !E.mod ? 'Pick a module below' : E.ghost ? 'Tap Place, or drag it where you want: it snaps on' : 'No room for that here';
+      hint.classList.add('show');
+      return;
+    }
     if (V.edit) {
       const E = V.edit, tool = t => () => { if (t === 'room' && E.tool === 'room') { roomPicker(); return; } E.tool = t; renderChrome(); };
       bar.append(b('hand', 'Move', E.tool === 'pan', tool('pan')), b('brush', 'Room', E.tool === 'room', tool('room')), b('trail', 'Corridor', E.tool === 'corr', tool('corr')),
@@ -8953,15 +8990,119 @@ const LocalMaps = (() => {
       hint.classList.add('show');
       return;
     }
-    bar.append(b('pin', 'Pin', V.mode && V.mode.t === 'add', () => setMode(V.mode && V.mode.t === 'add' ? null : { t: 'add' })),
+    bar.append(...[b('pin', 'Pin', V.mode && V.mode.t === 'add', () => setMode(V.mode && V.mode.t === 'add' ? null : { t: 'add' })),
       b('list', city ? 'Places' : 'Key', false, listSheet),
+      ship ? b('ship', 'Build', false, startBuild) : null,
       ship ? b('brush', 'Paint', false, () => { V.mode = null; V.edit = { tool: 'room', type: 'cabin', undo: [] }; renderChrome(); }) : null,
-      b('dice', 'Remake', false, remake),
+      ship && V.s.cls === 'custom' ? null : b('dice', 'Remake', false, remake),
       b('sliders', 'Options', false, optionsSheet),
-      b('share', 'Image', false, exportImage));
+      b('share', 'Image', false, exportImage)].filter(Boolean));
     const msg = V.mode && V.mode.t === 'add' ? (city ? 'Tap the map to add a place here: an inn, shop, temple…' : ship ? 'Tap the plan to mark crew, cargo, a hazard…' : 'Tap the map to mark a monster, treasure, trap…')
       : V.mode && V.mode.t === 'put' ? `Tap the map to put ${V.mode.q.name} there` : '';
     hint.textContent = msg; hint.classList.toggle('show', !!msg);
+  }
+
+  /* ---------- building from modules: pick one, and it snaps onto the ship with its doors made ---------- */
+  // parts: [room type or 'corr', x, y, w, h] in squares
+  const MODS = [
+    ['Start', 'Starter ship', '🚀', [['bridge', 0, 0, 5, 4], ['corr', 2, 4, 1, 8], ['engine', 0, 12, 5, 4]]],
+    ['Corridors', 'Corridor', '➖', [['corr', 0, 0, 1, 4]]], ['Corridors', 'Long corridor', '➖', [['corr', 0, 0, 1, 8]]], ['Corridors', 'Crossing', '➕', [['corr', 0, 2, 5, 1], ['corr', 2, 0, 1, 5]]],
+    ['Corridors', 'T-junction', '🔱', [['corr', 0, 0, 5, 1], ['corr', 2, 1, 1, 3]]], ['Corridors', 'Corner', '↩️', [['corr', 0, 0, 3, 1], ['corr', 0, 1, 1, 2]]],
+    ['Command', 'Bridge', '🧭', [['bridge', 0, 0, 6, 4]]], ['Command', 'Cockpit', '🕹️', [['cockpit', 0, 0, 3, 2]]], ['Command', 'Comms', '📡', [['comms', 0, 0, 3, 2]]], ['Command', 'Captain', '⭐', [['captain', 0, 0, 4, 3]]],
+    ['Command', 'Observation', '🔭', [['observation', 0, 0, 5, 3]]], ['Command', 'Armoury', '🛡️', [['armoury', 0, 0, 3, 3]]], ['Command', 'Brig', '🔒', [['brig', 0, 0, 4, 3]]],
+    ['Living', 'Cabin', '🛏️', [['cabin', 0, 0, 3, 2]]], ['Living', 'Cabin pair', '🛏️', [['cabin', 0, 0, 3, 2], ['corr', 3, 0, 1, 2], ['cabin', 4, 0, 3, 2]]], ['Living', 'Bunk room', '🛌', [['quarters', 0, 0, 4, 3]]], ['Living', 'Seats', '💺', [['seats', 0, 0, 4, 4]]],
+    ['Living', 'Mess', '🍽️', [['mess', 0, 0, 5, 4]]], ['Living', 'Galley', '🍳', [['galley', 0, 0, 3, 3]]], ['Living', 'Washroom', '🚿', [['wash', 0, 0, 3, 2]]], ['Living', 'Lounge', '🛋️', [['rec', 0, 0, 4, 3]]],
+    ['Living', 'Medbay', '⚕️', [['medbay', 0, 0, 4, 3]]], ['Living', 'Lab', '🔬', [['lab', 0, 0, 4, 3]]], ['Living', 'Hydroponics', '🌱', [['hydro', 0, 0, 5, 4]]], ['Living', 'Cryo bay', '❄️', [['cryo', 0, 0, 5, 4]]],
+    ['Working', 'Small hold', '📦', [['cargo', 0, 0, 4, 4]]], ['Working', 'Big hold', '📦', [['cargo', 0, 0, 6, 6]]], ['Working', 'Hangar', '🛬', [['hangar', 0, 0, 7, 6]]], ['Working', 'Storage', '🗄️', [['storage', 0, 0, 3, 2]]],
+    ['Working', 'Workshop', '🔧', [['workshop', 0, 0, 4, 3]]], ['Working', 'Weapons', '🎯', [['weapons', 0, 0, 3, 3]]], ['Working', 'Airlock', '🚪', [['airlock', 0, 0, 1, 1]]], ['Working', 'Escape pods', '🛟', [['escape', 0, 0, 2, 2]]], ['Working', 'Lift', '🛗', [['lift', 0, 0, 1, 1]]],
+    ['Engines', 'Engine', '🔥', [['engine', 0, 0, 4, 4]]], ['Engines', 'Reactor', '⚛️', [['reactor', 0, 0, 5, 5]]], ['Engines', 'Life support', '💨', [['life', 0, 0, 3, 3]]],
+  ].map(([g, n, ic, p]) => ({ g, n, ic, p }));
+  function startBuild() { V.mode = null; V.edit = { tool: 'build', mod: V.G.cell.some(c => c >= 0) ? null : MODS[0], rot: 0, mirror: true, remove: false, ghost: null, target: null, undo: [] }; fit(); V.snap = null; aim(); renderChrome(); redraw(); }
+  // the module's squares, turned: [x, y, part, type], starting at 0, 0
+  function modCells(m, rot) {
+    let c = []; m.p.forEach(([t, x, y, w, h], i) => { for (let b = y; b < y + h; b++) for (let a = x; a < x + w; a++) c.push([a, b, i, t]); });
+    for (let k = 0; k < rot; k++) c = c.map(([x, y, i, t]) => [-y, x, i, t]);
+    const mx = Math.min(...c.map(q => q[0])), my = Math.min(...c.map(q => q[1]));
+    return c.map(([x, y, i, t]) => [x - mx, y - my, i, t]);
+  }
+  // the nearest spot to (tx, ty) where the module is clear of everything and touches the ship; joining a corridor counts for a lot
+  function findSnap(m, rot, tx, ty) {
+    const G = V.G, { W, H, cell } = G, c = modCells(m, rot), bw = Math.max(...c.map(q => q[0])) + 1, bh = Math.max(...c.map(q => q[1])) + 1;
+    const free = (ox, oy) => c.every(([x, y]) => { const X = ox + x, Y = oy + y; return X > 0 && Y > 0 && X < W - 1 && Y < H - 1 && cell[Y * W + X] < 0; });
+    if (!cell.some(v => v >= 0)) { const ox = clamp(Math.round(tx - bw / 2), 1, W - bw - 1), oy = clamp(Math.round(ty - bh / 2), 1, H - bh - 1); return { x: ox, y: oy, c }; }
+    let best = null, bs = Infinity;
+    for (let oy = 1; oy + bh < H; oy++) for (let ox = 1; ox + bw < W; ox++) {
+      const d = (ox + bw / 2 - tx) ** 2 + (oy + bh / 2 - ty) ** 2; if (d >= bs || !free(ox, oy)) continue;
+      let any = false, corr = false, aft = false;
+      for (const [x, y] of c) for (const [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const v = cell[(oy + y + j) * W + ox + x + i]; if (v >= 0) { any = true; if (v === 0) corr = true; else if (j < 0 && G.rooms[v].type === 'engine') aft = true; } }
+      if (!any) continue;
+      const sc = d + (corr ? 0 : 300) + (aft ? 1500 : 0); if (sc < bs) { bs = sc; best = { x: ox, y: oy, c }; }
+    }
+    return best;
+  }
+  // the mirror image across the ship's centre line, if there is room and it isn't the same squares
+  function mirrorOf(gh) {
+    const G = V.G, cx = G.Hh.cx, c = gh.c.map(([x, y, i, t]) => [2 * cx - (gh.x + x), gh.y + y, i, t]), own = new Set(gh.c.map(([x, y]) => (gh.y + y) * G.W + gh.x + x));
+    return c.every(([x, y]) => x > 0 && x < G.W - 1 && G.cell[y * G.W + x] < 0 && !own.has(y * G.W + x)) ? c : null;
+  }
+  function aim(tx, ty) {
+    const E = V.edit; if (!E || E.tool !== 'build') return;
+    if (tx != null) E.target = [tx, ty];
+    if (!E.target) E.target = toWorld(V.cv.clientWidth / 2, (V.cv.clientHeight - 170) / 2);
+    E.ghost = E.mod ? findSnap(E.mod, E.rot, E.target[0], E.target[1]) : null;
+  }
+  function ghostOverlay(g) {
+    const E = V.edit, gh = E.ghost; if (!gh) return;
+    const cellAt = (x, y, t) => { const [sx, sy] = toScreen(x, y); g.fillStyle = t === 'corr' ? 'rgba(110,200,255,.55)' : 'rgba(110,235,150,.5)'; g.fillRect(sx, sy, V.k, V.k); g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1; g.strokeRect(sx + 0.5, sy + 0.5, V.k - 1, V.k - 1); };
+    for (const [x, y, , t] of gh.c) cellAt(gh.x + x, gh.y + y, t);
+    if (E.mirror) { const mc = mirrorOf(gh); if (mc) for (const [x, y, , t] of mc) cellAt(x, y, t); }
+    const [lx, ly] = toScreen(gh.x + Math.max(...gh.c.map(q => q[0])) / 2 + 0.5, gh.y + Math.max(...gh.c.map(q => q[1])) / 2 + 0.5); label(g, E.mod.n, lx, ly, 13, { weight: 750, color: '#fff', halo: 'rgba(0,0,0,.8)' });
+  }
+  // doors for any room without one: onto a corridor if it can, else into a neighbour; airlocks and hangars also open to space
+  function autoDoors(D) {
+    const { W, H } = D.Hh, { cell, doors } = D, has = new Set(), corr = {}, room = {}, out = {}, push = (o, id, e) => (o[id] || (o[id] = [])).push(e);
+    for (const e of doors) { const a = e.v ? cell[e.y * W + e.x - 1] : cell[(e.y - 1) * W + e.x], b = cell[e.y * W + e.x]; if (a >= 0 && b >= 0 && a !== b) { has.add(a); has.add(b); } else if (a !== b) { has.add('o' + Math.max(a, b)); } }
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      const id = cell[y * W + x]; if (id <= 0) continue;
+      for (const [i, j, e] of [[-1, 0, { x, y, v: 1 }], [1, 0, { x: x + 1, y, v: 1 }], [0, -1, { x, y, v: 0 }], [0, 1, { x, y: y + 1, v: 0 }]]) { const n = cell[(y + j) * W + x + i]; if (n === id) continue; push(n === 0 ? corr : n > 0 ? room : out, id, e); }
+    }
+    const mid = es => es[(es.length - 1) >> 1];
+    for (const id of Object.keys(corr).concat(Object.keys(room))) {
+      if (has.has(+id)) continue;
+      const t = D.typeOf(+id), e = mid(corr[id] || room[id]); has.add(+id);
+      if (!corr[id]) { const a = e.v ? cell[e.y * W + e.x - 1] : cell[(e.y - 1) * W + e.x], b = cell[e.y * W + e.x]; has.add(a); has.add(b); }
+      doors.push({ ...e, k: HEAVY.has(t) ? 'heavy' : 'door' });
+    }
+    for (const id of Object.keys(out)) {
+      const t = D.typeOf(+id); if ((t !== 'airlock' && t !== 'hangar') || has.has('o' + id)) continue;
+      const es = out[id].filter(e => e.v); if (!es.length) continue;
+      if (t === 'airlock') doors.push({ ...mid(es), k: 'hatch' });
+      else { const col = es.filter(e => e.x === es[0].x), a = Math.max(0, (col.length >> 1) - 1); for (const e of col.slice(a, a + 3)) doors.push({ ...e, k: 'bay' }); }
+    }
+  }
+  function placeModule() {
+    const E = V.edit, gh = E && E.ghost; if (!gh) { if (E && E.mod) toast('No room for that here'); return; }
+    const D = editable(), { W } = D.Hh, mc = E.mirror ? mirrorOf(gh) : null;
+    const put = list => { const ids = {}; for (const [x, y, i, t] of list) { if (t === 'corr') ids[i] = 0; else if (ids[i] == null) { D.types.push(t); ids[i] = D.types.length - 1; } D.cell[y * W + x] = ids[i]; } };
+    put(gh.c.map(([x, y, i, t]) => [gh.x + x, gh.y + y, i, t])); if (mc) put(mc);
+    autoDoors(D); pushUndo();
+    const bw = Math.max(...gh.c.map(q => q[0])), bh = Math.max(...gh.c.map(q => q[1]));
+    E.target = [gh.x + bw / 2 + 0.5, gh.y + bh / 2 + 0.5]; if (E.mod === MODS[0]) E.mod = null;
+    commitDeck(D);
+    const [a, b] = toScreen(gh.x, gh.y), [c, d] = toScreen(gh.x + bw + 1, gh.y + bh + 1);
+    if (a < 10 || b < 10 || c > V.cv.clientWidth - 10 || d > V.cv.clientHeight - 170) { fit(); V.snap = null; aim(); redraw(); }
+  }
+  // a room comes off whole; a corridor comes off as the straight piece between its junctions
+  function removeAt(wx, wy) {
+    const D = editable(), { W, H } = D.Hh, { cell } = D, x = Math.floor(wx), y = Math.floor(wy); if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) return;
+    const id = cell[y * W + x]; if (id < 0) return;
+    if (id > 0) { for (let i = 0; i < cell.length; i++) if (cell[i] === id) cell[i] = -1; }
+    else {
+      const links = i => [i - 1, i + 1, i - W, i + W].filter(u => cell[u] === 0), q = [y * W + x], seen = new Set(q);
+      while (q.length) { const v = q.pop(); for (const u of links(v)) if (!seen.has(u) && links(u).length < 3) { seen.add(u); q.push(u); } }
+      for (const i of seen) cell[i] = -1;
+    }
+    pushUndo(); commitDeck(D);
   }
 
   /* ---------- painting a deck ---------- */
@@ -9036,8 +9177,9 @@ const LocalMaps = (() => {
       const [x, y] = pos(e); V.ptrs.set(e.pointerId, [x, y]);
       if (V.ptrs.size === 1) {
         if (V.edit && ['room', 'corr', 'erase'].includes(V.edit.tool) && !e.button) { V.drag = null; V.stroke = { cells: new Map(), last: null, first: null, t: V.edit.tool, type: V.edit.type }; strokeTo(x, y); redraw(true); return; }
+        if (V.edit && V.edit.tool === 'build' && V.edit.mod && !e.button) { V.drag = null; V.placing = true; const [wx, wy] = toWorld(x, y); aim(wx, wy); redraw(true); return; }
         const pin = V.edit ? null : hitPin(x, y); V.drag = { x0: x, y0: y, lx: x, ly: y, moved: false, pin, t0: performance.now() };
-      } else { if (V.stroke) { V.stroke = null; redraw(true); } V.drag = null; const [a, b] = [...V.ptrs.values()]; V.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; }
+      } else { V.placing = false; if (V.stroke) { V.stroke = null; redraw(true); } V.drag = null; const [a, b] = [...V.ptrs.values()]; V.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; }
     });
     cv.addEventListener('pointermove', e => {
       if (!V || !V.ptrs.has(e.pointerId)) return;
@@ -9046,6 +9188,7 @@ const LocalMaps = (() => {
         const [a, b] = [...V.ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         V.ox += mx - V.pinch.mx; V.oy += my - V.pinch.my; zoomAt(mx, my, d / V.pinch.d); V.pinch = { d, mx, my }; return;
       }
+      if (V.placing) { const [wx, wy] = toWorld(x, y); aim(wx, wy); redraw(true); return; }
       if (V.stroke) { strokeTo(x, y); redraw(true); return; }
       const D = V.drag; if (!D) return;
       if (!D.moved && Math.hypot(x - D.x0, y - D.y0) > 6) D.moved = true;
@@ -9058,6 +9201,7 @@ const LocalMaps = (() => {
       if (!V || !V.ptrs.has(e.pointerId)) return;
       V.ptrs.delete(e.pointerId);
       if (V.ptrs.size < 2) V.pinch = null;
+      if (V.placing) { V.placing = false; if (e.type !== 'pointercancel' && !V.ptrs.size) placeModule(); else redraw(); return; }
       if (V.stroke) { const st = V.stroke; V.stroke = null; if (e.type !== 'pointercancel' && !V.ptrs.size) applyStroke(st); else redraw(); return; }
       const D = V.drag; V.drag = null;
       if (!D || e.type === 'pointercancel') { redraw(); return; }
@@ -9070,7 +9214,7 @@ const LocalMaps = (() => {
   }
   function onTap(x, y, pin) {
     const [wx, wy] = toWorld(x, y);
-    if (V.edit) { if (V.edit.tool === 'door') toggleDoor(wx, wy); return; }
+    if (V.edit) { if (V.edit.tool === 'door') toggleDoor(wx, wy); else if (V.edit.tool === 'build' && V.edit.remove) removeAt(wx, wy); return; }
     if (V.mode && V.mode.t === 'put') { const q = V.mode.q; q.mx = +wx.toFixed(1); q.my = +wy.toFixed(1); persist(); setMode(null); redraw(); toast(`${q.name} is on the map`); return; }
     if (V.mode && V.mode.t === 'add') { setMode(null); pinSheet(null, wx, wy); return; }
     if (pin) { pinSheet(pin.ref); return; }
@@ -9207,7 +9351,7 @@ const LocalMaps = (() => {
       };
       body = h('div', null,
         field('Class', seg(Object.entries(SHIPS).map(([k2, v]) => [k2, v.name.replace(' ship', '')]), s.cls, v => rework(() => { s.cls = v; s.decks = freshDecks(SHIPS[v].decks); }, `Now a ${SHIPS[v].name.toLowerCase()}`)),
-          `${Hh.L * CELL} m long and ${(Hh.M * 2 + 1) * CELL} m across. A new class builds a new hull.`),
+          s.cls === 'custom' ? 'Custom ships start empty and are built from modules. A new class builds a new hull.' : `${Hh.L * CELL} m long and ${(Hh.M * 2 + 1) * CELL} m across. A new class builds a new hull.`),
         field('Look', seg(Object.entries(SLOOK), s.look, v => { s.look = v; persist(); rebuild(false); }), 'Industrial is worn steel and grating, Sleek is white panels, Military is dark gunmetal, Blueprint is a line plan.'),
         h('div', { class: 'grp-title' }, 'Decks'),
         s.decks.map((d, i) => h('div', { class: 'list-row' }, h('div', { class: 'main' }, h('div', { class: 'title' }, `Deck ${i + 1}`), h('div', { class: 'sub' }, [ROLE_NAME[Hh.roles[i]], d.edit ? 'painted' : 'generated', Object.keys(d.rooms).length ? plural(Object.keys(d.rooms).length, 'room') + ' keyed' : null].filter(Boolean).join(' · '))),
@@ -9289,7 +9433,7 @@ const LocalMaps = (() => {
     const cv = h('canvas', { class: 'lm-thumb ship' }), go = () => openShip(e);
     const el = h('div', { class: 'card lm-card' },
       h('div', { class: 'row tap', role: 'button', tabindex: 0, onclick: go, onkeydown: ev => { if (ev.key === 'Enter') go(); } }, icon('ship', 18),
-        h('div', { class: 'grow' }, h('div', { style: 'font-weight:700' }, 'Deck plans'), h('div', { class: 'small muted' }, `${SHIPS[s.cls].name} · ${Hh.L * CELL} m long · ${s.decks.length} deck${s.decks.length > 1 ? 's' : ''} · ${SLOOK[s.look]}`)), icon('chev', 16)),
+        h('div', { class: 'grow' }, h('div', { style: 'font-weight:700' }, 'Deck plans'), h('div', { class: 'small muted' }, `${SHIPS[s.cls].name} · ${s.cls === 'custom' ? '' : Hh.L * CELL + ' m long · '}${s.decks.length} deck${s.decks.length > 1 ? 's' : ''} · ${SLOOK[s.look]}`)), icon('chev', 16)),
       h('div', { class: 'tap', onclick: go }, cv),
       h('div', { class: 'row wrap', style: 'margin-top:10px;gap:6px' },
         pl ? [h('span', { class: 'small grow' }, icon('pin', 13), ' ', pl.name, w && w !== S.world ? ` · on ${w.name}` : ''),
@@ -10988,6 +11132,7 @@ const Codex = (() => {
     if (S.ui.tab !== 'codex') setTab('codex'); else render();
     det.scrollTop = 0;
   }
+  function designShip() { const e = create({ kind: 'ship', ship: { cls: 'custom' } }); editing = false; render(); LocalMaps.openShip(e); }
   function create(preset = {}) {
     const kind = CODEX_KINDS[preset.kind] ? preset.kind : mode() === 'journal' ? 'session' : mode() === 'quests' ? 'quest' : mode() === 'ships' ? 'ship' : 'lore';
     const e = normalizeEntry({ ...preset, kind, title: preset.title || '', body: preset.body ?? CODEX_TEMPLATES[kind] ?? '' });
@@ -11017,6 +11162,7 @@ const Codex = (() => {
       if (kinds.length > 1 || tags.length) listEl.append(h('div', { class: 'filter-row' }, [['all', 'All']].concat(kinds.map(k => [k, CODEX_KINDS[k][0]]), tags.map(t => ['tag:' + t, '#' + t]))
         .map(([k, l]) => h('button', { class: 'chip' + (filter === k ? ' on' : ''), onclick: () => { filter = k; renderList(); } }, l))));
     }
+    if (m === 'ships') listEl.append(h('button', { class: 'btn primary block', style: 'margin-bottom:10px', onclick: designShip }, icon('ship', 16), 'Design your own ship'));
     listEl.append(cards);
     function drawCards() {
       cards.innerHTML = '';
