@@ -1858,7 +1858,7 @@ function openSheet({ title, body, foot, wide, onClose }) {
   sheetStack.push(api);
   return api;
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetStack.length) sheetStack[sheetStack.length - 1].close(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetStack.length) { e.preventDefault(); sheetStack[sheetStack.length - 1].close(); } });
 function confirmDlg(msg, opts = {}) {
   return new Promise(res => {
     let done = false, sh = null;
@@ -5076,7 +5076,9 @@ const MapView = (() => {
         if (d < best) { best = d; const ang = Math.atan2(ey, ex); river = { ang, off: qx * -Math.sin(ang) + qy * Math.cos(ang), w: clamp(2 * (+f.w1 || 6), 8, 90) }; }
       }
     }
-    return { roads, coast, river };
+    const s0 = T.sample(p.lat, p.lon); let ex = 0, ey = 0, lo = s0.elev, hi = s0.elev;
+    for (let k = 0; k < 8; k++) { const b = k * 45, q = destPoint(p.lat, p.lon, b * D2R, Rm * 0.7 / T.RM), e = T.sample(q[0], q[1]).elev, t = th(b); ex += Math.cos(t) * (e - s0.elev); ey += Math.sin(t) * (e - s0.elev); lo = Math.min(lo, e); hi = Math.max(hi, e); }
+    return { roads, coast, river, biome: s0.biome, moist: s0.moist, temp: s0.temp, relief: hi - lo, up: Math.hypot(ex, ey) > 1 ? Math.atan2(ey, ex) : null };
   }
   const pairKey = (a, b) => [a.id, b.id].sort().join('|');
   function roadBetween(a, b) { return roadEdges().find(e => e.a && e.b && pairKey(e.a, e.b) === pairKey(a, b)) || null; }
@@ -6437,6 +6439,8 @@ const LocalMaps = (() => {
   // the part of P where nx·x + ny·y <= d
   function clip(P, nx, ny, d) {
     if (!P) return null;
+    let cut = false; for (let i = 0; i < P.length; i++) if (nx * P[i][0] + ny * P[i][1] > d) { cut = true; break; }
+    if (!cut) return P;
     const out = [];
     for (let i = 0, n = P.length; i < n; i++) {
       const a = P[i], b = P[(i + 1) % n], da = nx * a[0] + ny * a[1] - d, db = nx * b[0] + ny * b[1] - d;
@@ -6491,7 +6495,7 @@ const LocalMaps = (() => {
   }
   function segDist(px, py, a, b) {
     const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy; let t = L ? ((px - a[0]) * dx + (py - a[1]) * dy) / L : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
-    return Math.hypot(px - a[0] - dx * t, py - a[1] - dy * t);
+    const ex = px - a[0] - dx * t, ey = py - a[1] - dy * t; return Math.sqrt(ex * ex + ey * ey);
   }
   const edgeDist = (P, x, y) => { let m = Infinity; for (let i = 0; i < P.length; i++) m = Math.min(m, segDist(x, y, P[i], P[(i + 1) % P.length])); return m; };
   // P shrunk by w on every side (convex only)
@@ -6512,10 +6516,79 @@ const LocalMaps = (() => {
   }
   const rect = (cx, cy, w, hh, a) => { const c = Math.cos(a), s = Math.sin(a), q = [[-w / 2, -hh / 2], [w / 2, -hh / 2], [w / 2, hh / 2], [-w / 2, hh / 2]]; return q.map(([x, y]) => [cx + x * c - y * s, cy + x * s + y * c]); };
   const addPoly = (path, P) => { path.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) path.lineTo(P[i][0], P[i][1]); path.closePath(); };
-  // many shapes at once go in as one SVG path string: adding closed shapes one by one gets slower with every shape in Chrome
-  const svgPoly = P => 'M' + P.map(q => q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join('L') + 'Z';
-  const polys = list => new Path2D(list.map(svgPoly).join(''));
+  // many shapes in one path. Each is closed by a line back to its start, not closePath(), which gets slower with every shape in Chrome
+  const polys = list => { const p = new Path2D(); for (const P of list) { p.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) p.lineTo(P[i][0], P[i][1]); p.lineTo(P[0][0], P[0][1]); } return p; };
   const pick = (r, a) => a[Math.floor(r() * a.length)];
+  const bbox = P => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return [x0, y0, x1, y1]; };
+  // the sides of a convex polygon as half-planes n·p <= d, for quick inside tests and clipping
+  function halfPlanes(P) {
+    const c = centroid(P), out = [];
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i], b = P[(i + 1) % P.length]; let nx = b[1] - a[1], ny = a[0] - b[0]; const l = Math.hypot(nx, ny); if (l < 1e-9) continue;
+      nx /= l; ny /= l; let d = nx * a[0] + ny * a[1];
+      if (nx * c[0] + ny * c[1] > d) { nx = -nx; ny = -ny; d = -d; }
+      out.push([nx, ny, d]);
+    }
+    return out;
+  }
+  // inside with m to spare (a negative m reaches that far outside)
+  const inHP = (H, x, y, m = 0) => { for (let i = 0; i < H.length; i++) { const q = H[i]; if (q[0] * x + q[1] * y > q[2] - m) return false; } return true; };
+  const clipHP = (P, H, m = 0) => { for (const q of H) { P = clip(P, q[0], q[1], q[2] - m); if (!P) return null; } return P; };
+  const overlap = (A, B) => A.some(([x, y]) => inside(B, x, y)) || B.some(([x, y]) => inside(A, x, y));
+  // how far from (x, y) along (dx, dy) to the edge of P
+  function rayHit(P, x, y, dx, dy) {
+    let best = Infinity;
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i], b = P[(i + 1) % P.length], ex = b[0] - a[0], ey = b[1] - a[1], den = dx * ey - dy * ex; if (Math.abs(den) < 1e-9) continue;
+      const t = ((a[0] - x) * ey - (a[1] - y) * ex) / den, u = ((a[0] - x) * dy - (a[1] - y) * dx) / den;
+      if (t > 0 && u >= 0 && u <= 1 && t < best) best = t;
+    }
+    return best;
+  }
+  // the part of the segment a–b inside convex P, or null
+  function clipSeg(P, a, b) {
+    let t0 = 0, t1 = 1; const dx = b[0] - a[0], dy = b[1] - a[1], ccw = area(P) > 0;
+    for (let i = 0; i < P.length; i++) {
+      const p = P[i], q = P[(i + 1) % P.length], nx = ccw ? q[1] - p[1] : p[1] - q[1], ny = ccw ? p[0] - q[0] : q[0] - p[0];
+      const den = nx * dx + ny * dy, num = nx * (a[0] - p[0]) + ny * (a[1] - p[1]);
+      if (Math.abs(den) < 1e-9) { if (num > 0) return null; continue; }
+      const t = -num / den; if (den > 0) t1 = Math.min(t1, t); else t0 = Math.max(t0, t);
+    }
+    return t0 < t1 ? [[a[0] + dx * t0, a[1] + dy * t0], [a[0] + dx * t1, a[1] + dy * t1]] : null;
+  }
+  // a polyline's running length at each point, and the point and heading at distance s along it
+  const measure = pts => { const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return L; };
+  function pointAt(pts, L, s) {
+    let i = 1; while (i < pts.length - 1 && L[i] < s) i++;
+    const a = pts[i - 1], b = pts[i], l = L[i] - L[i - 1] || 1, t = clamp((s - L[i - 1]) / l, 0, 1);
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, (b[0] - a[0]) / l, (b[1] - a[1]) / l];
+  }
+  // walks a polyline: at(s) is the point and heading at distance s (cheap when s moves steadily)
+  function cursor(pts) {
+    const L = measure(pts); let i = 1;
+    return { tot: L[L.length - 1], at(s) {
+      while (i < pts.length - 1 && L[i] < s) i++;
+      while (i > 1 && L[i - 1] > s) i--;
+      const a = pts[i - 1], b = pts[i], l = L[i] - L[i - 1] || 1, t = clamp((s - L[i - 1]) / l, 0, 1);
+      return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, (b[0] - a[0]) / l, (b[1] - a[1]) / l];
+    } };
+  }
+  // a wandering line along ctrl: points every `step`, pushed sideways by a smooth wobble of up to amp that dies away
+  // over fadeA at the start and fadeB at the end, so it still meets what it joins
+  function wander(ctrl, amp, step, r, fadeA = step * 2.5, fadeB = fadeA) {
+    const L = measure(ctrl), tot = L[L.length - 1];
+    if (tot < step * 2 || amp < 0.3) return ctrl.map(q => q.slice());
+    const n = Math.ceil(tot / step), ph = [r() * TAU, r() * TAU, r() * TAU], wl = [tot * (0.8 + r() * 0.8), Math.max(70, amp * 6) * (1 + r()), Math.max(30, amp * 3) * (1 + r() * 0.7)], out = [];
+    fadeA = Math.min(fadeA, tot / 3); fadeB = Math.min(fadeB, tot / 3);
+    for (let i = 0; i <= n; i++) {
+      const s = tot * i / n, [x, y, tx, ty] = pointAt(ctrl, L, s), e = Math.min(1, s / fadeA, (tot - s) / fadeB);
+      const o = amp * e * (Math.sin(TAU * s / wl[0] + ph[0]) * 0.6 + Math.sin(TAU * s / wl[1] + ph[1]) * 0.28 + Math.sin(TAU * s / wl[2] + ph[2]) * 0.12);
+      out.push([x - ty * o, y + tx * o]);
+    }
+    return out;
+  }
+  // from (x, y), s along heading a and t across it
+  const fwd = (x, y, a, s, t) => [x + Math.cos(a) * s - Math.sin(a) * t, y + Math.sin(a) * s + Math.cos(a) * t];
 
   /* ---------- what kind of map a place gets ---------- */
   const DUNGEONY = new Set(['dungeon']);
@@ -6523,7 +6596,7 @@ const LocalMaps = (() => {
   function state(p) {
     const m = p.lmap || {};   // not attached until something changes, so just looking writes nothing
     m.kind = m.kind === 'dungeon' || m.kind === 'city' ? m.kind : DUNGEONY.has(p.type) ? 'dungeon' : 'city';
-    m.city = Object.assign({ seed: 0, size: 'auto', walls: 'auto', water: 'auto', names: {}, notes: {} }, m.city || {});
+    m.city = Object.assign({ seed: 0, size: 'auto', style: 'auto', walls: 'auto', water: 'auto', names: {}, notes: {} }, m.city || {});
     m.dun = Object.assign({ cur: 0, levels: [] }, m.dun || {});
     if (!m.city.seed) m.city.seed = seedOf(p.id + ':town');
     if (!m.dun.levels.length) m.dun.levels.push({ ...newLevel(), seed: seedOf(p.id + ':dungeon') });
@@ -6534,11 +6607,20 @@ const LocalMaps = (() => {
 
   /* ===================== towns ===================== */
   const CITY = {
-    village: { name: 'Village', R: 230, ward: 24000, block: 5200, lot: 230, dens: 0.42, road: 7, street: 6, gates: 3 },
-    town: { name: 'Town', R: 470, ward: 52000, block: 3800, lot: 170, dens: 0.9, road: 9, street: 8, gates: 4 },
-    city: { name: 'City', R: 820, ward: 90000, block: 3400, lot: 150, dens: 0.93, road: 13, street: 11, gates: 5 },
-    metro: { name: 'Great city', R: 1250, ward: 130000, block: 3600, lot: 185, dens: 0.95, road: 16, street: 13, gates: 6 },
+    village: { name: 'Village', R: 120, ward: 15000, road: 6, gates: 3, khans: 0, baths: 0, gardens: 0, cems: 1 },
+    town: { name: 'Town', R: 320, ward: 34000, road: 8, gates: 4, khans: 1, baths: 1, gardens: 1, cems: 1 },
+    city: { name: 'City', R: 680, ward: 68000, road: 10, gates: 5, khans: 3, baths: 3, gardens: 2, cems: 2 },
+    metro: { name: 'Great city', R: 1150, ward: 110000, road: 12, gates: 6, khans: 5, baths: 5, gardens: 3, cems: 3 },
   };
+  // how each style builds. sec, lane: how far any spot may lie from a street before a street (or a blind alley) is cut to it;
+  // wig: how much streets wander; front, depth: house plots in metres; court: share of houses built round a courtyard
+  const TSTYLE = {
+    stone: { name: 'Levantine stone', sec: 70, lane: 24, wig: 0.06, laneThrough: 0.12, secW: 4.5, laneW: 2.6, front: [11, 18], depth: [13, 19], court: 0.8, dome: 0.16 },
+    desert: { name: 'Desert medina', sec: 80, lane: 22, wig: 0.07, laneThrough: 0.05, secW: 4, laneW: 2.2, front: [10, 16], depth: [12, 18], court: 0.9, dome: 0.05 },
+    euro: { name: 'European', sec: 44, lane: 0, wig: 0.035, laneThrough: 0, secW: 6, laneW: 0, front: [5.5, 9], depth: [20, 30], house: [8, 12], court: 0, dome: 0 },
+  };
+  const DRY = new Set([8, 9, 15, 19]);   // desert, cold desert, dunes, badlands
+  const styleOf = (C, env) => TSTYLE[C.style] ? C.style : DRY.has(env.biome) || (env.moist != null && env.moist < 0.24 && !(env.temp < 6)) ? 'desert' : 'stone';
   function sizeKey(p, C) {
     if (CITY[C.size]) return C.size;
     const n = +p.pop || 0;
@@ -6555,16 +6637,28 @@ const LocalMaps = (() => {
     slum: ['The Warrens', 'Low Town', 'Mudside', 'Ragged Row'],
     park: ['The Commons', 'The Gardens', 'Green Ward'],
   };
+  const WARDS_ME = {
+    market: ['The Great Souk', 'Spice Souk', 'Cloth Souk', "Coppersmiths' Souk", "Goldsmiths' Souk", 'Souk of the Perfumers'],
+    temple: ['Temple Quarter', 'Quarter of the Great Temple', 'Holy Quarter', 'Quarter of the Scholars'],
+    castle: ['The Citadel', 'The Kasbah', 'Citadel Hill', 'The Palace'],
+    docks: ['Harbour Quarter', "Fishers' Quarter", 'The Marina', 'Quarter of the Boatmen'],
+    craft: ["Tanners' Quarter", "Dyers' Quarter", "Potters' Quarter", "Weavers' Quarter", "Coppersmiths' Quarter", "Glassblowers' Quarter", "Ropemakers' Quarter", "Carpenters' Quarter"],
+    res: ['Well Quarter', 'Gate Quarter', 'Fig Tree Quarter', 'Quarter of the Palms', 'Pomegranate Quarter', 'Fountain Quarter', 'Old Quarter', 'Garden Quarter',
+      'Quarter of the Steps', 'Bath Quarter', 'Cistern Quarter', 'Olive Quarter', 'Quarter of the Doves', 'Lantern Quarter', 'Almond Quarter', 'Saffron Quarter',
+      'Quarter of the Arches', 'Moon Quarter', 'Quarter of the Scribes', 'Cedar Quarter', 'Jasmine Quarter', 'Date Palm Quarter', 'Quarter of the Water Sellers', 'Vine Quarter'],
+    slum: ['Outer Quarter', 'Potsherd Quarter', 'Quarter of the Ash Heaps', 'The Hollows'],
+    park: ['The Gardens', 'Palace Gardens', 'The Orchards'],
+  };
   const WARDS_HE = { market: ['HaShuk', 'Shuk HaIr', 'Kikar HaShuk'], temple: ['Rova HaMikdash', 'Har HaKodesh', 'Kikar HaMikdash'], castle: ['HaMetzuda', 'HaBira', 'Migdal HaIr'],
     docks: ['HaNamal', 'Sfat HaYam', 'Rova HaNamal'], craft: ['Rova HaNapachim', 'Rova HaYotzrim', 'Rova HaOrgim', 'Rova HaTzaba\'im', 'Rova HaBonim'],
     slum: ['HaMa\'abara', 'Ir HaTachtit'], park: ['HaGan', 'Gan HaIr', 'HaPardes'] };
-  function wardName(type, r, used) {
-    const he = S.meta.nameStyle === 'hebrew', list = (he ? WARDS_HE[type] : WARDS[type]) || [];
+  function wardName(type, r, used, me) {
+    const he = S.meta.nameStyle === 'hebrew', list = (he ? WARDS_HE : me ? WARDS_ME : WARDS)[type] || [];
     for (let k = 0; k < 8; k++) { const n = list.length ? pick(r, list) : ''; if (n && !used.has(n)) { used.add(n); return n; } }
-    for (let k = 0; k < 8; k++) { const n = Names.make('district'); if (!used.has(n)) { used.add(n); return n; } }
-    return 'Ward ' + (used.size + 1);
+    for (let k = 0; k < 8; k++) { let n = Names.make('district'); if (me && !he) n = n.replace(/ (Ward|Town|Row|End)$/, ' Quarter'); if (!used.has(n)) { used.add(n); return n; } }
+    return (me ? 'Quarter ' : 'Ward ') + (used.size + 1);
   }
-  // the town's surroundings from the world map: road directions, sea or lake, river (or made up, if asked for)
+  // the town's surroundings from the world map: road directions, sea or lake, river (or made up, if asked for), the land itself
   function surroundings(p, C, R, r) {
     let cx = { roads: [], coast: null, river: null };
     try { cx = MapView.localContext(p, R * 1.6); } catch (e) { console.error(e); }
@@ -6577,90 +6671,121 @@ const LocalMaps = (() => {
     if (coast && p.type === 'port') coast.off = Math.min(coast.off, R * 0.5);
     if (coast) coast.off = Math.max(coast.off, R * 0.3);
     if (river) river.off = clamp(river.off, -0.45 * R, 0.45 * R);
-    return { roads: cx.roads || [], coast, river };
+    return { roads: cx.roads || [], coast, river, biome: cx.biome, moist: cx.moist, temp: cx.temp, relief: cx.relief || 0, up: cx.up == null ? null : cx.up };
   }
-  function genCity(p, C) {
-    const sz = sizeKey(p, C), Z = CITY[sz], R = Z.R, r = srng(C.seed);
-    const ruined = p.type === 'ruin' || p.status === 'ruined' || p.status === 'abandoned', fort = p.type === 'fort';
-    const walls = C.walls === 'yes' || (C.walls !== 'no' && (sz !== 'village' || fort));
-    const { roads, coast, river } = surroundings(p, C, R, r);
-    const Vh = R * 1.75, view = [[-Vh, -Vh], [Vh, -Vh], [Vh, Vh], [-Vh, Vh]];
-    const wet = (x, y, m = 0) => (coast && coast.sx * x + coast.sy * y > coast.off - m) || (river && Math.abs(-Math.sin(river.ang) * x + Math.cos(river.ang) * y - river.off) < river.w / 2 + m);
-    // outline: a jittered, slightly stretched convex shape, cut back from the shore
-    const ell = 1 + r() * 0.25, rot = r() * Math.PI, raw = [];
-    for (let i = 0; i < 18; i++) {
-      const a = i / 18 * TAU + (r() - 0.5) * 0.25, rr = R * (0.86 + r() * 0.14), x = Math.cos(a) * rr * ell, y = Math.sin(a) * rr / ell;
-      raw.push([x * Math.cos(rot) - y * Math.sin(rot), x * Math.sin(rot) + y * Math.cos(rot)]);
-    }
-    let outline = hull(raw);
-    if (coast) outline = clip(outline, coast.sx, coast.sy, coast.off - 16) || outline;
-    const c0 = centroid(outline), cx = c0[0] + (r() - 0.5) * R * 0.1, cy = c0[1] + (r() - 0.5) * R * 0.1;
-    // main roads: toward the real roads first, then made up until there are enough gates; never straight into the sea
-    const angs = [];
-    const far = a => { const d = Math.cos(a), e = Math.sin(a); return !coast || coast.sx * d + coast.sy * e < 0.55; };
-    for (const a of roads) if (far(a) && angs.every(b => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) > 0.5)) angs.push(a);
-    for (let k = 0; angs.length < Z.gates && k < 60; k++) { const a = r() * TAU; if (far(a) && angs.every(b => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) > 0.9)) angs.push(a); }
-    const rays = angs.map(a => ({ a: ((a % TAU) + TAU) % TAU, w: Z.road, main: true })).sort((x, y) => x.a - y.a);
-    for (let i = 0; i < rays.length; i++) {   // fill wide gaps with lesser streets so every sector stays convex
-      const a = rays[i].a, b = i + 1 < rays.length ? rays[i + 1].a : rays[0].a + TAU;
-      if (b - a > Math.PI * 0.85) { rays.splice(i + 1, 0, { a: (a + (b - a) / 2) % TAU, w: Z.road * 0.6, main: false }); rays.sort((x, y) => x.a - y.a); i = -1; }
-    }
-    if (!rays.length) rays.push({ a: 0, w: Z.road, main: true }, { a: 2.1, w: Z.road, main: true }, { a: 4.2, w: Z.road, main: true });
-    const rp = Math.sqrt(R) * (sz === 'village' ? 1.6 : 2.1);   // the square
-    // sectors between the roads, the square cut out of their tips, the river cut through them
-    let sectors = [];
-    for (let i = 0; i < rays.length; i++) {
-      const A = rays[i], B = rays[(i + 1) % rays.length], a0 = A.a, a1 = i + 1 < rays.length ? B.a : B.a + TAU;
-      let P = clip(outline, Math.sin(a0), -Math.cos(a0), Math.sin(a0) * cx - Math.cos(a0) * cy - A.w / 2);
-      P = clip(P, -Math.sin(a1), Math.cos(a1), -Math.sin(a1) * cx + Math.cos(a1) * cy - B.w / 2);
-      const bi = (a0 + a1) / 2; P = clip(P, -Math.cos(bi), -Math.sin(bi), -(Math.cos(bi) * cx + Math.sin(bi) * cy) - rp);
-      if (P) sectors.push(P);
-    }
-    if (river) {
-      const nx = -Math.sin(river.ang), ny = Math.cos(river.ang), hw = river.w / 2 + 7;
-      sectors = sectors.flatMap(P => [clip(P, nx, ny, river.off - hw), clip(P, -nx, -ny, -river.off - hw)]).filter(Boolean);
-    }
-    // wards, then a type for each
-    const wardsP = []; for (const P of sectors) subdivide(P, Z.ward, Z.street, r, wardsP, 0.3);
-    const wards = wardsP.map(P => { const c = centroid(P); return { P, c, a: Math.abs(area(P)), d: Math.hypot(c[0] - cx, c[1] - cy), wet: wet(c[0], c[1], R * 0.18), type: 'res' }; }).filter(w => w.a > 300);
-    const byD = wards.slice().sort((a, b) => a.d - b.d);
-    if (sz !== 'village') {
-      for (const w of byD.slice(0, sz === 'town' ? 1 : 2)) w.type = 'market';
-      const t = byD.find(w => w.type === 'res'); if (t) t.type = 'temple';
-      if (walls || fort || p.type === 'capital') { const far2 = byD.filter(w => w.type === 'res' && !w.wet); const k = fort ? far2[0] : far2[far2.length - 1 - Math.floor(r() * Math.min(3, far2.length))]; if (k) k.type = 'castle'; }
-      for (const w of wards) if (w.type === 'res' && w.wet) w.type = 'docks';
-      const rest = byD.filter(w => w.type === 'res');
-      rest.forEach((w, i) => { const f = i / Math.max(1, rest.length - 1); w.type = f > 0.8 && sz !== 'town' ? 'slum' : r() < 0.4 ? 'craft' : 'res'; });
-      if (sz !== 'town') { const pk = rest.find(w => w.type === 'res' && w.d > R * 0.3); if (pk && r() < 0.8) pk.type = 'park'; }
-    } else { const t = byD[0]; if (t) t.type = 'temple'; }
-    // blocks, lots, buildings
-    const bld = [], special = [], parks = [], trees = [], innerWalls = [];
-    for (const w of wards) {
-      if (w.type === 'park') { const q = inset(w.P, 3); if (q) parks.push(q); for (let k = 0; k < w.a / 900; k++) { const x = w.c[0] + (r() - 0.5) * Math.sqrt(w.a), y = w.c[1] + (r() - 0.5) * Math.sqrt(w.a); if (inside(w.P, x, y) && edgeDist(w.P, x, y) > 6) trees.push([x, y, 3 + r() * 4]); } continue; }
-      if (w.type === 'castle') {
-        const q = inset(w.P, 4); if (!q) continue; innerWalls.push(q);
-        const [ang, len] = longAxis(q), s = Math.min(len * 0.32, Math.sqrt(w.a) * 0.38);
-        special.push(rect(w.c[0], w.c[1], s, s * (0.8 + r() * 0.3), ang));
-        for (let k = 0; k < 3; k++) { const a = ang + k * 2.1 + r(), dd = s * (0.9 + r() * 0.3), hb = rect(w.c[0] + Math.cos(a) * dd, w.c[1] + Math.sin(a) * dd, s * 0.55, s * 0.24, a + Math.PI / 2); if (hb.every(([x, y]) => inside(q, x, y) && edgeDist(q, x, y) > 3)) bld.push(hb); }
-        continue;
+  // every great temple in the world faces the same way
+  const qibla = () => (seedOf(String(S.world.seed) + ':qibla') % 3600) / 3600 * TAU;
+
+  // streets as polylines, with a grid of their segments for "what is nearest" questions
+  function network(cell, box) {
+    const x0 = box[0] - 150, y0 = box[1] - 150, GW = Math.ceil((box[2] - box[0] + 300) / cell) + 1, GH = Math.ceil((box[3] - box[1] + 300) / cell) + 1, grid = new Array(GW * GH);
+    const ci = x => Math.min(GW - 1, Math.max(0, Math.floor((x - x0) / cell))), cj = y => Math.min(GH - 1, Math.max(0, Math.floor((y - y0) / cell)));
+    const list = [];
+    function add(st) {
+      list.push(st);
+      const p = st.pts;
+      for (let k = 0; k + 1 < p.length; k++) {
+        const a = p[k], b = p[k + 1], sg = [a[0], a[1], b[0], b[1], st];
+        for (let j = cj(Math.min(a[1], b[1])), j1 = cj(Math.max(a[1], b[1])); j <= j1; j++) for (let i = ci(Math.min(a[0], b[0])), i1 = ci(Math.max(a[0], b[0])); i <= i1; i++) { const q = j * GW + i; if (grid[q]) grid[q].push(sg); else grid[q] = [sg]; }
       }
-      const blocks = []; subdivide(w.P, Z.block, sz === 'village' ? 5 : 4, r, blocks, 0.35);
-      let templeDone = w.type !== 'temple';
-      if (!templeDone) { const big = blocks.reduce((m, b) => (Math.abs(area(b)) > Math.abs(area(m)) ? b : m), blocks[0]); const q = big && inset(big, 4); if (q) { special.push(q); blocks.splice(blocks.indexOf(big), 1); } templeDone = true; }
-      const lotA = Z.lot * (w.type === 'docks' ? 2.4 : w.type === 'slum' ? 0.7 : w.type === 'market' ? 1.15 : 1), dens = Z.dens * (w.type === 'slum' ? 1.04 : 1);
-      for (const b of blocks) {
-        const lots = []; subdivide(b, lotA, 0.9, r, lots, 0.4);
-        for (const L of lots) {
-          if (!L.some(([x, y]) => edgeDist(b, x, y) < 2.5)) { if (r() < 0.12 && sz !== 'village') trees.push([...centroid(L), 2.5 + r() * 2]); continue; }   // courtyard
-          if (r() > (ruined ? dens * 0.5 : dens)) { if (sz === 'village' && r() < 0.35) trees.push([...centroid(L), 3 + r() * 3]); continue; }
-          if (sz === 'village') { const q = inset(L, Math.min(3.5, Math.sqrt(Math.abs(area(L))) * 0.2)); if (q) bld.push(q); } else bld.push(L);
+      return st;
+    }
+    // fn(segment, distance from the centre line, t) for every segment within reach of (x, y)
+    function each(x, y, reach, fn) {
+      const i0 = ci(x - reach), i1 = ci(x + reach), j0 = cj(y - reach), j1 = cj(y + reach);
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const l = grid[j * GW + i]; if (!l) continue;
+        for (const sg of l) {
+          const dx = sg[2] - sg[0], dy = sg[3] - sg[1], L = dx * dx + dy * dy; let t = L ? ((x - sg[0]) * dx + (y - sg[1]) * dy) / L : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+          const ex = x - sg[0] - dx * t, ey = y - sg[1] - dy * t, d2 = ex * ex + ey * ey; if (d2 <= reach * reach) fn(sg, Math.sqrt(d2), t);
         }
       }
     }
-    // the town square: a well or fountain and, in towns, market stalls
-    const stalls = [];
-    if (sz !== 'village') for (let k = 0; k < rp / 2.5; k++) { const a = r() * TAU, d = rp * (0.35 + r() * 0.45); stalls.push(rect(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 4 + r() * 2, 3, r() * Math.PI)); }
-    // gates: where the main roads cross the wall
+    function near(x, y, reach, skip) {
+      let best = null;
+      each(x, y, reach, (sg, d, t) => { if ((!best || d < best.d) && !(skip && skip(sg[4]))) best = { d, x: sg[0] + (sg[2] - sg[0]) * t, y: sg[1] + (sg[3] - sg[1]) * t, st: sg[4] }; });
+      return best;
+    }
+    return { list, add, each, near };
+  }
+  // cuts streets into open ground, farthest spot first, until nowhere ok() allows is more than D from a street's edge.
+  // grow(x, y, d) returns the new streets toward (x, y) or null; extra: outlines (citadel, gardens…) whose edges count as reached
+  function fillStreets(net, box, ok, D, r, grow, extra) {
+    const gs = Math.max(3, D / 3.2), x0 = box[0], y0 = box[1], GW = Math.ceil((box[2] - x0) / gs) + 1, GH = Math.ceil((box[3] - y0) / gs) + 1;
+    const cap = D * 1.4, dist = new Float32Array(GW * GH);
+    for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) dist[j * GW + i] = ok(x0 + i * gs, y0 + j * gs) ? cap : 0;
+    const stamp = (pts, w) => {
+      for (let k = 0; k + 1 < pts.length; k++) {
+        const a = pts[k], b = pts[k + 1];
+        const i0 = Math.max(0, Math.floor((Math.min(a[0], b[0]) - cap - x0) / gs)), i1 = Math.min(GW - 1, Math.ceil((Math.max(a[0], b[0]) + cap - x0) / gs));
+        const j0 = Math.max(0, Math.floor((Math.min(a[1], b[1]) - cap - y0) / gs)), j1 = Math.min(GH - 1, Math.ceil((Math.max(a[1], b[1]) + cap - y0) / gs));
+        const ax = a[0], ay = a[1], dx = b[0] - ax, dy = b[1] - ay, L2 = dx * dx + dy * dy || 1e-9, hw = w / 2;
+        for (let j = j0; j <= j1; j++) {
+          const py = y0 + j * gs - ay;
+          for (let i = i0; i <= i1; i++) {
+            const q = j * GW + i, cur = dist[q]; if (cur <= 0) continue;
+            const px = x0 + i * gs - ax; let t = (px * dx + py * dy) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+            const ex = px - dx * t, ey = py - dy * t, d2 = ex * ex + ey * ey, lim = cur + hw;
+            if (d2 < lim * lim) dist[q] = Math.max(0.001, Math.sqrt(d2) - hw);
+          }
+        }
+      }
+    };
+    for (const st of net.list) stamp(st.pts, st.w);
+    for (const P of extra || []) stamp(P.concat([P[0]]), 0);
+    // a max-heap of open cells by distance, with a little noise so that ties break at random
+    const hk = [], hq = [];
+    const swap = (a, b) => { const k = hk[a], q = hq[a]; hk[a] = hk[b]; hq[a] = hq[b]; hk[b] = k; hq[b] = q; };
+    const push = (key, q) => { hk.push(key); hq.push(q); let c = hk.length - 1; while (c > 0) { const pa = (c - 1) >> 1; if (hk[pa] >= hk[c]) break; swap(pa, c); c = pa; } };
+    const pop = () => {
+      const top = hq[0], key = hk[0], lk = hk.pop(), lq = hq.pop();
+      if (hk.length) { hk[0] = lk; hq[0] = lq; let c = 0; const n = hk.length; for (;;) { const l = 2 * c + 1, rr = l + 1; let m = c; if (l < n && hk[l] > hk[m]) m = l; if (rr < n && hk[rr] > hk[m]) m = rr; if (m === c) break; swap(m, c); c = m; } }
+      pop.key = key; return top;
+    };
+    for (let q = 0; q < dist.length; q++) if (dist[q] > D) push(dist[q] + r() * gs, q);
+    let n = 0;
+    while (hk.length && n < 30000) {
+      const q = pop(), d = dist[q];
+      if (d <= D) continue;
+      if (d + gs < pop.key) { push(d + r() * gs, q); continue; }   // stale: something new came closer since it was queued
+      n++;
+      const made = grow(x0 + (q % GW) * gs + (r() - 0.5) * gs * 0.8, y0 + Math.floor(q / GW) * gs + (r() - 0.5) * gs * 0.8, d);
+      if (made) for (const st of made) { net.add(st); stamp(st.pts, st.w); }
+      if (dist[q] > D) dist[q] = 0;   // nothing could reach it; don't try again
+    }
+  }
+
+  function genCity(p, C) {
+    const sz = sizeKey(p, C), Z = CITY[sz], R = Z.R, r = srng(C.seed), rn = (a, b) => a + r() * (b - a);
+    const ruined = p.type === 'ruin' || p.status === 'ruined' || p.status === 'abandoned', fort = p.type === 'fort', small = sz === 'village';
+    const walls = C.walls === 'yes' || (C.walls !== 'no' && (!small || fort));
+    const env = surroundings(p, C, R, r), { roads, coast, river } = env;
+    const style = styleOf(C, env), ST = TSTYLE[style], euro = style === 'euro', me = !euro;
+    const Vh = R * 1.75, rvN = river ? [-Math.sin(river.ang), Math.cos(river.ang)] : null;
+    const wet = (x, y, m = 0) => (coast && coast.sx * x + coast.sy * y > coast.off - m) || (river && Math.abs(rvN[0] * x + rvN[1] * y - river.off) < river.w / 2 + m);
+    // outline: a jittered, slightly stretched convex shape, cut back from the shore
+    const ell = 1 + r() * 0.22, rot = r() * Math.PI, raw = [];
+    for (let i = 0; i < 22; i++) {
+      const a = i / 22 * TAU + (r() - 0.5) * 0.22, rr = R * (0.87 + r() * 0.13), x = Math.cos(a) * rr * ell, y = Math.sin(a) * rr / ell;
+      raw.push([x * Math.cos(rot) - y * Math.sin(rot), x * Math.sin(rot) + y * Math.cos(rot)]);
+    }
+    let outline = hull(raw);
+    if (coast) outline = clip(outline, coast.sx, coast.sy, coast.off - 10) || outline;
+    const HP = halfPlanes(outline), inTown = (x, y, m = 0) => inHP(HP, x, y, m), box = bbox(outline);
+    const edgeIn = (x, y) => { let m = Infinity; for (const q of HP) m = Math.min(m, q[2] - q[0] * x - q[1] * y); return m; };
+    const c0 = centroid(outline), cx = c0[0] + (r() - 0.5) * R * 0.08, cy = c0[1] + (r() - 0.5) * R * 0.08;
+
+    // gates: toward the real roads first, then made up until there are enough; never straight into the sea
+    const angs = [], adiff = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+    const far = a => !coast || coast.sx * Math.cos(a) + coast.sy * Math.sin(a) < 0.55;
+    for (const a of roads) if (far(a) && angs.every(b => adiff(a, b) > 0.5)) angs.push(a);
+    for (let k = 0; angs.length < Z.gates && k < 60; k++) { const a = r() * TAU; if (far(a) && angs.every(b => adiff(a, b) > 0.9)) angs.push(a); }
+    if (!angs.length) angs.push(r() * TAU);
+    const rays = angs.map(a => ({ a: ((a % TAU) + TAU) % TAU, main: true })).sort((x, y) => x.a - y.a);
+    for (let i = 0; i < rays.length; i++) {   // farm tracks split wide gaps, so the fields between stay convex
+      const a = rays[i].a, b = i + 1 < rays.length ? rays[i + 1].a : rays[0].a + TAU;
+      if (b - a > Math.PI * 0.85) { rays.splice(i + 1, 0, { a: (a + (b - a) / 2) % TAU, main: false }); rays.sort((x, y) => x.a - y.a); i = -1; }
+    }
     const gates = [];
     for (const ray of rays) {
       if (!ray.main) continue;
@@ -6669,15 +6794,374 @@ const LocalMaps = (() => {
       for (let i = 0; i < outline.length; i++) {
         const a = outline[i], b = outline[(i + 1) % outline.length], ex = b[0] - a[0], ey = b[1] - a[1], den = dx * ey - dy * ex; if (Math.abs(den) < 1e-9) continue;
         const t = ((a[0] - cx) * ey - (a[1] - cy) * ex) / den, u = ((a[0] - cx) * dy - (a[1] - cy) * dx) / den;
-        if (t > 0 && u >= 0 && u <= 1 && (!best || t < best.t)) best = { t, x: cx + dx * t, y: cy + dy * t, edge: i, u, w: ray.w };
+        if (t > 0 && u >= 0 && u <= 1 && (!best || t < best.t)) best = { t, x: cx + dx * t, y: cy + dy * t, edge: i, u, w: Z.road, a: ray.a };
       }
       if (best) gates.push(best);
     }
-    // countryside: fields and farms around the town, houses strung along the roads, copses
-    const fields = [], farms = [];
-    const nearRoad = (x, y, m) => rays.some(ray => { if (!ray.main) return false; const dx = Math.cos(ray.a), dy = Math.sin(ray.a), t = (x - cx) * dx + (y - cy) * dy; return t > 0 && Math.abs(-(x - cx) * dy + (y - cy) * dx) < m; });
-    const sc = Math.sqrt(R / 800), fieldA = clamp(7000 * sc, 3200, 10000), ring = [];
+
+    // what streets and houses keep out of: the citadel, great buildings, gardens, squares
+    const obst = [];
+    const addObst = (P, kind) => { const o = { P, H: halfPlanes(P), bb: bbox(P), kind }; obst.push(o); return o; };
+    const blocked = (x, y, m = 0) => { for (const o of obst) if (x > o.bb[0] - m && x < o.bb[2] + m && y > o.bb[1] - m && y < o.bb[3] + m && inHP(o.H, x, y, -m)) return true; return false; };
+    const blds = [], sCourts = [], arcades = [], cells = [], cols = [], domes = [], minarets = [], pools = [], trees = [], palms = [], olives = [], gardens = [], gpaths = [], plazas = [];
+    const net = network(20, box);
+    const addPlaza = P => { if (!P) return; plazas.push(P); addObst(P, 'plaza'); net.add({ pts: P.concat([P[0]]), w: 0, kind: 'plaza' }); };
+    const blob = (x, y, rad, n = 6) => hull(Array.from({ length: n }, (_, i) => { const t = (i + r() * 0.6) / n * TAU, rr = rad * rn(0.78, 1.12); return [x + Math.cos(t) * rr, y + Math.sin(t) * rr]; }));
+    // the middle of the widest gap between the gates (and anything else given), seen from the centre
+    const gapAt = extra => {
+      const as = gates.map(q => q.a).concat(extra).map(a => ((a % TAU) + TAU) % TAU).sort((a, b) => a - b);
+      if (!as.length) return r() * TAU;
+      let best = 0, bg = -1;
+      for (let i = 0; i < as.length; i++) { const a0 = as[i], a1 = i + 1 < as.length ? as[i + 1] : as[0] + TAU; if (a1 - a0 > bg) { bg = a1 - a0; best = (a0 + a1) / 2; } }
+      return best;
+    };
+
+    // the citadel: on the town's edge in a wide gap between gates, uphill if there is a hill
+    let cit = null;
+    if ((walls && !small) || fort || p.type === 'capital') {
+      const rc = fort ? R * 0.42 : R * rn(0.14, 0.19), ga = gates.map(q => q.a).sort((a, b) => a - b), hilly = env.up != null && env.relief > 15;
+      let dir = hilly ? env.up : r() * TAU, bs = -Infinity;
+      for (let i = 0; i < ga.length; i++) {
+        const a0 = ga[i], a1 = i + 1 < ga.length ? ga[i + 1] : ga[0] + TAU, mid = (a0 + a1) / 2; if (!far(mid)) continue;
+        const sc = (a1 - a0) + (hilly ? 1.2 * Math.cos(mid - env.up) : 0); if (sc > bs) { bs = sc; dir = mid; }
+      }
+      const dx = Math.cos(dir), dy = Math.sin(dir), reach = rayHit(outline, cx, cy, dx, dy), dd = fort ? R * 0.15 : (isFinite(reach) ? reach : R) - rc * 0.6;
+      const kx = cx + dx * dd, ky = cy + dy * dd, pts = [];
+      for (let i = 0; i < 9; i++) { const t = (i + r() * 0.5) / 9 * TAU, rr = rc * rn(0.82, 1.08); pts.push([kx + Math.cos(t) * rr, ky + Math.sin(t) * rr]); }
+      const P = clipHP(hull(pts), HP, 1);
+      if (P && !wet(kx, ky, 6)) { cit = { P, c: centroid(P), a: dir }; addObst(P, 'citadel'); }
+    }
+    if (cit) {   // inside: a keep, a palace round a courtyard, barracks and stores along the walls
+      const P = cit.P, [ccx, ccy] = cit.c, a = cit.a, rc = Math.sqrt(Math.abs(area(P)) / Math.PI), placed = [];
+      const put = (Q, kind) => { if (!Q.every(([u, v]) => inside(P, u, v) && edgeDist(P, u, v) > 3) || placed.some(o => overlap(o, Q))) return false; placed.push(Q); blds.push({ P: Q, kind }); return true; };
+      const kp = fwd(ccx, ccy, a, rc * 0.38, 0), ks = rc * (fort ? 0.3 : 0.34);
+      put(rect(kp[0], kp[1], ks, ks * rn(0.85, 1.1), a + rn(-0.3, 0.3)), 'keep') || put(rect(ccx, ccy, ks * 0.8, ks * 0.8, a), 'keep');
+      const pp = fwd(ccx, ccy, a, -rc * 0.22, 0), pw = rc * 0.8, ph = rc * 0.5;
+      if (put(rect(pp[0], pp[1], pw, ph, a + Math.PI / 2), 'palace')) { sCourts.push(rect(pp[0], pp[1], pw * 0.5, ph * 0.42, a + Math.PI / 2)); if (me) pools.push(rect(pp[0], pp[1], 3, 3, a)); }
+      for (let i = 0; i < P.length; i++) {
+        const A = P[i], B = P[(i + 1) % P.length], len = Math.hypot(B[0] - A[0], B[1] - A[1]); if (len < 26) continue;
+        let nx = -(B[1] - A[1]) / len, ny = (B[0] - A[0]) / len; const mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2; if (nx * (ccx - mx) + ny * (ccy - my) < 0) { nx = -nx; ny = -ny; }
+        put(rect(mx + nx * 7.5, my + ny * 7.5, len * rn(0.4, 0.62), 7, Math.atan2(B[1] - A[1], B[0] - A[0])), 'barracks');
+      }
+    }
+
+    // the heart of town: a souk round the great temple, or a market square beside the church
+    const ringW = ST.secW, plazaR = small ? 10 : Math.max(11, Z.road * 1.5);
+    let templeRing = null;
+    if (euro) {
+      const rp = Math.sqrt(R) * (small ? 1.6 : 1.9); addPlaza(blob(cx, cy, rp, 7));
+      const Lc = ({ village: 22, town: 34, city: 48, metro: 64 })[sz], Wc = Lc * 0.36, a = gapAt(cit ? [cit.a] : []), ca = (r() - 0.5) * 0.3;
+      const fl = Lc + Wc * 1.1, fw = Wc * 1.9, d = rp + Math.hypot(fl, fw) / 2 + 6, tx = cx + Math.cos(a) * d, ty = cy + Math.sin(a) * d, foot = rect(tx, ty, fl, fw, ca);
+      if (foot.every(([u, v]) => inTown(u, v, 8) && !wet(u, v, 4) && !blocked(u, v, 2)) && !blocked(tx, ty, 2)) {
+        addObst(foot, 'church');
+        blds.push({ P: rect(tx, ty, Lc, Wc, ca), kind: 'church' });
+        const tw = fwd(tx, ty, ca, -Lc / 2 - Wc * 0.3, 0); blds.push({ P: rect(tw[0], tw[1], Wc * 0.72, Wc * 0.72, ca), kind: 'tower' });
+        const e = fwd(tx, ty, ca, Lc / 2, 0), ap = []; for (let i = 0; i <= 4; i++) { const t = ca - Math.PI / 2 + i * Math.PI / 4; ap.push([e[0] + Math.cos(t) * Wc / 2, e[1] + Math.sin(t) * Wc / 2]); }
+        blds.push({ P: ap, kind: 'church' });
+        const tr = fwd(tx, ty, ca, Lc * 0.18, 0); blds.push({ P: rect(tr[0], tr[1], Wc * 0.8, Wc * 1.75, ca), kind: 'church' });
+        const ring = rect(tx, ty, fl + 8, fw + 8, ca); net.add({ pts: ring.concat([ring[0]]), w: ST.secW, kind: 'street' });
+      }
+    } else {
+      addPlaza(blob(cx, cy, plazaR, 6)); pools.push(rect(cx, cy, 2.6, 2.6, 0.4));
+      if (!small) {
+        const L = ({ town: 44, city: 64, metro: 88 })[sz] * rn(0.9, 1.1), W = L * rn(0.7, 0.85), q = qibla(), a = gapAt(cit ? [cit.a] : []);
+        const d = Math.hypot(L, W) / 2 + ringW + plazaR + 4, tx = cx + Math.cos(a) * d, ty = cy + Math.sin(a) * d, P = rect(tx, ty, L, W, q);
+        if (P.every(([u, v]) => inTown(u, v, 12) && !wet(u, v, 4) && !blocked(u, v, 2)) && !blocked(tx, ty, 2)) {
+          addObst(P, 'temple'); blds.push({ P, kind: 'temple' });
+          // the prayer hall faces along q; its courtyard, ringed by arcades, lies behind
+          const hall = L * rn(0.42, 0.52), cl = L - hall, cc = fwd(tx, ty, q, -L / 2 + cl / 2, 0);
+          sCourts.push(rect(cc[0], cc[1], cl - 6, W - 6, q));
+          if (cl > 20 && W > 20) { const ar = rect(cc[0], cc[1], cl - 13, W - 13, q); arcades.push(ar.concat([ar[0]])); }
+          pools.push(rect(cc[0], cc[1], 3.2, 3.2, q + Math.PI / 4));
+          for (let s = L / 2 - hall + 3.5; s < L / 2 - 2.5; s += 4.5) for (let t = -W / 2 + 3.5; t < W / 2 - 2.5; t += 4.5) cols.push(fwd(tx, ty, q, s, t));
+          const dr = Math.min(hall, W) * 0.22, dm = fwd(tx, ty, q, L / 2 - dr - 3, 0); domes.push([dm[0], dm[1], dr]);
+          const mn = fwd(tx, ty, q, -L / 2 + 3.2, W / 2 - 3.2); minarets.push(rect(mn[0], mn[1], 6, 6, q));
+          // the souk wraps round it
+          templeRing = rect(tx, ty, L + ringW + 3, W + ringW + 3, q); net.add({ pts: templeRing.concat([templeRing[0]]), w: ringW, kind: 'souk' });
+          const ux = cx - tx, uy = cy - ty, ul = Math.hypot(ux, uy), t = rayHit(templeRing, tx, ty, ux / ul, uy / ul);
+          if (isFinite(t)) net.add({ pts: [[tx + ux / ul * t, ty + uy / ul * t], [cx, cy]], w: ringW, kind: 'souk' });
+        }
+      }
+    }
+
+    // main streets, gate to centre, ending at the great buildings they run into; near the centre they are the covered souk
+    const cutAt = pts => {
+      for (let i = 1; i < pts.length; i++) {
+        const b = pts[i];
+        for (const o of obst) {
+          if (o.kind === 'plaza' || b[0] < o.bb[0] - 12 || b[0] > o.bb[2] + 12 || b[1] < o.bb[1] - 12 || b[1] > o.bb[3] + 12 || !inHP(o.H, b[0], b[1], -(ST.secW / 2 + 2))) continue;
+          const E = inset(o.P, -(ST.secW / 2 + 2)), sg = E && clipSeg(E, pts[i - 1], b);
+          return pts.slice(0, i).concat(sg ? [sg[0]] : []);
+        }
+      }
+      return pts;
+    };
+    const Rs = euro || small ? 0 : Math.max(55, R * 0.15), soukW = Math.max(4.5, Z.road * 0.62);
+    for (const q of gates) {
+      const len = Math.hypot(q.x - cx, q.y - cy), pts = cutAt(wander([[q.x, q.y], [cx, cy]], Math.min(len * ST.wig, 32), 9, r, 18, 35));
+      q.pts = pts; q.sts = [];
+      const cut = Rs ? pts.findIndex(v => Math.hypot(v[0] - cx, v[1] - cy) < Rs) : -1;
+      if (cut < 0) q.sts.push(net.add({ pts, w: Z.road, kind: 'main' }));
+      else {
+        if (cut > 0) q.sts.push(net.add({ pts: pts.slice(0, cut + 1), w: Z.road, kind: 'main' }));
+        if (cut < pts.length - 1) q.sts.push(net.add({ pts: pts.slice(cut), w: soukW, kind: 'souk' }));
+      }
+    }
+    const roadsOut = gates.map(q => { const dx = Math.cos(q.a), dy = Math.sin(q.a); return wander([[q.x, q.y], [q.x + dx * Vh * 1.7, q.y + dy * Vh * 1.7]], Vh * 0.06, 14, r, 30, 40); });
+    // quays along the water, a street round the inside of the wall (European towns), the way up to the citadel
+    const lineIn = (px, py, tx, ty, m) => {
+      let t0 = -1e5, t1 = 1e5;
+      for (const q of HP) { const den = q[0] * tx + q[1] * ty, num = q[2] - m - (q[0] * px + q[1] * py); if (Math.abs(den) < 1e-9) { if (num < 0) return null; continue; } const t = num / den; if (den > 0) t1 = Math.min(t1, t); else t0 = Math.max(t0, t); }
+      return t0 < t1 - 10 ? [[px + tx * t0, py + ty * t0], [px + tx * t1, py + ty * t1]] : null;
+    };
+    if (river) for (const sd of [-1, 1]) { const o = river.off + sd * (river.w / 2 + 3 + ST.secW / 2), sg = lineIn(rvN[0] * o, rvN[1] * o, Math.cos(river.ang), Math.sin(river.ang), 4); if (sg) net.add({ pts: sg, w: ST.secW, kind: 'quay' }); }
+    if (euro && walls) { const ring = inset(outline, 9 + ST.secW / 2); if (ring) net.add({ pts: ring.concat([ring[0]]), w: ST.secW, kind: 'street' }); }
+    else if (coast) { const o = coast.off - 12 - ST.secW / 2, sg = lineIn(coast.sx * o, coast.sy * o, -coast.sy, coast.sx, 3); if (sg) net.add({ pts: sg, w: ST.secW, kind: 'quay' }); }
+    if (cit) {
+      const dx = cx - cit.c[0], dy = cy - cit.c[1], l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l, t = rayHit(cit.P, cit.c[0], cit.c[1], ux, uy);
+      if (isFinite(t)) {
+        const gx = cit.c[0] + ux * (t + 1), gy = cit.c[1] + uy * (t + 1), q = net.near(gx + ux * 4, gy + uy * 4, R, st => st.kind === 'plaza');
+        cit.gate = [gx, gy];
+        if (q) net.add({ pts: wander([[gx, gy], [q.x, q.y]], Math.hypot(q.x - gx, q.y - gy) * ST.wig, 8, r), w: ST.secW, kind: 'street' });
+      }
+    }
+    // a little square inside most gates
+    if (walls) for (const q of gates) {
+      const Lm = measure(q.pts); if (Lm[Lm.length - 1] < 70 || r() > 0.75) continue;
+      const [x, y] = pointAt(q.pts, Lm, rn(16, 24)), P = clipHP(blob(x, y, Z.road * rn(1.3, 2.1)), HP, 3);
+      if (P && !blocked(x, y, Z.road * 2.2)) addPlaza(P);
+    }
+    // caravanserais by the gates and the souk
+    const khanSz = ({ village: 0, town: 28, city: 34, metro: 40 })[sz];
+    for (let tries = 0, made = 0; made < Z.khans && gates.length && tries < 90; tries++) {
+      const q = gates[tries % gates.length], Lm = measure(q.pts), tot = Lm[Lm.length - 1], s = tries % 3 === 2 ? tot - Rs - rn(0, 60) : rn(26, 80);
+      if (s < 20 || s > tot - 20) continue;
+      const [x, y, tx, ty] = pointAt(q.pts, Lm, s), side = r() < 0.5 ? -1 : 1, a = khanSz * rn(0.85, 1.15), b = a * rn(0.9, 1.15), o = Z.road / 2 + b / 2 + 2, ang = Math.atan2(ty, tx);
+      const kx = x - ty * side * o, ky = y + tx * side * o, P = rect(kx, ky, a, b, ang);
+      let clash = !P.every(([u, v]) => inTown(u, v, 6) && !wet(u, v, 4)) || blocked(kx, ky, Math.max(a, b) * 0.75);
+      if (!clash) net.each(kx, ky, Math.max(a, b) * 0.8, (sg, d) => { if (!q.sts.includes(sg[4]) && d < Math.max(a, b) * 0.72 + sg[4].w / 2) clash = true; });
+      if (clash) continue;
+      addObst(P, 'khan'); blds.push({ P, kind: 'khan' }); made++;
+      const ia = a * 0.56, ib = b - (a - ia), ct = rect(kx, ky, ia, ib, ang); sCourts.push(ct);
+      const ar = rect(kx, ky, ia - 5, ib - 5, ang); arcades.push(ar.concat([ar[0]])); pools.push(rect(kx, ky, 2.4, 2.4, ang + Math.PI / 4));
+      for (let i = 0; i < 4; i++) {   // the rooms round the courtyard
+        const A0 = ct[i], A1 = ct[(i + 1) % 4], B0 = P[i], B1 = P[(i + 1) % 4], n = Math.max(2, Math.round(Math.hypot(A1[0] - A0[0], A1[1] - A0[1]) / 3.6));
+        for (let j = 0; j <= n; j++) { const t = j / n; cells.push([[A0[0] + (A1[0] - A0[0]) * t, A0[1] + (A1[1] - A0[1]) * t], [B0[0] + (B1[0] - B0[0]) * t, B0[1] + (B1[1] - B0[1]) * t]]); }
+      }
+    }
+    // walled gardens: a cross of paths, a pool, rows of trees
+    for (let tries = 0, made = 0; made < Z.gardens && tries < 60; tries++) {
+      const a = r() * TAU, d = R * rn(0.42, 0.78), x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d, s1 = Math.sqrt(R) * rn(2.1, 3.1), s2 = s1 * rn(0.7, 1), ga = r() * Math.PI;
+      const P = rect(x, y, s1, s2, ga);
+      if (!P.every(([u, v]) => inTown(u, v, 8) && !wet(u, v, 6)) || blocked(x, y, s1 * 0.8) || net.near(x, y, s1 * 0.75)) continue;
+      addObst(P, 'garden'); gardens.push(P); made++;
+      const ca = Math.cos(ga), sa = Math.sin(ga);
+      for (const [ux, uy] of [[ca, sa], [-sa, ca]]) { const sg = clipSeg(P, [x - ux * 500, y - uy * 500], [x + ux * 500, y + uy * 500]); if (sg) gpaths.push(sg); }
+      pools.push(rect(x, y, 4.5, 4.5, ga));
+      const sp = rn(6, 7.5);
+      for (let u = -s1 / 2 + 4; u < s1 / 2 - 3; u += sp) for (let v = -s2 / 2 + 4; v < s2 / 2 - 3; v += sp) {
+        if (Math.abs(u) < 3.5 || Math.abs(v) < 3.5) continue;
+        const tx = x + ca * u - sa * v, ty = y + sa * u + ca * v;
+        if (style === 'desert') palms.push([tx, ty, rn(2.6, 3.4), r() * TAU]); else trees.push([tx, ty, rn(2, 2.8)]);
+      }
+    }
+
+    // streets, then blind alleys, cut into whatever is still too far from one
+    const okFill = (x, y) => inTown(x, y, 4) && !blocked(x, y, 1) && !wet(x, y, 3);
+    const okPath = (x, y) => inTown(x, y, 2.5) && !blocked(x, y, 0.5) && !wet(x, y, 2);
+    const segOk = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 3); for (let i = 1; i <= n; i++) if (!okPath(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n)) return false; return true; };
+    const extra = obst.filter(o => o.kind !== 'plaza').map(o => o.P);
+    // from the nearest street, through (x, y), on until the next street (or as far as it can go)
+    const nearest = (x, y, d) => net.near(x, y, d + 10) || net.near(x, y, d * 3 + 60) || net.near(x, y, R);
+    function through(x, y, d, w, kind) {
+      const q = nearest(x, y, d); if (!q || q.d < 3) return null;
+      const ux = (x - q.x) / q.d, uy = (y - q.y) / q.d;
+      if (!segOk([q.x, q.y], [x, y])) return null;
+      let tail = null, hit = false;
+      for (let s = 3; s < 300; s += 3) {
+        const px = x + ux * s, py = y + uy * s, n = net.near(px, py, 2.5);
+        if (n) { tail = [n.x, n.y]; hit = true; break; }
+        if (!okPath(px, py)) { tail = [x + ux * Math.max(0, s - 5), y + uy * Math.max(0, s - 5)]; break; }
+      }
+      const pts = [[q.x, q.y], [x, y]]; if (tail && Math.hypot(tail[0] - x, tail[1] - y) > 3) pts.push(tail);
+      const tot = measure(pts).pop();
+      return [{ pts: wander(pts, Math.min(tot * ST.wig * (kind === 'lane' ? 0.6 : 1), 16), kind === 'lane' ? 5 : 8, r), w, kind, dead: !hit }];
+    }
+    // a blind alley from the nearest street to (x, y), often with a dog-leg
+    function alley(x, y, d) {
+      const q = nearest(x, y, d); if (!q || q.d < 3) return null;
+      const l = q.d, ux = (x - q.x) / l, uy = (y - q.y) / l, ext = Math.min(4, l * 0.2), tip0 = [x + ux * ext, y + uy * ext], st = [q.x, q.y];
+      let pts = null;
+      if (l > 12 && r() < 0.6) {
+        const f = rn(0.35, 0.65), e = [q.x + ux * l * f, q.y + uy * l * f], side = (r() < 0.5 ? -1 : 1) * l * rn(0.2, 0.5), tip = [tip0[0] - uy * side, tip0[1] + ux * side];
+        if (segOk(st, e) && segOk(e, tip) && !net.near(tip[0], tip[1], ST.laneW + 6)) pts = [st, e, tip];
+      }
+      if (!pts && segOk(st, tip0)) pts = [st, tip0];
+      return pts ? [{ pts, w: ST.laneW, kind: 'lane', dead: true }] : null;
+    }
+    fillStreets(net, box, okFill, ST.sec * (small ? 1.5 : 1), r, (x, y, d) => through(x, y, d, ST.secW, 'street'), extra);
+    if (ST.lane) fillStreets(net, box, okFill, ST.lane * (small ? 1.15 : 1), r, (x, y, d) => r() < ST.laneThrough ? through(x, y, d, ST.laneW, 'lane') : alley(x, y, d), extra);
+
+    // districts: cells round scattered centres, the first at the souk or market, one at the citadel
+    const wseeds = [[cx, cy]]; if (cit) wseeds.push(cit.c);
+    const tA = Math.abs(area(outline)), nW = small ? (tA > Z.ward * 1.5 ? 2 : 1) : Math.max(2, Math.round(tA / Z.ward)), md = Math.sqrt(Z.ward) * 0.85;
+    for (let k = 0; wseeds.length < nW && k < nW * 40; k++) { const x = rn(box[0], box[2]), y = rn(box[1], box[3]); if (!inTown(x, y, md * 0.35) || wet(x, y, 10) || wseeds.some(q => Math.hypot(q[0] - x, q[1] - y) < md)) continue; wseeds.push([x, y]); }
+    const wards = wseeds.map((q, i) => {
+      let P = outline;
+      for (let j = 0; j < wseeds.length && P; j++) if (j !== i) { const o = wseeds[j], dx = o[0] - q[0], dy = o[1] - q[1], dd = Math.hypot(dx, dy) || 1; P = clip(P, dx / dd, dy / dd, (dx * (q[0] + o[0]) + dy * (q[1] + o[1])) / (2 * dd)); }
+      if (!P) return null;
+      const c = centroid(P); return { P, c, a: Math.abs(area(P)), d: Math.hypot(c[0] - cx, c[1] - cy), type: 'res', q };
+    }).filter(w => w && w.a > 400);
+    const wardAt = (x, y) => { let best = null, bd = Infinity; for (const w of wards) { const d = (w.q[0] - x) ** 2 + (w.q[1] - y) ** 2; if (d < bd) { bd = d; best = w; } } return best; };
+    const byD = wards.slice().sort((a, b) => a.d - b.d);
+    if (!small && byD.length) {
+      byD[0].type = 'market';
+      if (cit) { const w = wardAt(cit.c[0], cit.c[1]); if (w) w.type = 'castle'; }
+      if (euro) { const t = byD.find(w => w.type === 'res'); if (t) t.type = 'temple'; }
+      for (const w of wards) if (w.type === 'res' && wet(w.c[0], w.c[1], R * 0.18)) w.type = 'docks';
+      if (gardens.length) { const w = wardAt(...centroid(gardens[0])); if (w && w.type === 'res') w.type = 'park'; }
+      const rest = byD.filter(w => w.type === 'res');
+      rest.forEach((w, i) => { const f = i / Math.max(1, rest.length - 1); w.type = f > 0.8 && sz !== 'town' ? 'slum' : r() < 0.35 ? 'craft' : 'res'; });
+    }
+
+    // house plots: seeds along both sides of every street, each grown into the space nearest to it
+    const subLen = R * ({ village: 0.6, town: 0.4, city: 0.3, metro: 0.25 })[sz], SC = 10, sx0 = box[0] - subLen - 150, sy0 = box[1] - subLen - 150;
+    const SW = Math.ceil((box[2] - sx0 + subLen + 150) / SC) + 1, SH = Math.ceil((box[3] - sy0 + subLen + 150) / SC) + 1, head = new Int32Array(SW * SH).fill(-1), nextS = [], seeds = [];
+    const si = x => Math.min(SW - 1, Math.max(0, Math.floor((x - sx0) / SC))), sj = y => Math.min(SH - 1, Math.max(0, Math.floor((y - sy0) / SC)));
+    const addSeed = s => { const c = sj(s.y) * SW + si(s.x); nextS.push(head[c]); head[c] = seeds.length; seeds.push(s); };
+    const seedsNear = (x, y, rad, fn) => { for (let j = sj(y - rad), j1 = sj(y + rad); j <= j1; j++) for (let i = si(x - rad), i1 = si(x + rad); i <= i1; i++) for (let k = head[j * SW + i]; k >= 0; k = nextS[k]) fn(seeds[k]); };
+    const tooClose = (x, y, m) => { let bad = false; seedsNear(x, y, m, s => { if (!bad && (s.x - x) * (s.x - x) + (s.y - y) * (s.y - y) < m * m) bad = true; }); return bad; };
+    const crowded = (x, y, own, m) => { let bad = false; net.each(x, y, m + 7, (sg, d) => { if (!bad && sg[4] !== own && d - sg[4].w / 2 < m) bad = true; }); return bad; };
+    const LOT = { slum: [0.75, 0.85, 0.5], craft: [1.1, 1, 0.8], docks: [1.7, 1.25, 0], market: [1, 1, 0.9], res: [1, 1, 1], temple: [1.1, 1, 1], castle: [1.15, 1.05, 1], park: [1.2, 1.05, 1] };   // frontage, depth, courtyards
+    const cems = [], tombs = [], cemAt = (x, y, m = 0) => cems.some(o => inHP(o.H, x, y, -m));
+    function seedAlong(st, okS, keep) {
+      const pts = st.pts, cu = cursor(pts), tot = cu.tot;
+      if (tot < 2) return;
+      for (const side of [-1, 1]) {
+        for (let s = r() * 3; s < tot;) {
+          const [x, y, tx, ty] = cu.at(s), wd = wardAt(x, y), lm = LOT[wd ? wd.type : 'res'] || LOT.res;
+          const shop = me && !keep && (st.kind === 'souk' || (Rs && st.kind !== 'lane' && Math.hypot(x - cx, y - cy) < Rs * 1.15));
+          const f = shop ? rn(3.6, 5.4) : rn(ST.front[0], ST.front[1]) * lm[0] * (keep ? 1.2 : 1), dep = rn(ST.depth[0], ST.depth[1]) * lm[1];
+          const nx = -ty * side, ny = tx * side, o = st.w / 2 + dep / 2, sx = x + nx * o, sy = y + ny * o;
+          if ((!keep || r() < keep(s)) && okS(sx, sy) && !crowded(sx, sy, st, dep * 0.42) && !tooClose(sx, sy, f * 0.55))
+            addSeed({ x: sx, y: sy, nx, ny, fx: x + nx * st.w / 2, fy: y + ny * st.w / 2, f, dep, shop, st, wd, sub: !!keep, cm: lm[2] });
+          s += f;
+        }
+      }
+      if (st.dead && pts.length > 1) {   // a house closes the end of a blind alley
+        const a = pts[pts.length - 2], b = pts[pts.length - 1], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, ux = (b[0] - a[0]) / l, uy = (b[1] - a[1]) / l, dep = rn(ST.depth[0], ST.depth[1]);
+        const sx = b[0] + ux * (st.w / 2 + dep / 2), sy = b[1] + uy * (st.w / 2 + dep / 2);
+        if (okS(sx, sy) && !crowded(sx, sy, st, dep * 0.4) && !tooClose(sx, sy, ST.front[0] * 0.5))
+          addSeed({ x: sx, y: sy, nx: ux, ny: uy, fx: b[0] + ux * st.w / 2, fy: b[1] + uy * st.w / 2, f: rn(ST.front[0], ST.front[1]), dep, st, wd: wardAt(sx, sy), cm: 1 });
+      }
+    }
+    // cemeteries outside the gates (before the suburbs, which keep off them)
+    if (me) for (let tries = 0; cems.length < Z.cems && gates.length && tries < 40; tries++) {
+      const q = gates[Math.floor(r() * gates.length)], dx = Math.cos(q.a), dy = Math.sin(q.a), side = r() < 0.5 ? -1 : 1, w = Math.sqrt(R) * rn(2, 3), hh = w * rn(0.6, 0.9);
+      const off = Z.road / 2 + hh / 2 + 7, along = rn(20, 45) + w / 2, x = q.x + dx * along - dy * off * side, y = q.y + dy * along + dx * off * side, P = rect(x, y, w, hh, q.a);
+      if (P.some(([u, v]) => inTown(u, v, -12) || wet(u, v, 4)) || cems.some(o => Math.hypot(o.c[0] - x, o.c[1] - y) < w * 1.3)) continue;
+      cems.push({ P, c: [x, y], H: halfPlanes(P) });
+      const qa = qibla();
+      for (let s = -w / 2 + 3; s < w / 2 - 2; s += 3.4) for (let t = -hh / 2 + 3; t < hh / 2 - 2; t += 2.4) { if (r() > 0.72) continue; const g = fwd(x, y, q.a, s + rn(-0.5, 0.5), t); tombs.push(rect(g[0], g[1], 2, 0.9, qa)); }
+      for (let j = 0; j < w / 9; j++) { const g = fwd(x, y, q.a, rn(-w / 2 + 2, w / 2 - 2), (r() < 0.5 ? -1 : 1) * (hh / 2 - 1.8)); trees.push([g[0], g[1], rn(1.3, 1.9)]); }   // cypresses along the walls
+    }
+    const okIn = (x, y) => inTown(x, y, -4) && !blocked(x, y, 0.5)   // a little past the wall is fine: the plot is cut back to it && !wet(x, y, 2) && (walls || r() < clamp(edgeIn(x, y) / (R * 0.3), 0.18, 1));
+    for (const st of net.list) seedAlong(st, okIn);
+    // houses strung along the roads outside the gates
+    const okOut = (x, y) => !inTown(x, y, -8) && !wet(x, y, 3) && !cemAt(x, y, 4);
+    roadsOut.forEach(pts => seedAlong({ pts, w: Z.road * 0.8, kind: 'road' }, okOut, s => s < subLen ? 0.92 * Math.pow(1 - s / subLen, 0.6) : 0));
+
+    const lots = [];
+    for (const s of seeds) {
+      const capD = s.dep * (euro ? 0.56 : s.sub ? 0.8 : 1.45), capW = Math.max(s.f, s.dep) * (euro ? 0.9 : 1.2), R0 = Math.hypot(capW, capD);
+      let P = rect(s.x, s.y, capW * 2, capD * 2, Math.atan2(s.ny, s.nx) + Math.PI / 2), m2 = R0 * R0;
+      seedsNear(s.x, s.y, R0 * 2, o => {
+        if (o === s || !P) return;
+        const dx = o.x - s.x, dy = o.y - s.y, d2 = dx * dx + dy * dy; if (d2 > 4 * m2 || d2 < 1e-9) return;   // too far to reach this cell
+        const dd = Math.sqrt(d2), Q = clip(P, dx / dd, dy / dd, (dx * (s.x + o.x) + dy * (s.y + o.y)) / (2 * dd));
+        if (Q && Q !== P) { m2 = 0; for (const v of Q) { const ex = v[0] - s.x, ey = v[1] - s.y; if (ex * ex + ey * ey > m2) m2 = ex * ex + ey * ey; } }
+        P = Q;
+      });
+      if (P) P = clip(P, -s.nx, -s.ny, -(s.nx * s.fx + s.ny * s.fy) - 0.4);   // back from the street's edge
+      if (P && !s.sub && edgeIn(s.x, s.y) < R0) P = clipHP(P, HP, 1.5);
+      if (P && river) { const sd = rvN[0] * s.x + rvN[1] * s.y - river.off, hw = river.w / 2 + 2; P = sd > 0 ? clip(P, -rvN[0], -rvN[1], -(river.off + hw)) : clip(P, rvN[0], rvN[1], river.off - hw); }
+      if (P && coast) P = clip(P, coast.sx, coast.sy, coast.off - 11);
+      if (!P || Math.abs(area(P)) < 9) continue;
+      s.P = P; s.A = Math.abs(area(P)); lots.push(s);
+    }
+    // baths and a small temple (or chapel) for every quarter
+    const pickLots = (n, test) => { const c = lots.filter(test), out = []; for (let i = 0; i < n && c.length; i++) out.push(c.splice(Math.floor(r() * c.length), 1)[0]); return out; };
+    if (me) for (const s of pickLots(Z.baths, s => !s.shop && !s.sub && s.A > 140 && s.A < 700 && s.st.kind !== 'lane')) s.kind = 'bath';
+    for (const w of wards) {
+      if (w.type === 'castle' || (w.type === 'market' && (templeRing || euro))) continue;
+      let best = null, bd = Infinity;
+      for (const s of lots) if (s.wd === w && !s.kind && !s.shop && !s.sub && s.A > 90) { const d = (s.x - w.c[0]) ** 2 + (s.y - w.c[1]) ** 2; if (d < bd) { bd = d; best = s; } }
+      if (best && (me || (!small && r() < 0.5))) best.kind = 'shrine';
+    }
+    if (ruined) for (const s of lots) if (r() < 0.45) s.kind = 'rubble';
+    // what stands on each plot
+    const lotP = [], shops = [], specL = [], rubble = [], houses = [], ridges = [], courts = [];
+    for (const s of lots) {
+      const ta = Math.atan2(s.ny, s.nx) + Math.PI / 2, tx = -s.ny, ty = s.nx;
+      if (s.kind === 'rubble') { rubble.push(s.P); continue; }
+      if (s.kind === 'bath' || s.kind === 'shrine') {
+        specL.push(s.P);
+        const c = centroid(s.P), rr = Math.min(Math.sqrt(s.A) * (s.kind === 'bath' ? 0.17 : 0.2), 6);
+        if (me) {
+          domes.push([c[0], c[1], rr]);
+          if (s.kind === 'bath') for (let i = 0; i < 3; i++) { const t = ta + i * 2.1 + r(), x = c[0] + Math.cos(t) * rr * 1.7, y = c[1] + Math.sin(t) * rr * 1.7; if (inside(s.P, x, y) && edgeDist(s.P, x, y) > rr * 0.6) domes.push([x, y, rr * 0.55]); }
+          else { const m = [(c[0] + s.fx) / 2 + tx * rr, (c[1] + s.fy) / 2 + ty * rr]; if (inside(s.P, m[0], m[1]) && edgeDist(s.P, m[0], m[1]) > 1.6) minarets.push(rect(m[0], m[1], 3, 3, ta)); }
+        } else { const m = [s.fx + s.nx * 3, s.fy + s.ny * 3]; if (inside(s.P, m[0], m[1])) minarets.push(rect(m[0], m[1], 3.4, 3.4, ta)); }
+        continue;
+      }
+      if (euro) {
+        lotP.push(s.P);
+        const hd = rn(ST.house[0], ST.house[1]) * (s.sub ? 0.85 : 1), H = clip(s.P, s.nx, s.ny, s.nx * s.fx + s.ny * s.fy + hd);
+        if (!H) continue;
+        houses.push(H);
+        const mx = s.fx + s.nx * hd / 2, my = s.fy + s.ny * hd / 2, sg = clipSeg(H, [mx - tx * 40, my - ty * 40], [mx + tx * 40, my + ty * 40]); if (sg) ridges.push(sg);
+        if (s.A > hd * s.f + 110 && r() < 0.3) { const x = s.fx + s.nx * (hd + rn(5, 10)), y = s.fy + s.ny * (hd + rn(5, 10)); if (inside(s.P, x, y) && edgeDist(s.P, x, y) > 2.2) trees.push([x, y, rn(2, 3.2)]); }
+        continue;
+      }
+      if (s.shop) {   // a booth on the street, storerooms behind
+        const fd = s.nx * s.fx + s.ny * s.fy + rn(4.5, 6.5), front = clip(s.P, s.nx, s.ny, fd), back = clip(s.P, -s.nx, -s.ny, -fd);
+        if (front) shops.push(front); if (back) lotP.push(back);
+        continue;
+      }
+      lotP.push(s.P);
+      let court = null, LH = null;
+      if (!s.shop && s.A > 80 && r() < ST.court * s.cm) {
+        const cp = [s.x + s.nx * s.dep * 0.08, s.y + s.ny * s.dep * 0.08], base = Math.sqrt(s.A) * rn(0.3, 0.42);
+        LH = halfPlanes(s.P);
+        for (const f of [1, 0.7]) {
+          const q = rect(cp[0], cp[1], base * f * rn(0.85, 1.2), base * f * rn(0.85, 1.2), ta);
+          if (!q.every(([u, v]) => inHP(LH, u, v, 1.4))) continue;
+          courts.push(q); court = { x: cp[0], y: cp[1], s: base * f };
+          if (s.A > 220 && r() < 0.4) { if (r() < 0.55) trees.push([cp[0], cp[1], base * f * 0.32]); else pools.push(rect(cp[0], cp[1], 1.6, 1.6, ta + Math.PI / 4)); }
+          break;
+        }
+      }
+      if (!s.shop && r() < ST.dome * (court ? 0.7 : 1.4)) {
+        const x = court ? s.x + s.nx * s.dep * 0.45 : s.x, y = court ? s.y + s.ny * s.dep * 0.45 : s.y, rr = rn(1.6, 2.6);
+        if (inHP(LH || (LH = halfPlanes(s.P)), x, y, rr + 0.4) && (!court || Math.hypot(x - court.x, y - court.y) > court.s * 0.75 + rr)) domes.push([x, y, rr]);
+      }
+    }
+
+    // countryside: fields, groves and orchards around the town, farms along the roads, copses; terraces on hills
+    const fields = [], farms = [], terraces = [];
+    const sc = Math.sqrt(R / 700), fieldA = clamp(6500 * sc, 2600, 9000), ring = [];
     for (let i = 0; i < 28; i++) { const a = i / 28 * TAU; ring.push([cx + Math.cos(a) * Vh * 1.08, cy + Math.sin(a) * Vh * 1.08]); }
+    const irrig = R * 1.45 + 60, ip = [r() * TAU, r() * TAU];   // in the desert, how far the town's water reaches
+    const watered = (x, y) => { const a = Math.atan2(y - cy, x - cx); return Math.hypot(x - cx, y - cy) < irrig * (1 + 0.2 * Math.sin(3 * a + ip[0]) + 0.12 * Math.sin(5 * a + ip[1])) || (river && Math.abs(rvN[0] * x + rvN[1] * y - river.off) < river.w / 2 + 140) || (coast && coast.sx * x + coast.sy * y > coast.off - 110); };
+    const grove = (P, kind) => {
+      const ga = longAxis(P)[0], ca = Math.cos(ga), sa = Math.sin(ga), c = centroid(P), sp = kind === 'palm' ? rn(8, 9.5) : rn(11, 13), ext = Math.sqrt(Math.abs(area(P))) * 1.2, jit = kind === 'palm' ? 1.8 : 0.6;
+      for (let u = -ext; u <= ext; u += sp) for (let v = -ext; v <= ext; v += sp) {
+        const x = c[0] + ca * u - sa * v + (r() - 0.5) * jit, y = c[1] + sa * u + ca * v + (r() - 0.5) * jit;
+        if (!inside(P, x, y) || edgeDist(P, x, y) < 2.5) continue;
+        if (kind === 'palm') palms.push([x, y, rn(2.8, 3.8), r() * TAU]); else olives.push([x, y, rn(1.9, 2.6)]);
+      }
+    };
+    const copse = (x0, y0, n, spread, rr) => { for (let j = 0; j < n; j++) { const x = x0 + (r() - 0.5) * spread, y = y0 + (r() - 0.5) * spread; if (!inTown(x, y, -6) && !wet(x, y, 3) && !cemAt(x, y, 2)) trees.push([x, y, rr()]); } };
     for (let i = 0; i < rays.length; i++) {
       const A = rays[i], B = rays[(i + 1) % rays.length], a0 = A.a, a1 = i + 1 < rays.length ? B.a : B.a + TAU, hw0 = (A.main ? Z.road : 0) / 2 + 4, hw1 = (B.main ? Z.road : 0) / 2 + 4;
       let P = clip(ring, Math.sin(a0), -Math.cos(a0), Math.sin(a0) * cx - Math.cos(a0) * cy - hw0);
@@ -6686,28 +7170,41 @@ const LocalMaps = (() => {
       const pieces = []; subdivideRadial(P, fieldA, 3, r, pieces, cx, cy);
       for (const q of pieces) {
         const cq = centroid(q), dq = Math.hypot(cq[0] - cx, cq[1] - cy);
-        if (q.some(([x, y]) => inside(outline, x, y)) || edgeDist(outline, cq[0], cq[1]) < 14 || q.some(([x, y]) => wet(x, y, 6))) continue;
+        if (q.some(([x, y]) => inTown(x, y, -2) || wet(x, y, 6) || cemAt(x, y, 4)) || edgeIn(cq[0], cq[1]) > -14 || tooClose(cq[0], cq[1], 32)) continue;
         if (Math.abs(area(q)) < fieldA * 0.18) continue;
+        if (style === 'desert') {
+          if (!watered(cq[0], cq[1])) { if (r() < 0.35) copse(cq[0], cq[1], 3, 60 * sc, () => rn(1.2, 2)); continue; }   // bare desert, a few thorn bushes
+          if (r() < 0.45) { grove(q, 'palm'); continue; }
+          const sub = []; subdivideRadial(q, fieldA * 0.3, 2, r, sub, cx, cy);   // small irrigated plots
+          for (const f of sub) fields.push({ P: f, c: Math.floor(r() * 4), a: longAxis(f)[0] });
+          continue;
+        }
         // farther out, more of the land is left wild
-        if (r() < 0.85 * Math.min(1, Math.max(0, (dq - R * 1.3) / (Vh - R * 1.3)))) { if (r() < 0.5) for (let j = 0; j < 7; j++) { const x = cq[0] + (r() - 0.5) * 50 * sc, y = cq[1] + (r() - 0.5) * 50 * sc; if (inside(q, x, y)) trees.push([x, y, 4 + r() * 5]); } continue; }
-        if (r() < 0.13) { for (let j = 0; j < 4; j++) { const x = cq[0] + (r() - 0.5) * 30 * sc, y = cq[1] + (r() - 0.5) * 30 * sc; if (inside(q, x, y)) trees.push([x, y, 4 + r() * 4]); } continue; }   // meadow and copse
+        if (r() < 0.85 * clamp((dq - R * 1.3) / (Vh - R * 1.3), 0, 1)) { if (r() < 0.5) copse(cq[0], cq[1], 7, 50 * sc, () => rn(4, 9)); continue; }
+        if (style === 'stone' && dq < R * 1.8 && r() < 0.42) { grove(q, 'olive'); continue; }
+        if (r() < 0.13) { copse(cq[0], cq[1], 4, 30 * sc, () => rn(4, 8)); continue; }   // meadow and copse
         fields.push({ P: q, c: Math.floor(r() * 4), a: longAxis(q)[0] });
       }
     }
-    for (const ray of rays) {
-      if (!ray.main) continue;
-      const dx = Math.cos(ray.a), dy = Math.sin(ray.a);
-      for (let t = R * 0.95; t < R * (sz === 'village' ? 1.25 : 1.5); t += 14 + r() * 22) for (const side of [-1, 1]) {
-        if (r() < 0.35) continue;
-        const o = Z.road / 2 + 6 + r() * 6, x = cx + dx * t - dy * o * side, y = cy + dy * t + dx * o * side, q = rect(x, y, 8 + r() * 6, 6 + r() * 4, ray.a);
-        if (q.every(([u, v]) => !inside(outline, u, v) && !wet(u, v, 3))) farms.push(q);
+    roadsOut.forEach(pts => {
+      const cu = cursor(pts);
+      for (let s = subLen + 25; s < cu.tot; s += rn(18, 45)) for (const side of [-1, 1]) {
+        if (r() < 0.65) continue;
+        const [x, y, tx, ty] = cu.at(s), w = me ? rn(11, 15) : rn(8, 14), hh = me ? w * rn(0.85, 1.1) : rn(6, 10), o = Z.road * 0.4 + hh / 2 + rn(5, 11);
+        const fx = x - ty * o * side, fy = y + tx * o * side, q = rect(fx, fy, w, hh, Math.atan2(ty, tx));
+        if (q.some(([u, v]) => inTown(u, v, -6) || wet(u, v, 3) || cemAt(u, v, 2)) || tooClose(fx, fy, 14)) continue;
+        farms.push(q); if (me) courts.push(rect(fx, fy, w * 0.42, hh * 0.42, Math.atan2(ty, tx)));
+      }
+    });
+    if (style !== 'desert') for (let k = 0; k < 30; k++) { const a = r() * TAU, d = R * rn(1.15, 1.7); copse(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 3 + Math.floor(r() * 7), 50 * sc, () => rn(4, 8)); }
+    if (style === 'stone' && env.relief > 40) {   // terraced hillsides
+      const ph1 = r() * TAU, ph2 = r() * TAU;
+      for (let rad = R * 1.06; rad < Vh * 1.5; rad += rn(11, 16)) {
+        const pts = []; for (let i = 0; i <= 72; i++) { const t = i / 72 * TAU, rr = rad * (1 + 0.045 * Math.sin(3 * t + ph1 + rad / 90) + 0.025 * Math.sin(7 * t + ph2)); pts.push([cx + Math.cos(t) * rr, cy + Math.sin(t) * rr]); }
+        terraces.push(pts);
       }
     }
-    for (let k = 0; k < 40; k++) {
-      const a = r() * TAU, d = R * (1.1 + r() * 0.6), x0 = cx + Math.cos(a) * d, y0 = cy + Math.sin(a) * d;
-      for (let j = 0, n = 3 + Math.floor(r() * 9); j < n; j++) { const x = x0 + (r() - 0.5) * 50 * sc, y = y0 + (r() - 0.5) * 50 * sc; if (!inside(outline, x, y) && !wet(x, y, 4) && !nearRoad(x, y, Z.road) && !fields.some(f => inside(f.P, x, y))) trees.push([x, y, 4 + r() * 5]); }
-    }
-    // piers along the shore
+    // piers along the shore; bridges where the main streets and roads cross the river
     const piers = [];
     if (coast) {
       const tx = -coast.sy, ty = coast.sx, bx = coast.sx * coast.off, by = coast.sy * coast.off;
@@ -6716,9 +7213,24 @@ const LocalMaps = (() => {
         const L = 25 + r() * 45; piers.push(rect(x + coast.sx * L / 2, y + coast.sy * L / 2, 6, L + 6, Math.atan2(coast.sy, coast.sx) + Math.PI / 2));
       }
     }
+    const bridges = [];
+    if (river) for (const [pts, w] of gates.map(q => [q.pts, Z.road]).concat(roadsOut.map(pp => [pp, Z.road * 0.8]))) {
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const a = pts[i], b = pts[i + 1], da = rvN[0] * a[0] + rvN[1] * a[1] - river.off, db = rvN[0] * b[0] + rvN[1] * b[1] - river.off; if (da * db > 0 || da === db) continue;
+        const t = da / (da - db), l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, cs = Math.abs(rvN[0] * (b[0] - a[0]) + rvN[1] * (b[1] - a[1])) / l; if (cs < 0.2) continue;
+        bridges.push(rect(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, (river.w + 12) / cs, w + 3, Math.atan2(b[1] - a[1], b[0] - a[0])));
+      }
+    }
+
     const used = new Set();
-    for (const w of wards) w.name = wardName(w.type, r, used);
-    return { kind: 'city', sz, R, Vh, view, roadW: Z.road, outline, cx, cy, rp, rays, gates, walls, wards, bld, special, parks, trees, innerWalls, stalls, fields, farms, piers, coast, river, ruined, title: `${p.name}` };
+    for (const w of wards) w.name = wardName(w.type, r, used, me);
+    const streets = { main: [], souk: [], street: [], lane: [], quay: [] };
+    for (const st of net.list) if (streets[st.kind]) streets[st.kind].push(st.pts);
+    const pal = ruined ? { ...PALS[style], bldg: '#d3c8b3', shop: '#cbbfa8', special: '#bdb099', wall: '#82776a', dome: '#e2d9c8' } : PALS[style];
+    return { kind: 'city', sz, style, pal, R, Vh, roadW: Z.road, outline, cx, cy, walls, gates, wards, ruined, coast, river,
+      streets, streetW: { main: Z.road, souk: soukW, street: ST.secW, lane: ST.laneW || 2, quay: ST.secW }, roads: roadsOut, plazas, bridges, piers,
+      lots: lotP, shops, specL, rubble, houses, ridges, courts, blds, sCourts, arcades, cells, cols, domes, minarets, pools,
+      gardens, gpaths, cit: cit && cit.P, cems: cems.map(o => o.P), tombs, trees, palms, olives, fields, farms, terraces, title: `${p.name}` };
   }
 
   /* ===================== dungeons ===================== */
@@ -6821,33 +7333,53 @@ const LocalMaps = (() => {
   }
 
   /* ===================== drawing ===================== */
-  const PAPER = { paper: '#ece6d3', country: '#e2dfc5', ground: '#f4eedf', grass: '#dfe4c3', road: '#f5f0e2', roadEdge: '#c8bea4', bldg: '#b3a58e', bldgEdge: '#6c6150', special: '#8b7860',
-    wall: '#4b4136', water: '#a2c6da', waterEdge: '#6f9fba', fields: ['#d7d5a6', '#cbd39f', '#dfd2a1', '#c6cf9c'], tree: '#9ab47a', treeEdge: '#6d8a52', park: '#cdd9a7', plaza: '#ece2c4', label: '#3b3229', sand: '#e9dfbf' };
+  const PALS = {
+    stone: { country: '#e4e0c8', fields: ['#dcd7a9', '#d0d4a3', '#e2d5a6', '#cbcf9f'], fieldEdge: 'rgba(120,110,80,.35)', olive: '#a3ab80', terrace: 'rgba(125,108,80,.32)',
+      ground: '#ece5d3', yard: '#e4e2c6', hedge: 'rgba(110,120,80,.4)', bldg: '#cdbd9e', bldgEdge: '#83745c', lotEdge: 'rgba(110,95,70,.38)', shop: '#c1aa83', court: '#f4eedf',
+      street: '#f8f4ea', streetEdge: '#9e9078', souk: '#ece0c4', rib: 'rgba(130,110,80,.28)', plaza: '#f5efe1', special: '#b9a17b', specialEdge: '#5b4d3c', dome: '#efe8d8',
+      wall: '#5b4d3e', road: '#f4eee0', roadEdge: '#bdb196', garden: '#c5d39c', tree: '#9bb27a', treeEdge: '#6d8751', palm: '#6b8b4a', palmCore: '#8a7652',
+      cem: '#e8e3cf', tomb: '#b3aa95', water: '#a2c6da', waterEdge: '#6f9fba', sand: '#e9dfbf', ridge: 'rgba(80,70,55,.45)' },
+    desert: { country: '#ebd8ae', fields: ['#c5cf8d', '#b9c783', '#cfd497', '#b0c07d'], fieldEdge: 'rgba(120,100,60,.35)', olive: '#a3a874', terrace: 'rgba(130,100,60,.3)',
+      ground: '#f0e1c2', yard: '#e9dab4', hedge: 'rgba(120,110,70,.4)', bldg: '#cfa676', bldgEdge: '#7b5532', lotEdge: 'rgba(110,70,35,.36)', shop: '#be915d', court: '#f5e8cb',
+      street: '#f8eed7', streetEdge: '#aa875c', souk: '#ecd8b0', rib: 'rgba(140,100,60,.28)', plaza: '#f5e9cd', special: '#bb8c5c', specialEdge: '#5c3d22', dome: '#f2e2c2',
+      wall: '#6b4a2d', road: '#f5e8cc', roadEdge: '#c4a77d', garden: '#bccb88', tree: '#91aa69', treeEdge: '#627c43', palm: '#5e8641', palmCore: '#8b6b43',
+      cem: '#ecdcbb', tomb: '#b8996f', water: '#9cc4d6', waterEdge: '#6a9ab2', sand: '#eedfba', ridge: 'rgba(90,60,30,.45)' },
+    euro: { country: '#e2dfc5', fields: ['#d7d5a6', '#cbd39f', '#dfd2a1', '#c6cf9c'], fieldEdge: 'rgba(120,110,80,.35)', olive: '#a3ad7f', terrace: 'rgba(110,100,70,.28)',
+      ground: '#e9e5cf', yard: '#dde3c2', hedge: 'rgba(95,120,70,.5)', bldg: '#b9a184', bldgEdge: '#6c5d4b', lotEdge: 'rgba(90,75,55,.45)', shop: '#b09a7e', court: '#ece6d3',
+      street: '#f5f0e2', streetEdge: '#a39880', souk: '#f5f0e2', rib: 'rgba(0,0,0,0)', plaza: '#efe7cf', special: '#8b7860', specialEdge: '#4b4033', dome: '#d8cfbb',
+      wall: '#4b4136', road: '#f5f0e2', roadEdge: '#c8bea4', garden: '#cdd9a7', tree: '#9ab47a', treeEdge: '#6d8a52', palm: '#6f8f50', palmCore: '#8a7652',
+      cem: '#e3e0c9', tomb: '#aaa18c', water: '#a2c6da', waterEdge: '#6f9fba', sand: '#e9dfbf', ridge: 'rgba(70,50,35,.5)' },
+  };
+  const PAPER = { label: '#3b3229' };
+  const cityBg = G => (G.pal || PALS.euro).country;
+  const lines = list => { const p = new Path2D(); for (const L of list) { p.moveTo(L[0][0], L[0][1]); for (let i = 1; i < L.length; i++) p.lineTo(L[i][0], L[i][1]); } return p; };
+  const circles = list => { const p = new Path2D(); for (const [x, y, rr] of list) { p.moveTo(x + rr, y); p.arc(x, y, rr, 0, TAU); } return p; };
   // geometry is built into Path2D once per layout and reused for every frame
   function cityPaths(G) {
     if (G.paths) return G.paths;
     const P = {}, mk = polys;
-    P.bld = mk(G.bld); P.special = mk(G.special); P.parks = mk(G.parks); P.stalls = mk(G.stalls); P.farms = mk(G.farms); P.piers = mk(G.piers);
     P.fieldsBy = [0, 1, 2, 3].map(c => mk(G.fields.filter(f => f.c === c).map(f => f.P)));
-    P.furrows = new Path2D();
+    const furrows = [];
     for (const f of G.fields) {
       const c = Math.cos(f.a), s = Math.sin(f.a), ctr = centroid(f.P);
       let ext = 0; for (const q of f.P) ext = Math.max(ext, Math.hypot(q[0] - ctr[0], q[1] - ctr[1]));
-      for (let o = -ext; o <= ext; o += 6) { const ax = ctr[0] - s * o, ay = ctr[1] + c * o, seg = []; for (const t of [-ext, ext]) seg.push([ax + c * t, ay + s * t]);
-        // clip the furrow to the field
-        let t0 = 0, t1 = 1; const dx = seg[1][0] - seg[0][0], dy = seg[1][1] - seg[0][1], ccw = area(f.P) > 0, ok = (() => {
-          for (let i = 0; i < f.P.length; i++) { const a = f.P[i], b = f.P[(i + 1) % f.P.length], nx = ccw ? b[1] - a[1] : a[1] - b[1], ny = ccw ? a[0] - b[0] : b[0] - a[0];
-            const den = nx * dx + ny * dy, num = nx * (seg[0][0] - a[0]) + ny * (seg[0][1] - a[1]);
-            if (Math.abs(den) < 1e-9) { if (num > 0) return false; continue; }
-            const t = -num / den; if (den > 0) t1 = Math.min(t1, t); else t0 = Math.max(t0, t); }
-          return t0 < t1; })();
-        if (ok) { P.furrows.moveTo(seg[0][0] + dx * t0, seg[0][1] + dy * t0); P.furrows.lineTo(seg[0][0] + dx * t1, seg[0][1] + dy * t1); }
-      }
+      for (let o = -ext; o <= ext; o += 6) { const ax = ctr[0] - s * o, ay = ctr[1] + c * o, sg = clipSeg(f.P, [ax - c * ext, ay - s * ext], [ax + c * ext, ay + s * ext]); if (sg) furrows.push(sg); }
     }
-    P.trees = new Path2D(); for (const [x, y, rr] of G.trees) { P.trees.moveTo(x + rr, y); P.trees.arc(x, y, rr, 0, TAU); }
+    P.furrows = lines(furrows);
+    P.terraces = lines(G.terraces); P.olives = circles(G.olives); P.trees = circles(G.trees);
+    P.palmDots = circles(G.palms.map(([x, y, rr]) => [x, y, rr * 0.8]));
+    P.cems = mk(G.cems); P.tombs = mk(G.tombs);
     P.outline = mk([G.outline]);
-    P.roads = new Path2D(); for (const ray of G.rays) { P.roads.moveTo(G.cx, G.cy); P.roads.lineTo(G.cx + Math.cos(ray.a) * G.Vh * 1.5, G.cy + Math.sin(ray.a) * G.Vh * 1.5); }
-    P.mainRoads = new Path2D(); for (const ray of G.rays) if (ray.main) { P.mainRoads.moveTo(G.cx, G.cy); P.mainRoads.lineTo(G.cx + Math.cos(ray.a) * G.Vh * 1.5, G.cy + Math.sin(ray.a) * G.Vh * 1.5); }
+    P.lots = mk(G.lots); P.shops = mk(G.shops); P.specL = mk(G.specL); P.rubble = mk(G.rubble); P.houses = mk(G.houses); P.ridges = lines(G.ridges); P.courts = mk(G.courts);
+    P.st = {}; for (const k in G.streets) P.st[k] = lines(G.streets[k]);
+    P.roads = lines(G.roads); P.plazas = mk(G.plazas); P.bridges = mk(G.bridges); P.piers = mk(G.piers); P.farms = mk(G.farms);
+    // ribs across the covered souk
+    const ribs = [], sw = G.streetW.souk / 2;
+    for (const pts of G.streets.souk) { const cu = cursor(pts); for (let s = 2; s < cu.tot; s += 4.5) { const [x, y, tx, ty] = cu.at(s); ribs.push([[x - ty * sw, y + tx * sw], [x + ty * sw, y - tx * sw]]); } }
+    P.ribs = lines(ribs);
+    P.blds = mk(G.blds.map(b => b.P)); P.sCourts = mk(G.sCourts); P.arcades = lines(G.arcades); P.cells = lines(G.cells);
+    P.cols = circles(G.cols.map(([x, y]) => [x, y, 0.55])); P.domes = circles(G.domes); P.minarets = mk(G.minarets); P.pools = mk(G.pools);
+    P.gardens = mk(G.gardens); P.gpaths = lines(G.gpaths); P.cit = G.cit ? mk([G.cit]) : null;
     const far = G.Vh * 3, wave = (t, ph, amp) => amp * (Math.sin(t / 37 + ph) * 0.6 + Math.sin(t / 13 + ph * 2.3) * 0.4);
     // a shore along the line where the normal (nx, ny) reaches off, wavering by amp, closed off on the side of `side`
     const shore = (nx, ny, off, amp, ph, side) => { const tx = -ny, ty = nx, pts = []; for (let t = -far; t <= far; t += 12) { const o = off + wave(t, ph, amp); pts.push([nx * o + tx * t, ny * o + ty * t]); }
@@ -6859,54 +7391,90 @@ const LocalMaps = (() => {
       for (let t = far; t >= -far; t -= 12) { const o = v.off - v.w / 2 - wave(t, 2.1, 2.5); pts.push([nx * o + tx * t, ny * o + ty * t]); }
       P.river = mk([pts]);
     }
-    // walls, broken at the gates and left off the seaward side
-    P.towers = new Path2D();
+    // walls, broken at the gates and left off the seaward side; square towers in the east, round ones in the west
+    const sq = G.style !== 'euro', towers = [], tower = (x, y, s, a) => towers.push(sq ? rect(x, y, s, s, a) : [x, y, s / 2]);
     if (G.walls) {
-      P.wall = new Path2D();
-      const O = G.outline, seaSide = (a, b) => G.coast && G.coast.sx * (a[0] + b[0]) / 2 + G.coast.sy * (a[1] + b[1]) / 2 > G.coast.off - 40;
+      const wall = [], O = G.outline, seaSide = (a, b) => G.coast && G.coast.sx * (a[0] + b[0]) / 2 + G.coast.sy * (a[1] + b[1]) / 2 > G.coast.off - 40;
       for (let i = 0; i < O.length; i++) {
         const a = O[i], b = O[(i + 1) % O.length]; if (seaSide(a, b)) continue;
-        const len = Math.hypot(b[0] - a[0], b[1] - a[1]), cuts = G.gates.filter(q => q.edge === i).map(q => [q.u - (q.w / 2 + 4) / len, q.u + (q.w / 2 + 4) / len]).sort((x, y) => x[0] - y[0]);
-        let t = 0; for (const [u0, u1] of cuts.concat([[1, 1]])) { if (u0 > t) { P.wall.moveTo(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t); P.wall.lineTo(a[0] + (b[0] - a[0]) * u0, a[1] + (b[1] - a[1]) * u0); } t = Math.max(t, u1); }
-        P.towers.moveTo(a[0] + 6, a[1]); P.towers.arc(a[0], a[1], 6, 0, TAU);
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ea = Math.atan2(b[1] - a[1], b[0] - a[0]), gs = G.gates.filter(q => q.edge === i);
+        const cuts = gs.map(q => [q.u - (q.w / 2 + 4) / len, q.u + (q.w / 2 + 4) / len]).sort((x, y) => x[0] - y[0]);
+        let t = 0; for (const [u0, u1] of cuts.concat([[1, 1]])) { if (u0 > t) wall.push([[a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], [a[0] + (b[0] - a[0]) * u0, a[1] + (b[1] - a[1]) * u0]]); t = Math.max(t, u1); }
+        tower(a[0], a[1], sq ? 7 : 12, ea);
+        if (sq) for (let s = 34; s < len - 20; s += 34) { const u = s / len; if (gs.some(q => Math.abs(q.u - u) * len < q.w / 2 + 14)) continue; tower(a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, 5.5, ea); }
       }
-      for (const q of G.gates) { const e = G.outline[q.edge], f = G.outline[(q.edge + 1) % G.outline.length], len = Math.hypot(f[0] - e[0], f[1] - e[1]), ux = (f[0] - e[0]) / len, uy = (f[1] - e[1]) / len, o = q.w / 2 + 5;
-        for (const s of [-1, 1]) { const x = q.x + ux * o * s, y = q.y + uy * o * s; P.towers.moveTo(x + 5, y); P.towers.arc(x, y, 5, 0, TAU); } }
+      for (const q of G.gates) { const e = O[q.edge], f = O[(q.edge + 1) % O.length], len = Math.hypot(f[0] - e[0], f[1] - e[1]), ux = (f[0] - e[0]) / len, uy = (f[1] - e[1]) / len, o = q.w / 2 + 5;
+        for (const s of [-1, 1]) tower(q.x + ux * o * s, q.y + uy * o * s, sq ? 9 : 10, Math.atan2(uy, ux)); }
+      P.wall = lines(wall);
     }
-    P.inner = mk(G.innerWalls); for (const q of G.innerWalls) for (const [x, y] of q) { P.towers.moveTo(x + 4.5, y); P.towers.arc(x, y, 4.5, 0, TAU); }
+    if (G.cit) { P.inner = lines([G.cit.concat([G.cit[0]])]); for (let i = 0; i < G.cit.length; i++) { const a = G.cit[i], b = G.cit[(i + 1) % G.cit.length]; tower(a[0], a[1], sq ? 6.5 : 9, Math.atan2(b[1] - a[1], b[0] - a[0])); } }
+    P.towers = sq ? mk(towers) : circles(towers);
     return (G.paths = P);
   }
   // draws the town with world→screen already set on g; k = screen pixels per metre
   function drawCity(g, G, k) {
-    const P = cityPaths(G), C = PAPER, lw = px => px / k;
-    g.fillStyle = C.country; g.fillRect(-G.Vh * 2, -G.Vh * 2, G.Vh * 4, G.Vh * 4);
+    const P = cityPaths(G), C = G.pal, lw = px => px / k, euro = G.style === 'euro';
+    g.fillStyle = C.country; g.fillRect(-G.Vh * 2.2, -G.Vh * 2.2, G.Vh * 4.4, G.Vh * 4.4);
+    // the countryside
     P.fieldsBy.forEach((f, i) => { g.fillStyle = C.fields[i]; g.fill(f); });
     if (k > 0.25) { g.strokeStyle = 'rgba(110,100,60,.22)'; g.lineWidth = lw(0.8); g.stroke(P.furrows); }
-    g.strokeStyle = 'rgba(120,110,80,.35)'; g.lineWidth = lw(0.8); P.fieldsBy.forEach(f => g.stroke(f));
-    g.fillStyle = G.sz === 'village' ? C.grass : C.ground; g.fill(P.outline);
-    // roads: an edge, then the surface
-    g.lineCap = 'round'; g.strokeStyle = C.roadEdge; g.lineWidth = G.roadW + lw(2.2); g.stroke(P.mainRoads);
-    g.strokeStyle = C.road; g.lineWidth = G.roadW; g.stroke(P.mainRoads);
-    g.beginPath(); g.moveTo(G.cx + G.rp, G.cy); g.arc(G.cx, G.cy, G.rp, 0, TAU); g.fillStyle = C.plaza; g.fill();
+    g.strokeStyle = C.fieldEdge; g.lineWidth = lw(0.8); P.fieldsBy.forEach(f => g.stroke(f));
+    if (k > 0.06) { g.strokeStyle = C.terrace; g.lineWidth = lw(0.9); g.stroke(P.terraces); }
+    g.fillStyle = C.olive; g.fill(P.olives);
+    g.fillStyle = C.cem; g.fill(P.cems); g.strokeStyle = C.specialEdge; g.lineWidth = lw(0.9); g.stroke(P.cems); g.fillStyle = C.tomb; g.fill(P.tombs);
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    const rw = Math.max(G.roadW * 0.8, lw(1.8));
+    g.strokeStyle = C.roadEdge; g.lineWidth = rw + lw(2); g.stroke(P.roads); g.strokeStyle = C.road; g.lineWidth = rw; g.stroke(P.roads);
+    g.fillStyle = C.bldg; g.fill(P.farms); if (k > 0.3) { g.strokeStyle = C.bldgEdge; g.lineWidth = lw(0.7); g.stroke(P.farms); }
+    // the town: plots and houses, courtyards, then the streets cut through them
+    if (G.walls) { g.fillStyle = C.ground; g.fill(P.outline); }
+    if (euro) {
+      g.fillStyle = C.yard; g.fill(P.lots); if (k > 0.45) { g.strokeStyle = C.hedge; g.lineWidth = lw(0.7); g.stroke(P.lots); }
+      g.fillStyle = C.bldg; g.fill(P.houses); if (k > 0.3) { g.strokeStyle = C.bldgEdge; g.lineWidth = lw(0.7); g.stroke(P.houses); }
+      if (k > 0.8) { g.strokeStyle = C.ridge; g.lineWidth = lw(0.8); g.stroke(P.ridges); }
+    } else {
+      g.fillStyle = C.bldg; g.fill(P.lots); g.fillStyle = C.shop; g.fill(P.shops);
+      if (k > 0.45) { g.strokeStyle = C.lotEdge; g.lineWidth = lw(0.6); g.stroke(P.lots); g.stroke(P.shops); }
+    }
+    g.fillStyle = C.special; g.fill(P.specL); if (k > 0.28) { g.strokeStyle = C.specialEdge; g.lineWidth = lw(0.7); g.stroke(P.specL); }
+    g.fillStyle = 'rgba(150,135,110,.35)'; g.fill(P.rubble); if (k > 0.3) { g.strokeStyle = 'rgba(110,98,80,.6)'; g.lineWidth = lw(0.7); g.stroke(P.rubble); }
+    g.fillStyle = C.court; g.fill(P.courts); if (k > 0.4) { g.strokeStyle = C.bldgEdge; g.lineWidth = lw(0.5); g.stroke(P.courts); }
+    // streets: every edge first, then every surface, so that crossings join up
+    const SW = G.streetW, cls = ['lane', 'street', 'quay', 'souk', 'main'], wid = c => Math.max(SW[c], lw(c === 'lane' ? 0.8 : c === 'main' ? 2.2 : 1.3));
+    for (const c of cls) if (SW[c] * k > 2.2) { g.strokeStyle = C.streetEdge; g.lineWidth = wid(c) + lw(1.3); g.stroke(P.st[c]); }
+    if (k > 0.15) { g.strokeStyle = C.streetEdge; g.lineWidth = lw(2.6); g.stroke(P.plazas); }
+    for (const c of cls) { g.strokeStyle = c === 'souk' ? C.souk : C.street; g.lineWidth = wid(c); g.stroke(P.st[c]); }
+    g.fillStyle = C.plaza; g.fill(P.plazas);
+    if (k > 1.1) { g.lineCap = 'butt'; g.strokeStyle = C.rib; g.lineWidth = lw(0.7); g.stroke(P.ribs); g.lineCap = 'round'; }
+    // water, bridges, piers
     if (P.sand) { g.fillStyle = C.sand; g.fill(P.sand); }
     if (P.sea) { g.fillStyle = C.water; g.fill(P.sea); g.strokeStyle = C.waterEdge; g.lineWidth = lw(1.4); g.stroke(P.sea); }
     if (P.river) { g.fillStyle = C.water; g.fill(P.river); g.strokeStyle = C.waterEdge; g.lineWidth = lw(1.4); g.stroke(P.river); }
-    if (G.river) {   // bridges where the main roads cross
-      const v = G.river, nx = -Math.sin(v.ang), ny = Math.cos(v.ang);
-      for (const ray of G.rays) { const dx = Math.cos(ray.a), dy = Math.sin(ray.a), den = nx * dx + ny * dy; if (Math.abs(den) < 0.15) continue; const t = (v.off - (nx * G.cx + ny * G.cy)) / den; if (t <= 0) continue;
-        const q = rect(G.cx + dx * t, G.cy + dy * t, ray.w + 4, v.w / Math.abs(den) + 10, ray.a + Math.PI / 2); g.beginPath(); addPoly(g, q); g.fillStyle = '#d9cfb6'; g.fill(); g.strokeStyle = C.bldgEdge; g.lineWidth = lw(1); g.stroke(); }
-    }
+    g.fillStyle = C.road; g.fill(P.bridges); g.strokeStyle = C.specialEdge; g.lineWidth = lw(1); g.stroke(P.bridges);
     g.fillStyle = '#cdbf9f'; g.fill(P.piers); g.strokeStyle = C.bldgEdge; g.lineWidth = lw(0.8); g.stroke(P.piers);
-    g.fillStyle = C.park; g.fill(P.parks);
+    // gardens, the citadel, the great buildings
+    if (P.cit) { g.fillStyle = C.ground; g.fill(P.cit); }
+    g.fillStyle = C.garden; g.fill(P.gardens); g.strokeStyle = C.bldgEdge; g.lineWidth = lw(1); g.stroke(P.gardens);
+    g.lineCap = 'butt'; g.strokeStyle = C.plaza; g.lineWidth = Math.max(2.2, lw(1)); g.stroke(P.gpaths); g.lineCap = 'round';
+    g.fillStyle = C.special; g.fill(P.blds); g.strokeStyle = C.specialEdge; g.lineWidth = lw(1); g.stroke(P.blds);
+    g.fillStyle = C.court; g.fill(P.sCourts); g.lineWidth = lw(0.8); g.stroke(P.sCourts);
+    if (k > 0.45) { g.lineWidth = lw(0.6); g.stroke(P.arcades); g.stroke(P.cells); }
+    if (k > 0.9) { g.fillStyle = C.specialEdge; g.fill(P.cols); }
+    g.fillStyle = C.water; g.fill(P.pools); if (k > 0.5) { g.strokeStyle = C.waterEdge; g.lineWidth = lw(0.6); g.stroke(P.pools); }
+    g.fillStyle = C.dome; g.fill(P.domes); if (k > 0.2) { g.strokeStyle = C.specialEdge; g.lineWidth = lw(0.8); g.stroke(P.domes); }
+    g.fillStyle = C.specialEdge; g.fill(P.minarets);
+    // trees and palms over everything on the ground
     g.fillStyle = C.tree; g.fill(P.trees); if (k > 0.35) { g.strokeStyle = C.treeEdge; g.lineWidth = lw(0.8); g.stroke(P.trees); }
-    g.fillStyle = G.ruined ? '#cdc2ad' : C.bldg; g.fill(P.bld); g.fill(P.farms);
-    if (k > 0.3) { g.strokeStyle = G.ruined ? '#958a77' : C.bldgEdge; g.lineWidth = lw(0.7); g.stroke(P.bld); g.stroke(P.farms); }
-    g.fillStyle = G.ruined ? '#b9ab92' : C.special; g.fill(P.special); g.strokeStyle = C.bldgEdge; g.lineWidth = lw(1.1); g.stroke(P.special);
-    g.fillStyle = '#c7b48f'; g.fill(P.stalls);
-    g.beginPath(); g.arc(G.cx, G.cy, Math.max(2.5, G.rp * 0.12), 0, TAU); g.fillStyle = C.water; g.fill(); g.strokeStyle = C.wall; g.lineWidth = lw(1.2); g.stroke();
-    if (G.walls) { g.lineCap = 'butt'; g.strokeStyle = G.ruined ? '#7d7264' : C.wall; g.lineWidth = Math.max(3.5, lw(2.5)); g.stroke(P.wall); }
-    g.strokeStyle = G.ruined ? '#7d7264' : C.wall; g.lineWidth = Math.max(2.5, lw(2)); g.stroke(P.inner);
-    g.fillStyle = G.ruined ? '#8a7f70' : C.wall; g.fill(P.towers);
+    if (k < 0.6) { g.fillStyle = C.palm; g.fill(P.palmDots); }
+    else if (G.palms.length) {
+      if (!P.palms) { P.palms = lines(G.palms.flatMap(([x, y, rr, a]) => Array.from({ length: 7 }, (_, i) => { const t = a + i * TAU / 7; return [[x, y], [x + Math.cos(t) * rr, y + Math.sin(t) * rr]]; }))); P.palmCore = circles(G.palms.map(([x, y, rr]) => [x, y, rr * 0.26])); }
+      g.strokeStyle = C.palm; g.lineWidth = Math.max(0.9, lw(0.8)); g.stroke(P.palms); g.fillStyle = C.palmCore; g.fill(P.palmCore);
+    }
+    // walls and towers
+    g.lineCap = 'butt';
+    if (P.wall) { g.strokeStyle = C.wall; g.lineWidth = Math.max(3.2, lw(2.5)); g.stroke(P.wall); }
+    if (P.inner) { g.strokeStyle = C.wall; g.lineWidth = Math.max(2.4, lw(2)); g.stroke(P.inner); }
+    g.fillStyle = C.wall; g.fill(P.towers);
   }
   // dungeon geometry: floor as a path of cells (rooms) or soft blobs (caves), plus hatching around it
   function dunPaths(D) {
@@ -6958,7 +7526,7 @@ const LocalMaps = (() => {
   const cache = new Map();
   function layoutOf(p, m, kind) {
     const C = m.city, L = m.dun.levels[m.dun.cur];
-    const key = kind === 'city' ? `c|${p.id}|${C.seed}|${C.size}|${C.walls}|${C.water}|${p.type}|${p.status}|${p.pop}|${S.meta.nameStyle}` : `d|${L.seed}|${L.size}|${L.style}`;
+    const key = kind === 'city' ? `c|${p.id}|${C.seed}|${C.size}|${C.style}|${C.walls}|${C.water}|${p.type}|${p.status}|${p.pop}|${S.meta.nameStyle}` : `d|${L.seed}|${L.size}|${L.style}`;
     if (!cache.has(key)) { cache.set(key, kind === 'city' ? genCity(p, C) : genDungeon(L)); if (cache.size > 6) cache.delete(cache.keys().next().value); }
     return cache.get(key);
   }
@@ -6987,7 +7555,7 @@ const LocalMaps = (() => {
   // the map into g (CSS pixels w × hh) with the view k/ox/oy; shared by the viewer, thumbnails and images
   function paint(g, G, w, hh, k, ox, oy, dpr, extras = {}) {
     const ty = extras.ty || 0;
-    g.setTransform(dpr, 0, 0, dpr, 0, ty); g.fillStyle = G.kind === 'city' ? PAPER.country : '#ebe5d5'; g.fillRect(0, 0, w, hh);
+    g.setTransform(dpr, 0, 0, dpr, 0, ty); g.fillStyle = G.kind === 'city' ? cityBg(G) : '#ebe5d5'; g.fillRect(0, 0, w, hh);
     g.save(); g.beginPath(); g.rect(0, 0, w, hh); g.clip();
     g.setTransform(dpr * k, 0, 0, dpr * k, dpr * ox, dpr * oy + ty);
     if (G.kind === 'city') drawCity(g, G, k); else drawDungeon(g, G, k);
@@ -7032,7 +7600,7 @@ const LocalMaps = (() => {
     const g = cv.getContext('2d'), sn = V.snap;
     if (V.fast && sn) {
       const f = V.k / sn.k;
-      g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = V.G.kind === 'city' ? PAPER.country : '#ebe5d5'; g.fillRect(0, 0, cv.width, cv.height);
+      g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = V.G.kind === 'city' ? cityBg(V.G) : '#ebe5d5'; g.fillRect(0, 0, cv.width, cv.height);
       g.drawImage(sn.c, (V.ox - sn.ox * f) * dpr, (V.oy - sn.oy * f) * dpr, sn.c.width * f, sn.c.height * f);
     } else {
       paint(g, V.G, w, hh, V.k, V.ox, V.oy, dpr, { bare: true });
@@ -7065,7 +7633,7 @@ const LocalMaps = (() => {
     V.G = layoutOf(p, m, V.kind);
     renderChrome(); fit(); draw();
     if (!V.k) requestAnimationFrame(() => redraw());
-    V.onKey = e => { if (e.key === 'Escape' && !sheetStack.length && V) { e.preventDefault(); close(); } };
+    V.onKey = e => { if (e.key === 'Escape' && !e.defaultPrevented && !sheetStack.length && V) { e.preventDefault(); close(); } };   // a sheet that Escape just closed has handled it
     document.addEventListener('keydown', V.onKey);
     V.onResize = () => { V.snap = null; redraw(); };
     window.addEventListener('resize', V.onResize);
@@ -7080,7 +7648,7 @@ const LocalMaps = (() => {
   function setMode(mode) { V.mode = mode; renderChrome(); }
   function renderChrome() {
     const { el, m, p } = V, top = el.querySelector('.lm-top'), bar = el.querySelector('.lm-bar'), hint = el.querySelector('.lm-hint');
-    const city = V.kind === 'city', L = m.dun.levels[m.dun.cur], sub = city ? `${CITY[V.G.sz].name} plan` : `Level ${m.dun.cur + 1} of ${m.dun.levels.length}`;
+    const city = V.kind === 'city', L = m.dun.levels[m.dun.cur], sub = city ? `${CITY[V.G.sz].name} · ${TSTYLE[V.G.style].name}` : `Level ${m.dun.cur + 1} of ${m.dun.levels.length}`;
     top.innerHTML = '';
     top.append(h('button', { class: 'icon-btn', 'aria-label': 'Back to the place', onclick: () => close() }, icon('back', 22)),
       h('div', { class: 'lm-title' }, h('div', { class: 'lm-name' }, p.name), h('div', { class: 'lm-sub' }, sub)),
@@ -7178,7 +7746,7 @@ const LocalMaps = (() => {
     const name = h('input', { value: cur, autocomplete: 'off' });
     let noteV = (C.notes || {})[i] || '';
     const note = mdEditor(noteV, v => { noteV = v; }, { minHeight: '110px', placeholder: 'Who lives here, what it is known for, trouble brewing… [[links]] work' });
-    const kinds = { market: 'Market', temple: 'Temple quarter', castle: 'Castle', docks: 'Docks', craft: 'Craftsfolk', res: 'Homes', slum: 'Poor quarter', park: 'Park' };
+    const me = V.G.style !== 'euro', kinds = { market: me ? 'Souk' : 'Market', temple: 'Temple quarter', castle: me ? 'Citadel' : 'Castle', docks: me ? 'Harbour' : 'Docks', craft: 'Craftsfolk', res: 'Homes', slum: 'Poor quarter', park: 'Gardens' };
     let sh;
     sh = openSheet({ title: cur, body: h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:4px' }, `${kinds[w.type] || 'District'} · about ${fmtInt(w.a / 10000 * 2.47)} acres`),
       field('Name', Names.field(name, () => 'district')), field('Notes', note)), foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => {
@@ -7235,6 +7803,8 @@ const LocalMaps = (() => {
     if (V.kind === 'city') {
       const C = V.m.city, set = (k, v) => { C[k] = v; persist(); rebuild(true); };
       body = h('div', null,
+        field('Style', seg([['auto', 'From the land'], ['stone', 'Stone'], ['desert', 'Desert'], ['euro', 'European']], C.style || 'auto', v => set('style', v)),
+          'From the land builds pale stone towns in green or hilly country and mud-brick medinas in dry country.'),
         field('Size', seg([['auto', 'Auto'], ['village', 'Village'], ['town', 'Town'], ['city', 'City'], ['metro', 'Great']], C.size, v => set('size', v)), 'Auto follows the population.'),
         field('Walls', seg([['auto', 'Auto'], ['yes', 'Walled'], ['no', 'Open']], C.walls, v => set('walls', v))),
         field('Water', seg([['auto', 'From the map'], ['none', 'None'], ['river', 'River'], ['coast', 'Coast']], C.water, v => set('water', v)), 'From the map uses the sea, lakes and rivers around this place, and its roads become the gates.'));
@@ -7256,7 +7826,7 @@ const LocalMaps = (() => {
     const ext = city ? G.Vh * 1.64 : Math.max(bw, bh), size = 2400, k = size / ext, w = city ? size : bw * k, hh = city ? size : bh * k;
     const c = document.createElement('canvas'); c.width = Math.round(w); c.height = Math.round(hh + 70);
     const g = c.getContext('2d');
-    g.fillStyle = city ? PAPER.country : '#ebe5d5'; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = city ? cityBg(G) : '#ebe5d5'; g.fillRect(0, 0, c.width, c.height);
     const ox = city ? w / 2 : (1.5 - G.box[0]) * k, oy = city ? hh / 2 : (1.5 - G.box[1]) * k;
     paint(g, G, w, hh, k, ox, oy, 1, { pins: pinsOf(), names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms, ty: 70 });
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -7287,7 +7857,7 @@ const LocalMaps = (() => {
     }, 40);
     return el;
   }
-  return { open, card, get isOpen() { return !!V; }, debug: { genCity, genDungeon, cityPaths, drawCity } };
+  return { open, card, get isOpen() { return !!V; }, debug: { genCity, genDungeon, cityPaths, drawCity, state, layoutOf } };
 })();
 
 const Chars = (() => {
