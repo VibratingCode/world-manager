@@ -483,6 +483,9 @@ textarea.md-edit { min-height: 200px; font-size: 15.5px; line-height: 1.5; }
 .lm-card { padding-bottom: 12px; }
 .lm-card .row > .ico:first-child { color: var(--accent); }
 .lm-thumb { display: block; width: 100%; height: 150px; border-radius: 12px; margin-top: 10px; background: #e2dfc5; }
+.lm-cv.ship, .lm-thumb.ship { background: #05070a; }
+.lm-thumb.ship { height: 170px; }
+.lm-thumb.ship.sm { height: 84px; margin-top: 8px; border-radius: 10px; }
 .lm-num { min-width: 30px; height: 30px; border-radius: 50%; background: var(--card2); display: grid; place-items: center; font-weight: 800; font-variant-numeric: tabular-nums; flex: none; }
 .act-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 12px; padding: 0 18px 2px; }
 .act-row::-webkit-scrollbar { display: none; }
@@ -1797,6 +1800,7 @@ const ICONS = {
   flag: 'M5 21V4h11l-2 4 2 4H5',
   sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
   village: 'M3 21V11l5-4 5 4v10M13 21v-7l4-3 4 3v7M2 21h20M7 21v-4h2v4',
+  ship: 'M12 2c3 2.6 4.5 6 4.5 10.5V17h-9v-4.5C7.5 8 9 4.6 12 2zM7.5 12.5 4 16v4l3.5-2.2M16.5 12.5 20 16v4l-3.5-2.2M10.5 17v4M13.5 17v4M12 8.5h.01',
 };
 function iconSVG(name, size = 20) {
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[name] || ''}"/></svg>`;
@@ -2180,6 +2184,7 @@ const Names = (() => {
       case 'ruin': return `Horvat ${R()}`;
       case 'fort': return `${pick(['Metzudat', 'Migdal', 'Mivtzar'])} ${R()}`;
       case 'dungeon': return `Me'arat ${R()}`;
+      case 'ship': return rand() < 0.5 ? `${pick(['Halalit', 'Sfinat', 'Oniyat'])} ${R()}` : `${pick(['ISV', 'CSV', 'MV'])} ${pick(HE_WORDS)}`;
       case 'port': return rand() < 0.45 ? `Namal ${R()}` : hePlace();
       case 'era': return rand() < 0.5 ? `Tekufat ${R()}` : `The Age of ${R()}`;
       case 'faction': return rand() < 0.55 ? `${pick(['Brit', 'Agudat', 'Misdar', "Tnu'at", 'Beit', 'Ihud'])} ${R()}` : `The ${R()} ${pick(['Compact', 'Order', 'Guild', 'League', 'Covenant', 'Company'])}`;
@@ -2212,6 +2217,7 @@ const Names = (() => {
       case 'district': return rand() < 0.6 ? `${root()} Ward` : `${pick(['Old', 'High', 'Low', 'North', 'South', 'East', 'West', 'New'])} ${pick(['Town', 'Ward', 'Quarter', 'Gate', 'Row', 'End'])}`;
       case 'fort': return `${pick(['Fort', 'Castle', 'Keep'])} ${root()}`;
       case 'dungeon': return `${root()} ${pick(['Caverns', 'Deep', 'Vault', 'Hollow'])}`;
+      case 'ship': return `${pick(['ISV', 'CSV', 'MV', 'SS', 'The'])} ${rand() < 0.55 ? pick(['Long Patience', 'Second Dawn', 'Meridian', 'Wayfarer', 'Far Horizon', 'Persistence', 'Covenant', 'Lantern', 'Tenacity', 'Odyssey', 'Harbinger', 'Quiet Resolve', 'Good Hope', 'Iron Orchard']) : root()}`;
       case 'port': return rand() < 0.45 ? `Port ${root()}` : place();
       case 'era': return rand() < 0.5 ? `The ${pick(['Age', 'Era', 'Time'])} of ${root()}` : `The ${pick(['Long', 'Bright', 'Silent', 'Second', 'Iron', 'Ashen', 'Golden'])} ${pick(['Age', 'Era', 'Winter', 'Dawn', 'Reign', 'Accord'])}`;
       case 'faction': return `The ${root()} ${pick(['Compact', 'Syndicate', 'Order', 'Guild', 'League', 'Covenant', 'Collective', 'Company', 'Concord'])}`;
@@ -2752,6 +2758,7 @@ const PTYPES = {
   peak: { name: 'Peak', max: 900, glyph: 'peak', size: 6 },
   dungeon: { name: 'Dungeon / cave', max: 320, glyph: 'cave', size: 6 },
   camp: { name: 'Camp', max: 200, glyph: 'triangle', size: 5 },
+  ship: { name: 'Ship / landing site', max: 900, glyph: 'ship', size: 6.5 },
   water: { name: 'Lake / sea label', max: 7000, glyph: 'none', size: 0 },
   region: { name: 'Region label', max: 30000, glyph: 'none', size: 0 },
   other: { name: 'Other', max: 1800, glyph: 'diamond', size: 5.5 },
@@ -3511,7 +3518,7 @@ const MapView = (() => {
     }
   }
   const PGROUPS = { settle: ['Settlements', ['capital', 'city', 'town', 'village', 'port']], forts: ['Forts & camps', ['fort', 'camp']], land: ['Landmarks & peaks', ['landmark', 'peak']],
-    ruins: ['Ruins & dungeons', ['ruin', 'dungeon']], labels: ['Region & sea labels', ['region', 'water']], other: ['Other places', ['other']] };
+    ruins: ['Ruins & dungeons', ['ruin', 'dungeon']], ships: ['Ships', ['ship']], labels: ['Region & sea labels', ['region', 'water']], other: ['Other places', ['other']] };
   function placeGroup(p) {
     const sy = p.sym && SYMBOLS.get(p.sym); if (sy && sy.cat !== 'defaults') return 'sym:' + sy.cat;
     for (const [k, v] of Object.entries(PGROUPS)) if (v[1].includes(p.type)) return k;
@@ -3555,6 +3562,7 @@ const MapView = (() => {
       case 'anchor': ctx.arc(x, y, r * 0.85, 0, Math.PI * 2); break;
       case 'ruin': ctx.rect(x - r * 0.9, y - r * 0.2, r * 0.5, r); ctx.rect(x + r * 0.4, y - r * 0.6, r * 0.5, r * 1.4); ctx.rect(x - r * 0.25, y + r * 0.3, r * 0.5, r * 0.5); break;
       case 'cave': ctx.arc(x, y + r * 0.3, r, Math.PI, 0); ctx.closePath(); break;
+      case 'ship': ctx.moveTo(x, y - r * 1.1); ctx.quadraticCurveTo(x + r * 0.55, y - r * 0.5, x + r * 0.45, y + r * 0.25); ctx.lineTo(x + r, y + r * 0.95); ctx.lineTo(x - r, y + r * 0.95); ctx.lineTo(x - r * 0.45, y + r * 0.25); ctx.quadraticCurveTo(x - r * 0.55, y - r * 0.5, x, y - r * 1.1); ctx.closePath(); break;
       default: return;
     }
     ctx.stroke(); ctx.fill();
@@ -3613,7 +3621,7 @@ const MapView = (() => {
   function drawPlaces(topo, boxes) {
     placeHits = [];
     const widthMi = W * mpp() / T.MI, cll = centerLL(), tilt = !S.ui.layers.noTilt;
-    const order = ['capital', 'region', 'city', 'water', 'town', 'fort', 'port', 'peak', 'landmark', 'ruin', 'village', 'dungeon', 'camp', 'other'];
+    const order = ['capital', 'region', 'city', 'water', 'town', 'fort', 'port', 'peak', 'landmark', 'ruin', 'village', 'dungeon', 'camp', 'ship', 'other'];
     const list = S.world.places.filter(p => placeVisible(p, widthMi, cll)).sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
     const here = {}; for (const c of S.chars) if (c.at) here[c.at] = (here[c.at] || 0) + 1;
     // markers first (and reserved), so every name steers around every marker
@@ -4322,7 +4330,7 @@ const MapView = (() => {
     const smp = T.sample(p.lat, p.lon);
     const chars = S.chars.filter(c => c.at === p.id || c.home === p.id);
     const evs = S.events.filter(e => e.place === p.id).sort((a, b) => a.start - b.start);
-    const twin = S.codex.find(e => lc(e.title) === lc(p.name));
+    const twin = (p.ship && S.codex.find(e => e.id === p.ship)) || S.codex.find(e => lc(e.title) === lc(p.name));
     let sh;
     const close = () => sh.close();
     const party = S.chars.filter(c => c.role === 'PC' && c.status !== 'dead');
@@ -6380,7 +6388,7 @@ const MapView = (() => {
   return {
     init, flyTo, openPlace, editPlace, placesSheet, localContext, POI_KINDS, showShareResult, goHere, hereSheet, roadsSheet, routeSheet, factionsSheet, milSheet, milLabel, showMil, worldSheet, layersSheet, legendSheet, home, zoomToFeature, openFeature, placeWidth, nearby,
     stampName: k => (STAMPS[k] || { name: k }).name,
-    centerLL,
+    centerLL, startMove,
     show() { visible = true; resize(); dirty = true; },
     hide() { visible = false; },
     redraw() { dirty = true; },
@@ -6485,6 +6493,7 @@ function conceptionChance(carrier, partner, o) {
 /* ===================== local maps: a generated town plan or dungeon for any place ===================== */
 // Both are rebuilt from a seed and a few options, so only those (plus names, notes and pins) are stored on the place:
 // p.lmap = { kind, city: { seed, size, walls, water, names, notes }, dun: { cur, levels: [{ seed, size, style, rooms, marks }] } }.
+// A place can show a ship's deck plans instead (kind 'ship'); the ship itself is a codex entry, linked by p.ship.
 // Town pins are the place's own points of interest (p.poi[].mx/my, in metres from the centre); dungeon marks live on each level.
 const LocalMaps = (() => {
   const srng = seed => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -6658,7 +6667,7 @@ const LocalMaps = (() => {
   const NO_MAP = new Set(['region', 'water']);
   function state(p) {
     const m = p.lmap || {};   // not attached until something changes, so just looking writes nothing
-    m.kind = m.kind === 'dungeon' || m.kind === 'city' ? m.kind : DUNGEONY.has(p.type) ? 'dungeon' : 'city';
+    m.kind = m.kind === 'dungeon' || m.kind === 'city' || m.kind === 'ship' ? m.kind : p.type === 'ship' ? 'ship' : DUNGEONY.has(p.type) ? 'dungeon' : 'city';
     m.city = Object.assign({ seed: 0, size: 'auto', style: 'auto', walls: 'auto', water: 'auto', names: {}, notes: {} }, m.city || {});
     m.dun = Object.assign({ cur: 0, levels: [] }, m.dun || {});
     if (!m.city.seed) m.city.seed = seedOf(p.id + ':town');
@@ -7584,10 +7593,1139 @@ const LocalMaps = (() => {
     }
   }
 
+  /* ===================== ships ===================== */
+  // Deck plans on a grid of 2 m cells, nose up. Every deck is cut from one hull, so the lifts line up from deck to deck.
+  // A ship lives on a codex entry: e.ship = { cls, look, seed, cur, decks: [{ rooms: { id: { name, note, type } }, marks, edit, ver }] }.
+  // A deck that has been painted keeps its whole grid in edit and is no longer generated.
+  const SHIPS = {
+    shuttle: { name: 'Shuttle', L: [12, 15], B: [7, 9], decks: 1, wing: [1, 2], shapes: ['pod', 'dart'] },
+    scout: { name: 'Scout', L: [19, 25], B: [9, 11], decks: 1, wing: [2, 4], shapes: ['dart', 'brick'] },
+    freighter: { name: 'Freighter', L: [30, 40], B: [13, 15], decks: 2, wing: [0, 1], shapes: ['brick', 'hammer'] },
+    frigate: { name: 'Frigate', L: [42, 52], B: [15, 17], decks: 3, wing: [3, 5], shapes: ['dart', 'hammer'] },
+    colony: { name: 'Colony ship', L: [60, 76], B: [19, 23], decks: 4, wing: [0, 2], shapes: ['spine', 'brick', 'hammer'] },
+  };
+  const SLOOK = { industrial: 'Industrial', sleek: 'Sleek', military: 'Military', blueprint: 'Blueprint' };
+  const CELL = 2;   // metres to a square
+  // room types: name, floor, which list in the paint picker, and an icon for the room key
+  const RT = {
+    bridge: ['Bridge', 'plate', 'Command', '🧭'], cockpit: ['Cockpit', 'plate', 'Command', '🕹️'], comms: ['Comms', 'plate', 'Command', '📡'], captain: ['Captain’s cabin', 'carpet', 'Command', '⭐'],
+    observation: ['Observation', 'carpet', 'Command', '🔭'], armoury: ['Armoury', 'diamond', 'Command', '🛡️'], brig: ['Brig', 'plate', 'Command', '🔒'],
+    cabin: ['Cabin', 'carpet', 'Living', '🛏️'], quarters: ['Crew quarters', 'carpet', 'Living', '🛌'], seats: ['Passenger cabin', 'carpet', 'Living', '💺'], mess: ['Mess hall', 'tile', 'Living', '🍽️'],
+    galley: ['Galley', 'tile', 'Living', '🍳'], wash: ['Washroom', 'tile', 'Living', '🚿'], rec: ['Lounge', 'carpet', 'Living', '🛋️'], medbay: ['Medbay', 'tile', 'Living', '⚕️'],
+    lab: ['Laboratory', 'tile', 'Living', '🔬'], hydro: ['Hydroponics', 'plate', 'Living', '🌱'], cryo: ['Cryo bay', 'tile', 'Living', '❄️'],
+    cargo: ['Cargo hold', 'heavy', 'Working', '📦'], hangar: ['Hangar', 'heavy', 'Working', '🛬'], storage: ['Storage', 'plate', 'Working', '🗄️'], workshop: ['Workshop', 'diamond', 'Working', '🔧'],
+    weapons: ['Weapons bay', 'diamond', 'Working', '🎯'], airlock: ['Airlock', 'diamond', 'Working', '🚪'], escape: ['Escape pods', 'plate', 'Working', '🛟'], lift: ['Lift', 'plate', 'Working', '🛗'],
+    engine: ['Engine room', 'grate', 'Engineering', '🚀'], reactor: ['Reactor', 'grate', 'Engineering', '⚛️'], life: ['Life support', 'grate', 'Engineering', '💨'],
+  };
+  const HEAVY = new Set(['reactor', 'engine', 'armoury', 'hangar', 'cargo', 'brig', 'weapons']);
+  const UNIQUE = new Set(['bridge', 'cockpit', 'captain', 'reactor', 'galley', 'hangar', 'brig', 'comms']);
+  const ROLES = { shuttle: ['flight'], scout: ['scout'], freighter: ['command', 'cargo'], frigate: ['command', 'crew', 'engineering'], colony: ['command', 'habitat', 'cryo', 'cargo'] };
+  const ROLE_NAME = { flight: 'Main deck', scout: 'Main deck', command: 'Command deck', crew: 'Crew deck', habitat: 'Habitat deck', cryo: 'Cryo deck', cargo: 'Cargo deck', engineering: 'Engineering deck' };
+  // what each kind of deck is furnished with: rooms it must have, then what small, middling and big rooms become
+  // (fill: what a small, middling or big room becomes once the deck has enough of everything else)
+  const POOLS = {
+    command: { must: ['comms', 'captain', 'wash', 'armoury', 'observation'], s: ['cabin', 'cabin', 'storage', 'wash'], m: ['cabin', 'cabin', 'observation', 'rec', 'medbay', 'lab', 'brig'], l: ['observation', 'rec', 'mess'], fill: { s: 'cabin', m: 'cabin', l: 'rec' }, big: 0.12, maxA: 9, side: 4 },
+    crew: { must: ['mess', 'galley', 'medbay', 'wash', 'rec'], s: ['cabin', 'cabin', 'cabin', 'wash', 'storage'], m: ['quarters', 'quarters', 'cabin', 'wash', 'brig'], l: ['quarters', 'mess', 'rec'], fill: { s: 'cabin', m: 'quarters', l: 'quarters' }, big: 0.3, maxA: 6, side: 3 },
+    habitat: { must: ['mess', 'galley', 'medbay', 'wash', 'lab', 'hydro'], s: ['cabin', 'cabin', 'cabin', 'wash', 'storage'], m: ['cabin', 'quarters', 'wash', 'lab', 'rec'], l: ['hydro', 'mess', 'rec', 'quarters'], fill: { s: 'cabin', m: 'cabin', l: 'quarters' }, big: 0.25, maxA: 6, side: 3 },
+    cryo: { must: ['medbay', 'life', 'hydro', 'storage'], s: ['storage', 'life', 'wash'], m: ['cryo', 'cryo', 'lab', 'storage', 'life'], l: ['cryo', 'cryo', 'cryo', 'hydro'], fill: { s: 'storage', m: 'cryo', l: 'cryo' }, big: 0.75, maxA: 12, side: 4 },
+    cargo: { must: ['life', 'workshop', 'storage'], s: ['storage', 'storage', 'life', 'escape'], m: ['cargo', 'storage', 'workshop', 'life'], l: ['cargo', 'cargo', 'hangar'], fill: { s: 'storage', m: 'cargo', l: 'cargo' }, big: 0.6, maxA: 12, side: 4 },
+    engineering: { must: ['life', 'workshop', 'weapons', 'armoury'], s: ['storage', 'life', 'weapons'], m: ['weapons', 'workshop', 'cargo', 'storage', 'life'], l: ['hangar', 'cargo', 'weapons'], fill: { s: 'storage', m: 'cargo', l: 'cargo' }, big: 0.5, maxA: 10, side: 4 },
+    scout: { must: ['mess', 'medbay', 'wash', 'lab', 'life'], s: ['cabin', 'cabin', 'storage', 'wash'], m: ['cabin', 'lab', 'cargo', 'workshop', 'rec', 'armoury'], l: ['cargo', 'rec', 'lab'], fill: { s: 'cabin', m: 'cabin', l: 'cargo' }, big: 0.3, maxA: 6, side: 3 },
+    flight: { must: ['wash'], s: ['storage', 'wash'], m: ['seats', 'cargo', 'storage'], l: ['seats', 'cargo'], fill: { s: 'storage', m: 'seats', l: 'seats' }, big: 0.6, maxA: 8, side: 4 },
+  };
+  const CAP = { life: 2, workshop: 2, medbay: 2, lab: 2, observation: 2, rec: 2, wash: 4, armoury: 2, escape: 2, weapons: 4, hydro: 4, mess: 2, galley: 1, brig: 1 };
+  const FORE = { command: ['comms', 'captain', 'armoury'], crew: ['rec', 'armoury', 'storage'], habitat: ['observation', 'rec', 'lab'], cryo: ['lab', 'medbay', 'storage'],
+    cargo: ['cargo', 'workshop', 'escape'], engineering: ['weapons', 'armoury', 'storage'], scout: ['comms', 'lab'], flight: ['storage'] };
+  function rolesFor(cls, D) {
+    if (D === 1) return [cls === 'shuttle' ? 'flight' : 'scout'];
+    const base = ROLES[cls].length > 1 ? ROLES[cls] : ['command', 'cargo'], mids = cls === 'colony' ? ['habitat', 'cryo'] : cls === 'frigate' ? ['crew'] : ['habitat'];
+    const out = ['command'];
+    for (let i = 1; i < D - 1; i++) out.push(i < base.length - 1 ? base[i] : mids[(i - 1) % mids.length]);
+    out.push(base[base.length - 1]);
+    return out;
+  }
+  function normShip(s, seed) {
+    s = s && typeof s === 'object' ? s : {};
+    if (!SHIPS[s.cls]) s.cls = 'freighter';
+    if (!SLOOK[s.look]) s.look = 'industrial';
+    if (!s.seed) s.seed = seed || newSeed();
+    if (!Array.isArray(s.decks) || !s.decks.length) s.decks = Array.from({ length: SHIPS[s.cls].decks }, () => ({}));
+    s.decks = s.decks.slice(0, 8).map(d => Object.assign({ rooms: {}, marks: [], edit: null, ver: 0 }, d && typeof d === 'object' ? d : {}));
+    for (const d of s.decks) { if (!d.rooms || typeof d.rooms !== 'object') d.rooms = {}; if (!Array.isArray(d.marks)) d.marks = []; }
+    s.cur = clamp(s.cur | 0, 0, s.decks.length - 1);
+    return s;
+  }
+
+  /* ---------- the hull: an outline that every deck is cut from ---------- */
+  const hullCache = new Map();
+  function shipHull(s) {
+    const D = s.decks.length, key = `${s.seed}|${s.cls}|${D}`;
+    if (hullCache.has(key)) return hullCache.get(key);
+    const C = SHIPS[s.cls], r = srng(s.seed), ri = (a, b) => a + Math.floor(r() * (b - a + 1));
+    const L = ri(C.L[0], C.L[1]), M = ri(C.B[0], C.B[1]) >> 1, wing = ri(C.wing[0], C.wing[1]), pad = 6;
+    const W = 2 * (M + wing + pad) + 1, H = L + 2 * pad, cx = M + wing + pad, y0 = pad, shape = pick(r, C.shapes);
+    const nl = Math.max(2, Math.round(L * (0.15 + r() * 0.08))), sl = Math.max(2, Math.round(L * (0.1 + r() * 0.05))), minW = Math.min(2, M);
+    // the body in a few sections, each a little narrower than the widest
+    const nSec = shape === 'hammer' ? 3 : M >= 6 ? ri(1, 3) : 1, cuts = [nl];
+    for (let i = 1; i < nSec; i++) cuts.push(Math.round(nl + (L - sl - nl) * i / nSec + (r() - 0.5) * 2));
+    cuts.push(L - sl);
+    const secW = cuts.slice(0, -1).map(() => M - ri(0, Math.round(M * 0.3)));
+    if (shape === 'hammer') { secW[0] = M; secW[1] = Math.max(minW, Math.round(M * (0.45 + r() * 0.15))); secW[2] = M; } else secW[ri(0, secW.length - 1)] = M;
+    const ws = shape === 'dart' ? M : Math.max(minW, M - ri(0, Math.round(M * 0.3))), sw = Math.max(minW, Math.round(M * 0.42)), mod = [ri(6, 9), ri(2, 3)], ex = 0.4 + r() * 0.5;
+    const bodyW = y => {
+      if (shape === 'dart') return Math.round(M * 0.5 + (M * 0.5) * (y - nl) / Math.max(1, L - sl - nl));
+      if (shape === 'spine') { const t = (y - nl) % (mod[0] + mod[1]); return t < mod[0] ? M : sw; }
+      let i = 0; while (i < secW.length - 1 && y >= cuts[i + 1]) i++; return secW[i];
+    };
+    const hw = new Int8Array(L);
+    for (let y = 0; y < L; y++) {
+      let w;
+      if (y < nl) w = Math.round(bodyW(nl) * Math.pow((y + 1) / (nl + 1), ex));
+      else if (y >= L - sl) w = y === L - 1 && ws > 2 && r() < 0.5 ? ws - 1 : ws;
+      else w = bodyW(y);
+      hw[y] = Math.max(y < nl ? (y ? 1 : 0) : minW, Math.min(M, w));
+    }
+    // wings and fins: hull without decks, swept back along the aft half
+    const wingM = new Uint8Array(W * H);
+    if (wing) {
+      const wa = Math.round(L * (shape === 'dart' ? 0.45 : 0.6)), wb = L - 1;
+      for (let y = wa; y <= wb; y++) {
+        const span = Math.round(wing * (y - wa + 1) / (wb - wa + 1) + 0.3);
+        for (let k = 1; k <= span; k++) { wingM[(y0 + y) * W + cx + hw[y] + k] = 1; wingM[(y0 + y) * W + cx - hw[y] - k] = 1; }
+      }
+    }
+    const decks = [];
+    for (let d = 0; d < D; d++) {
+      const m = new Uint8Array(W * H), top = D > 1 && d === 0, bot = D > 2 && d === D - 1;
+      for (let y = 0; y < L; y++) {
+        if (top && y >= L - sl) continue;   // the bridge deck stops short of the engines
+        if (bot && y < Math.round(nl * 0.6)) continue;
+        let w = hw[y]; if (top && M >= 6 && y >= nl) w = Math.max(minW, w - 1);
+        for (let dx = -w; dx <= w; dx++) m[(y0 + y) * W + cx + dx] = 1;
+      }
+      decks.push(m);
+    }
+    // lift shafts in pairs beside the spine, at rows every deck has
+    const lifts = [];
+    if (D > 1) {
+      const n = L >= 50 ? 2 : 1;
+      for (let k = 0; k < n; k++) {
+        const y = y0 + Math.round(nl + 2 + (L - sl - nl - 5) * (k + 1) / (n + 1));
+        if (decks.every(m => m[y * W + cx - 1] && m[y * W + cx + 1])) lifts.push([cx - 1, y], [cx + 1, y]);
+      }
+    }
+    // engine bells along the stern, and smaller ones on long wings
+    const nz = [], nN = M >= 9 ? ri(3, 5) : M >= 5 ? ri(2, 3) : ri(1, 2), spanS = 2 * ws + 1, sp = spanS / nN;
+    for (let i = 0; i < nN; i++) nz.push({ x: cx - ws + sp * (i + 0.5), y: y0 + L, w: Math.min(sp * 0.78, 3.4) });
+    if (wing >= 3) { const y = L - 1, x = hw[y] + wing; nz.push({ x: cx - x + 0.5, y: y0 + L, w: 0.9 }, { x: cx + x + 0.5, y: y0 + L, w: 0.9 }); }
+    const Hh = { W, H, cx, y0, L, M, wing, nl, sl, hw, shape, decks, wingM, lifts, nozzles: nz, roles: rolesFor(s.cls, D) };
+    hullCache.set(key, Hh); if (hullCache.size > 8) hullCache.delete(hullCache.keys().next().value);
+    return Hh;
+  }
+
+  /* ---------- a deck: corridors, rooms and doors ---------- */
+  // cell: -1 outside, 0 corridor, n > 0 room n. Doors sit on cell edges: v 1 is the edge left of (x, y), v 0 the edge above it.
+  function genDeck(Hh, s, d) {
+    const { W, H, cx, y0, L, M, nl, sl } = Hh, m = Hh.decks[d], N = W * H, D = Hh.decks.length, role = Hh.roles[d];
+    const r = srng((s.seed * 7 + d * 7919 + 3) >>> 0), ri = (a, b) => a + Math.floor(r() * (b - a + 1));
+    const cell = new Int16Array(N).fill(-1); for (let i = 0; i < N; i++) if (m[i]) cell[i] = -2;
+    const inn = (x, y) => x >= 0 && y >= 0 && x < W && y < H && m[y * W + x] === 1;
+    const wAt = y => { let w = 0; while (inn(cx + w + 1, y)) w++; return w; };
+    let ya = -1, yb = -1; for (let y = 0; y < H; y++) if (m[y * W + cx]) { if (ya < 0) ya = y; yb = y; }
+    const types = [null], twin = new Map(), newRoom = t => { types.push(t); return types.length - 1; };
+    if (ya < 0) return { cell, types, doors: [] };
+    const hasStern = yb === y0 + L - 1, hasNose = ya === y0, small = M <= 4;
+    const fl = hasNose ? Math.max(2, Math.round(nl * (d === 0 ? 0.95 : 0.7))) : 2, al = hasStern ? Math.max(2, sl) : 2;
+    const sTop = ya + fl, sBot = yb - al;
+    for (let y = sTop; y <= sBot; y++) cell[y * W + cx] = 0;
+    const sx = M >= 9 ? Math.round(M * 0.5) : 0;
+    if (sx) for (let y = sTop; y <= sBot; y++) if (wAt(y) >= sx + 3) { cell[y * W + cx - sx] = 0; cell[y * W + cx + sx] = 0; }
+    for (let k = 0; k < Hh.lifts.length; k += 2) {
+      const [ax, ly] = Hh.lifts[k], bx = Hh.lifts[k + 1][0];
+      if (ly < sTop || ly > sBot) continue;
+      const a = newRoom('lift'), b = newRoom('lift'); cell[ly * W + ax] = a; cell[ly * W + bx] = b; twin.set(a, b);
+    }
+    const liftRows = new Set(Hh.lifts.map(q => q[1])), cross = [], step = M >= 9 ? [6, 9] : M >= 6 ? [5, 7] : [4, 6];
+    for (let y = sTop + ri(2, small ? 3 : 4); y <= sBot - 2; y += ri(step[0], step[1])) {
+      if (liftRows.has(y)) y++;
+      if (y > sBot - 2) break;
+      const w = wAt(y); for (let dx = -w; dx <= w; dx++) if (cell[y * W + cx + dx] === -2) cell[y * W + cx + dx] = 0;
+      cross.push(y);
+    }
+    // airlocks where cross corridors meet the hull
+    if (d === D - 1 || role === 'habitat') {
+      const rows = cross.length > 2 ? [cross[0], cross[cross.length - 1]] : cross.slice(0, 1);
+      for (const y of rows) { const w = wAt(y), a = y * W + cx - w, b = y * W + cx + w; if (w >= 2 && cell[a] === 0 && cell[b] === 0) { const i = newRoom('airlock'), j = newRoom('airlock'); cell[a] = i; cell[b] = j; twin.set(i, j); } }
+    }
+    // what is left falls into blocks between the corridors (the nose and the stern kept apart); each block is cut into rooms
+    const comp = new Int32Array(N).fill(-1), blocks = [], zone = i => { const y = (i / W) | 0; return y < sTop ? 0 : y > sBot ? 2 : 1; };
+    for (let i = 0; i < N; i++) {
+      if (cell[i] !== -2 || comp[i] >= 0) continue;
+      const q = [i], b = { cells: [], x0: W, x1: 0, y0: H, y1: 0 }; comp[i] = blocks.length;
+      while (q.length) {
+        const v = q.pop(), x = v % W, y = (v / W) | 0; b.cells.push(v);
+        if (x < b.x0) b.x0 = x; if (x > b.x1) b.x1 = x; if (y < b.y0) b.y0 = y; if (y > b.y1) b.y1 = y;
+        for (const u of [v - 1, v + 1, v - W, v + W]) if (cell[u] === -2 && comp[u] < 0 && zone(u) === zone(v)) { comp[u] = blocks.length; q.push(u); }
+      }
+      b.side = b.x1 < cx ? 'L' : b.x0 > cx ? 'R' : 'C'; blocks.push(b);
+    }
+    const P = POOLS[role] || POOLS.cargo;
+    function bsp(cells, maxA, maxSide, out) {
+      let x0 = W, x1 = 0, y0b = H, y1 = 0;
+      for (const i of cells) { const x = i % W, y = (i / W) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0b) y0b = y; if (y > y1) y1 = y; }
+      const w = x1 - x0 + 1, h = y1 - y0b + 1;
+      if ((cells.length <= maxA && w <= maxSide && h <= maxSide) || cells.length < 4) { out.push(cells); return; }
+      let vert = w > h ? true : w < h ? false : r() < 0.5;
+      if ((vert ? w : h) < 4) vert = !vert;
+      const len = vert ? w : h; if (len < 4) { out.push(cells); return; }
+      const t = clamp(Math.round(len / 2 + (r() - 0.5) * (len - 4) * 0.7), 2, len - 2), A = [], B = [];
+      for (const i of cells) ((vert ? i % W - x0 : ((i / W) | 0) - y0b) < t ? A : B).push(i);
+      if (A.length < 3 || B.length < 3) { out.push(cells); return; }
+      bsp(A, maxA, maxSide, out); bsp(B, maxA, maxSide, out);
+    }
+    const mir = i => ((i / W) | 0) * W + 2 * cx - i % W;
+    const rooms = [];   // { id, cells, where: fore | aft | mid, main: the bridge or the reactor }
+    const add = (cells, where, main) => { const id = newRoom(null); for (const i of cells) cell[i] = id; rooms.push({ id, cells, where, main }); return id; };
+    const done = new Set();
+    for (const b of blocks) {
+      if (done.has(b)) continue; done.add(b);
+      const where = b.y1 < sTop ? 'fore' : b.y0 > sBot ? 'aft' : 'mid';
+      if (b.side === 'C') {
+        // a block across the middle (the nose and the stern): a centre room and a mirrored pair at the sides;
+        // a long centre keeps its end for the bridge or the reactor and the rest becomes other rooms
+        const hwB = Math.max(...b.cells.map(i => Math.abs(i % W - cx))), cw = hwB <= 2 || (where === 'fore' && hwB <= 4) ? hwB : Math.max(1, Math.round(hwB * (0.3 + r() * 0.25)));
+        const mid = [], left = [];
+        for (const i of b.cells) { const dx = i % W - cx; if (Math.abs(dx) <= cw) mid.push(i); else if (dx < 0) left.push(i); }
+        const ys = mid.map(i => (i / W) | 0), my0 = Math.min(...ys), my1 = Math.max(...ys);
+        if (my1 - my0 + 1 > 7) {
+          const cut = where === 'aft' ? my1 - 5 : my0 + 6, main = mid.filter(i => (where === 'aft') !== (((i / W) | 0) < cut)), rest = mid.filter(i => (where === 'aft') === (((i / W) | 0) < cut));
+          add(main, where, true); const parts = []; bsp(rest, 12, 6, parts); for (const pc of parts) add(pc, where);
+        } else add(mid, where, true);
+        if (left.length) {
+          const parts = []; bsp(left, where === 'aft' ? 12 : 8, where === 'aft' ? 6 : 4, parts);
+          for (const pc of parts) { const a = add(pc, where), bb = add(pc.map(mir), where); twin.set(a, bb); }
+        }
+        continue;
+      }
+      const big = r() < P.big, maxA = big ? 42 : P.maxA, maxSide = big ? 9 : P.side;
+      const parts = []; bsp(b.cells, maxA, maxSide, parts);
+      const tw = b.side === 'L' ? blocks.find(o => !done.has(o) && o.side === 'R' && o.cells.length === b.cells.length && comp[mir(b.cells[0])] === blocks.indexOf(o)) : null;
+      if (tw && r() < 0.85) {
+        done.add(tw);
+        for (const pc of parts) { const a = add(pc, where), bb = add(pc.map(mir), where); twin.set(a, bb); }
+      } else for (const pc of parts) add(pc, where);
+    }
+    // room types
+    const info = new Map();
+    for (const o of rooms) {
+      let hull = false, stern = false;
+      for (const i of o.cells) { for (const u of [i - 1, i + 1, i - W, i + W]) if (cell[u] === -1) hull = true; if (cell[i + W] === -1 && ((i / W) | 0) === yb) stern = true; }
+      info.set(o.id, { o, n: o.cells.length, hull, stern, centre: o.cells.some(i => i % W === cx) });
+    }
+    const count = {}, setT = (id, t) => { types[id] = t; count[t] = (count[t] || 0) + 1; };
+    const sizeOf = n => (n <= 4 ? 's' : n <= 14 ? 'm' : 'l');
+    const free = rooms.filter(o => o.where === 'mid').sort((a, b) => b.cells.length - a.cells.length);
+    for (const o of rooms) {
+      const f = info.get(o.id);
+      if (o.where === 'fore') {
+        if (o.main) setT(o.id, d === 0 || D === 1 ? (s.cls === 'shuttle' ? 'cockpit' : 'bridge') : FORE[role][0]);
+        else if (!types[o.id]) {
+          // side rooms in the nose: one of the deck's own kinds each, then plain storage and cabins
+          const opts = FORE[role].slice(d === 0 || D === 1 ? 0 : 1).filter(t => !count[t]), t = opts.length ? opts[0] : pick(r, ['storage', 'cabin', 'life']);
+          setT(o.id, t); const tw = twin.get(o.id);
+          if (tw) setT(tw, opts.length > 1 ? opts[1] : UNIQUE.has(t) ? 'storage' : t);
+        }
+      } else if (o.where === 'aft') {
+        if (hasStern) { if (o.main) setT(o.id, f.n >= 6 && !small && !['command', 'habitat', 'crew'].includes(role) && !count.reactor ? 'reactor' : 'engine'); else if (!types[o.id]) { const t = f.stern ? 'engine' : pick(r, ['life', 'workshop', 'storage']); setT(o.id, (CAP[t] || 99) <= (count[t] || 0) ? 'storage' : t); const tw = twin.get(o.id); if (tw) setT(tw, types[o.id]); } }
+        else if (!types[o.id]) { const t = o.main ? (role === 'command' ? 'observation' : 'storage') : pick(r, ['storage', 'life', 'cabin']); setT(o.id, t); const tw = twin.get(o.id); if (tw && !types[tw]) setT(tw, t); }
+      }
+    }
+    const wants = { mess: 'l', hydro: 'l', cryo: 'l', hangar: 'l', rec: 'm', medbay: 'm', lab: 'm', workshop: 'm', armoury: 'm', weapons: 'm', galley: 'm', life: 'm', captain: 'm', comms: 's', wash: 's', storage: 's' };
+    // a room may not become what doesn't fit it, or more of something than a deck needs; then it gets the deck's plain filler
+    const capK = Math.max(1, Math.round(free.length / 30));
+    const ok = (t, f) => !((UNIQUE.has(t) || t === 'hangar') && count[t]) && (count[t] || 0) < (CAP[t] || 99) * capK && !((t === 'hangar' && (!f.hull || f.n < 16)) || ((t === 'escape' || t === 'observation' || t === 'weapons') && !f.hull));
+    const choose = f => { for (let k = 0; k < 6; k++) { const t = pick(r, P[sizeOf(f.n)]); if (ok(t, f)) return t; } const fl = P.fill[sizeOf(f.n)]; return ok(fl, f) ? fl : 'storage'; };
+    for (const t of P.must) {
+      if (count[t]) continue;
+      const want = wants[t] || 'm', cand = free.filter(o => !types[o.id] && ok(t, info.get(o.id)));
+      if (!cand.length) continue;
+      const best = cand.reduce((a, b) => { const sa = sizeOf(a.cells.length) === want ? 0 : 1, sb = sizeOf(b.cells.length) === want ? 0 : 1; return sb < sa || (sb === sa && r() < 0.3) ? b : a; });
+      setT(best.id, t);
+    }
+    for (const o of free) {
+      if (types[o.id]) continue;
+      const f = info.get(o.id), t = choose(f); setT(o.id, t);
+      const tw = twin.get(o.id);
+      if (tw && !types[tw]) { const f2 = info.get(tw); setT(tw, r() < 0.8 && ok(t, f2) ? t : choose(f2)); }
+    }
+    for (let i = 1; i < types.length; i++) if (!types[i]) types[i] = 'storage';
+    return { cell, types, doors: placeDoors(cell, types, W, H, r) };
+  }
+  // doors: every room gets one onto a corridor if it touches one, otherwise into a neighbour that is already reachable;
+  // airlocks get an outer hatch and a hangar a wide bay door in the hull
+  function placeDoors(cell, types, W, H, r) {
+    const pairs = new Map(), hullE = new Map(), key = (a, b) => (a < b ? a * 4096 + b : b * 4096 + a);
+    const addE = (a, b, e) => { if (a === b) return; if (a < 0 || b < 0) { const id = a < 0 ? b : a; if (id > 0) { if (!hullE.has(id)) hullE.set(id, []); hullE.get(id).push(e); } return; } const k = key(a, b); if (!pairs.has(k)) pairs.set(k, []); pairs.get(k).push(e); };
+    for (let y = 0; y < H - 1; y++) for (let x = 0; x < W - 1; x++) {
+      const a = cell[y * W + x]; if (a === -2) continue;
+      const b = cell[y * W + x + 1], c = cell[(y + 1) * W + x];
+      if (!(a < 0 && b < 0)) addE(a, b, { x: x + 1, y, v: 1 });
+      if (!(a < 0 && c < 0)) addE(a, c, { x, y: y + 1, v: 0 });
+    }
+    const doors = [], conn = new Set([0]), n = types.length;
+    const mid = es => { const s = es.slice().sort((p, q) => p.v - q.v || p.x - q.x || p.y - q.y); return s[(s.length - 1) >> 1]; };
+    const door = (es, a, b) => { const e = mid(es); doors.push({ ...e, k: types[a] === 'armoury' || types[b] === 'armoury' || types[a] === 'brig' || types[b] === 'brig' ? 'lock' : HEAVY.has(types[a]) || HEAVY.has(types[b]) ? 'heavy' : 'door' }); };
+    for (let id = 1; id < n; id++) { const es = pairs.get(key(0, id)); if (es) { door(es, 0, id); conn.add(id); if (es.length > 8 && r() < 0.6) { const s = es.slice().sort((p, q) => p.v - q.v || p.x - q.x || p.y - q.y); doors.push({ ...s[1], k: 'door' }); } } }
+    for (let pass = 0, grew = true; grew && pass < 40; pass++) {
+      grew = false;
+      for (let id = 1; id < n; id++) {
+        if (conn.has(id) || !types[id]) continue;
+        let best = null, bl = 0;
+        for (const o of conn) { if (!o) continue; const es = pairs.get(key(o, id)); if (es && es.length > bl) { bl = es.length; best = [es, o]; } }
+        if (best) { door(best[0], best[1], id); conn.add(id); grew = true; }
+      }
+    }
+    for (const [id, es] of hullE) {
+      const t = types[id];
+      if (t === 'airlock') { const side = es.filter(e => e.v === 1); if (side.length) doors.push({ ...mid(side), k: 'hatch' }); }
+      else if (t === 'hangar') { const side = es.filter(e => e.v === 1).sort((p, q) => p.x - q.x || p.y - q.y); if (side.length >= 3) { const xs = side.filter(e => e.x === side[0].x), run = xs.length >= 3 ? xs : side, a = Math.max(0, (run.length >> 1) - 1); for (const e of run.slice(a, a + Math.min(3, run.length))) doors.push({ ...e, k: 'bay' }); } }
+    }
+    return doors;
+  }
+
+  /* ---------- painted decks: the grid, room types and doors, kept as text ---------- */
+  function encodeDeck(base, W, H) {
+    const out = []; let prev = base.cell[0], run = 0;
+    for (let i = 0; i <= W * H; i++) { const v = i < W * H ? base.cell[i] : NaN; if (v === prev) run++; else { out.push((prev + 1).toString(36) + (run > 1 ? '*' + run.toString(36) : '')); prev = v; run = 1; } }
+    return { W, H, c: out.join('.'), t: base.types.slice(), d: base.doors.map(e => [e.x, e.y, e.v, e.k]) };
+  }
+  function decodeDeck(E) {
+    const cell = new Int16Array(E.W * E.H).fill(-1); let i = 0;
+    for (const tok of String(E.c || '').split('.')) { if (!tok) continue; const [a, b] = tok.split('*'), v = parseInt(a, 36) - 1, n = b ? parseInt(b, 36) : 1; for (let k = 0; k < n && i < cell.length; k++) cell[i++] = v; }
+    const types = Array.isArray(E.t) ? E.t.map(t => (t && RT[t] ? t : null)) : [null];
+    return { cell, types, doors: (E.d || []).map(([x, y, v, k]) => ({ x, y, v, k: k || 'door' })) };
+  }
+
+  /* ---------- a finished deck: room shapes, windows, furniture and the hull outline ---------- */
+  const baseCache = new Map(), shipCache = new Map();
+  function deckBase(s, Hh, d) {
+    const dk = s.decks[d], key = `${s.seed}|${s.cls}|${s.decks.length}|${d}|${dk.ver | 0}|${dk.edit ? 'e' : 'g'}`;
+    if (baseCache.has(key)) return baseCache.get(key);
+    const b = dk.edit && dk.edit.W === Hh.W && dk.edit.H === Hh.H ? decodeDeck(dk.edit) : genDeck(Hh, s, d);
+    baseCache.set(key, b); if (baseCache.size > 24) baseCache.delete(baseCache.keys().next().value);
+    return b;
+  }
+  // the biggest rectangle of whole cells inside a room, for laying out its furniture
+  function maxRect(cells, W) {
+    let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+    for (const i of cells) { const x = i % W, y = (i / W) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const w = x1 - x0 + 1, h = y1 - y0 + 1, g = new Uint8Array(w * h), hg = new Int16Array(w); let best = { x: x0, y: y0, w: 1, h: 1, a: 0 };
+    for (const i of cells) g[(((i / W) | 0) - y0) * w + i % W - x0] = 1;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) hg[x] = g[y * w + x] ? hg[x] + 1 : 0;
+      for (let x = 0; x < w; x++) { let mh = hg[x]; for (let x2 = x; x2 < w && mh; x2++) { mh = Math.min(mh, hg[x2]); const a = mh * (x2 - x + 1) - Math.abs((x2 - x + 1) - mh) * 0.01; if (a > best.a) best = { x: x0 + x, y: y0 + y - mh + 1, w: x2 - x + 1, h: mh, a }; } }
+    }
+    return best;
+  }
+  // furniture for one room, laid out in half cells (1 m) inside its biggest rectangle. Props have a box in cells and a side a:
+  // the wall they back onto (0 top, 1 right, 2 bottom, 3 left); under: 1 marks floor markings that others may sit on
+  function furnish(t, R, inRoom, doorIn, hullSide, r) {
+    const P = [], w2 = R.w * 2, h2 = R.h * 2, occ = new Uint8Array(w2 * h2), long = w2 >= h2;
+    const block = (ix, iy, w, h) => { for (let y = Math.max(0, iy); y < Math.min(h2, iy + h); y++) for (let x = Math.max(0, ix); x < Math.min(w2, ix + w); x++) occ[y * w2 + x] = 1; };
+    // keep doorways clear, and in bigger rooms a lane in from each door
+    for (const [x, y, nx, ny] of doorIn) {
+      if (x < R.x || y < R.y || x >= R.x + R.w || y >= R.y + R.h) continue;
+      const ix = (x - R.x) * 2, iy = (y - R.y) * 2; block(ix, iy, 2, 2);
+      if (R.w * R.h >= 6 && !['engine', 'reactor', 'hangar'].includes(t)) { const n = Math.max(2, Math.round((nx ? w2 : h2) * 0.45)); for (let k = 1; k <= n; k++) block(ix + nx * k, iy + ny * k, 2, 2); }
+    }
+    const fits = (ix, iy, w, h) => { if (ix < 0 || iy < 0 || ix + w > w2 || iy + h > h2) return false; for (let y = iy; y < iy + h; y++) for (let x = ix; x < ix + w; x++) if (occ[y * w2 + x]) return false; return true; };
+    const put = (k, ix, iy, w, h, a = 0, o) => { block(ix, iy, w, h); P.push(Object.assign({ k, x: R.x + ix / 2, y: R.y + iy / 2, w: w / 2, h: h / 2, a, v: Math.floor(r() * 4) }, o)); return true; };
+    const decal = (k, x, y, w, h, o) => P.push(Object.assign({ k, x, y, w, h, a: 0, under: 1, v: Math.floor(r() * 4) }, o));
+    const along = (side, k, len, dep, gap = 0, max = 99, o) => {
+      if (side == null) return 0;
+      const hz = side === 0 || side === 2, run = hz ? w2 : h2; let n = 0;
+      for (let p = 0; p + len <= run && n < max;) {
+        const ix = hz ? p : side === 1 ? w2 - dep : 0, iy = hz ? (side === 0 ? 0 : h2 - dep) : p, w = hz ? len : dep, h = hz ? dep : len;
+        if (fits(ix, iy, w, h)) { put(k, ix, iy, w, h, side, typeof o === 'function' ? o() : o); n++; p += len + gap; } else p++;
+      }
+      return n;
+    };
+    const centre = (k, w, h, a = 0, o, force) => { const ix = (w2 - w) >> 1, iy = (h2 - h) >> 1; return force || fits(ix, iy, w, h) ? put(k, ix, iy, w, h, a, o) : false; };
+    const fill = (k, w, h, gx, gy, m, prob = 1, a = 0, o) => { let n = 0; for (let iy = m; iy + h <= h2 - m; iy += h + gy) for (let ix = m; ix + w <= w2 - m; ix += w + gx) if (r() < prob && fits(ix, iy, w, h)) { put(k, ix, iy, w, h, a, typeof o === 'function' ? o() : o); n++; } return n; };
+    // rows of planters or pods: every free run along the row
+    const rows = (k, dep, step, a0, from = 1) => {
+      for (let q = from; q + dep <= (long ? h2 : w2) - (from ? 1 : 0); q += step) {
+        let s0 = -1;
+        for (let p = 0; p <= (long ? w2 : h2); p++) {
+          const ok = p < (long ? w2 : h2) && (long ? fits(p, q, 1, dep) : fits(q, p, dep, 1));
+          if (ok && s0 < 0) s0 = p;
+          if (!ok && s0 >= 0) { const n = p - s0; if (n >= 2) { if (long) put(k, s0, q, n, dep, a0); else put(k, q, s0, dep, n, a0 + 1); } s0 = -1; }
+        }
+      }
+    };
+    // walls to back furniture onto, best first: real walls, then the long ones, then any with a door
+    const wall = sd => { let n = 0, tot = 0; const hz = sd === 0 || sd === 2;
+      for (let i = 0; i < (hz ? R.w : R.h); i++) { const x = hz ? R.x + i : sd === 1 ? R.x + R.w : R.x - 1, y = hz ? (sd === 0 ? R.y - 1 : R.y + R.h) : R.y + i; tot++; if (!inRoom(x, y)) n++; }
+      return n / tot; };
+    const doorOn = sd => doorIn.some(([x, y]) => (sd === 0 ? y === R.y : sd === 2 ? y === R.y + R.h - 1 : sd === 1 ? x === R.x + R.w - 1 : x === R.x));
+    const S = [0, 1, 2, 3].filter(sd => wall(sd) > 0.6).sort((a, b) => doorOn(a) - doorOn(b) || ((b % 2 === 0) === long) - ((a % 2 === 0) === long) || r() - 0.5);
+    for (const sd of [0, 1, 2, 3]) if (!S.includes(sd)) S.push(sd);
+    const area = R.w * R.h, big = area >= 9;
+    switch (t) {
+      case 'bridge': case 'cockpit': {
+        if (t === 'cockpit') { along(0, 'console', Math.min(w2, 4), 1, 0, 1); fill('pilot', 1, 1, 1, 1, 1, 1, 0); break; }
+        along(0, 'console', 2, 1, 0); along(1, 'console', 2, 1, 1, 3); along(3, 'console', 2, 1, 1, 3);
+        if (!centre('helm', 2, 4)) centre('holo', 2, 2);
+        break;
+      }
+      case 'comms': along(S[0], 'console', 2, 1, 0); along(S[1], 'servers', 1, 1, 0); along(S[2], 'servers', 1, 1, 0); break;
+      case 'captain': along(S[0], 'bed2', 2, 2, 0, 1); along(S[1], 'desk', 2, 1, 0, 1); along(S[2], 'sofa', 3, 1, 0, 1); along(S[3], 'plant', 1, 1, 0, 1); if (area >= 6) decal('rug', R.x + R.w / 2 - 0.8, R.y + R.h / 2 - 0.6, 1.6, 1.2); break;
+      case 'cabin': along(S[0], 'bed', 2, 1, 0, 1); along(S[1], 'desk', 2, 1, 0, 1); along(S[2], 'locker', 1, 1, 0, area > 2 ? 2 : 1); if (area >= 4) along(S[3], 'plant', 1, 1, 0, 1); break;
+      case 'quarters': {
+        const a = long ? 0 : 3, b = long ? 2 : 1;
+        along(a, 'bunk', 1, 2, 0); if ((long ? h2 : w2) >= 5) along(b, 'bunk', 1, 2, 0);
+        along(long ? 3 : 0, 'locker', 1, 1); along(long ? 1 : 2, 'locker', 1, 1); break;
+      }
+      case 'seats': { const aisle = w2 >> 1; block(aisle - (w2 >= 6 ? 1 : 0), 0, w2 >= 6 ? 2 : 1, h2); for (let iy = 1; iy < h2 - 1; iy += 2) for (let ix = 0; ix < w2; ix++) if (fits(ix, iy, 1, 1)) put('seat', ix, iy, 1, 1, 0); break; }
+      case 'mess': along(S[0], 'counter', 2, 1, 0, 3, () => ({ v: Math.floor(r() * 4) })); fill('table', 3, 3, 1, 0, 1); break;
+      case 'galley': for (const sd of S.slice(0, 3)) along(sd, 'counter', 2, 1, 0, 5, () => ({ v: Math.floor(r() * 4) })); if (big) centre('counter', 3, 2, 0, { v: 1 }); break;
+      case 'medbay': along(S[0], 'medbed', 1, 2, 1); along(S[1], 'cabinet', 2, 1, 0); if (big) centre('surgery', 2, 3); decal('cross', R.x + R.w / 2 - 0.4, R.y + R.h / 2 - 0.4, 0.8, 0.8); break;
+      case 'lab': along(S[0], 'bench', 3, 1, 0); along(S[1], 'bench', 3, 1, 0); if (!centre('tank', 2, 2)) along(S[2], 'cabinet', 2, 1, 0, 1); break;
+      case 'wash': along(S[0], 'stall', 1, 1, 0); along(S[1], 'shower', 1, 1, 0); along(S[2], 'sinks', 2, 1, 0, 1); break;
+      case 'rec': along(S[0], 'sofa', 3, 1, 0, 2); along(S[1], 'screen', 2, 1, 0, 1); if (!centre('ctable', 2, 1)) centre('plant', 1, 1); along(S[2], 'plant', 1, 1, 2, 2); break;
+      case 'observation': { const hs = hullSide >= 0 ? (hullSide + 2) % 4 : S[0]; centre('scope', 1, 1); along(hs, 'sofa', 3, 1, 1); along(S.find(x => x !== hs && x % 2 !== hs % 2), 'plant', 1, 1, 2, 2); break; }
+      case 'cargo': decal('hazard', R.x + 0.15, R.y + 0.15, R.w - 0.3, R.h - 0.3); if (area >= 12) fill('container', 4, 2, 1, 1, 1, 0.65, 0, () => ({ v: Math.floor(r() * 5) })); fill('crate', 2, 2, 0, 0, 1, 0.75, 0, () => ({ v: Math.floor(r() * 5) })); fill('crate', 1, 1, 0, 0, 1, 0.3, 0, () => ({ v: Math.floor(r() * 5) })); break;
+      case 'hangar': { const s = Math.min(w2, h2); decal('pad', R.x + R.w / 2 - s / 4 + 0.1, R.y + R.h / 2 - s / 4 + 0.1, s / 2 - 0.2, s / 2 - 0.2); if (s >= 6) centre('craft', Math.min(6, w2 - 2) & ~1, Math.min(8, h2 - 2), 0, null, true); along(S[0], 'crate', 2, 2, 1, 3, () => ({ v: Math.floor(r() * 5) })); along(S[1], 'fuel', 1, 1, 1, 3); break; }
+      case 'storage': along(S[0], 'shelf', 2, 1, 0); along(S[1], 'shelf', 2, 1, 0); along(S[2], 'shelf', 2, 1, 0); fill('crate', 1, 1, 0, 0, 1, 0.3, 0, () => ({ v: Math.floor(r() * 5) })); break;
+      case 'engine': {
+        const n = Math.max(1, Math.floor(w2 / 4)), hh = Math.max(2, h2 - 2);
+        for (let k = 0; k < n; k++) put('engine', clamp(Math.round((k + 0.5) * w2 / n - 1.5), 0, Math.max(0, w2 - 3)), h2 - hh, Math.min(3, w2), hh, 2);
+        along(0, 'console', 2, 1, 1, 2); break;
+      }
+      case 'reactor': { const s = Math.min(w2, h2) - (Math.min(w2, h2) >= 6 ? 2 : 1); decal('ring', R.x + R.w / 2 - s / 4 - 0.25, R.y + R.h / 2 - s / 4 - 0.25, s / 2 + 0.5, s / 2 + 0.5); centre('reactor', s, s, 0, null, true); along(S[0], 'console', 2, 1, 1, 2); break; }
+      case 'life': along(S[0], 'tank', 2, 2, 0); along(S[1], 'fan', 2, 2, 0); along(S[2], 'scrubber', 2, 1, 0); break;
+      case 'workshop': along(S[0], 'bench', 3, 1, 0); along(S[1], 'toolrack', 2, 1, 0); centre('arm', 2, 2); fill('crate', 1, 1, 0, 0, 1, 0.2, 0, () => ({ v: Math.floor(r() * 5) })); break;
+      case 'armoury': along(S[0], 'rack', 2, 1, 0); along(S[1], 'rack', 2, 1, 0); along(S[2], 'locker', 1, 1); centre('ctable', 2, 1); break;
+      case 'brig': if ((long ? h2 : w2) >= 5) along(S[0], 'cell', 2, 3, 0); along(S[1], 'desk', 2, 1, 0, 1); break;
+      case 'weapons': along(hullSide >= 0 ? hullSide : S[0], 'tube', 1, Math.min(4, (hullSide % 2 ? w2 : h2) - 1), 1); along(S[1], 'rack', 2, 1, 0); break;
+      case 'cryo': {
+        const a = long ? 0 : 3, b = long ? 2 : 1;
+        along(a, 'pod', 1, 2, 0); along(b, 'pod', 1, 2, 0);
+        if ((long ? h2 : w2) >= 8) { const m = (long ? h2 : w2) >> 1; for (let p = 0; p < (long ? w2 : h2); p++) { if (long) { if (fits(p, m - 2, 1, 4)) { put('pod', p, m - 2, 1, 2, 2); put('pod', p, m, 1, 2, 0); } } else if (fits(m - 2, p, 4, 1)) { put('pod', m - 2, p, 2, 1, 1); put('pod', m, p, 2, 1, 3); } } }
+        break;
+      }
+      case 'hydro': rows('planter', 1, 2, 0); along(S[0], 'tank', 2, 2, 0, 1); break;
+      case 'airlock': decal('hazard', R.x + 0.1, R.y + 0.1, R.w - 0.2, R.h - 0.2); along(S[0], 'suit', 1, 1, 0, 2); break;
+      case 'lift': decal('liftpad', R.x, R.y, R.w, R.h); break;
+      case 'escape': along(hullSide >= 0 ? hullSide : S[0], 'escpod', 2, 2, 0); break;
+    }
+    return P;
+  }
+  const VIEW = new Set(['bridge', 'cockpit', 'observation', 'rec', 'captain', 'mess', 'hydro', 'lab', 'cabin']);
+  function shipLayout(s) {
+    const Hh = shipHull(s), d = s.cur, dk = s.decks[d];
+    const key = `${s.seed}|${s.cls}|${s.decks.length}|${d}|${s.decks.map(x => (x.ver | 0) + (x.edit ? 'e' : '')).join(',')}|${Object.entries(dk.rooms).map(([k, v]) => v.type ? k + v.type : '').join('')}`;
+    let G = shipCache.get(key);
+    if (G) { G.look = s.look; return G; }
+    const { W, H } = Hh, N = W * H, base = deckBase(s, Hh, d), cell = base.cell, r = srng((s.seed * 31 + d * 977 + (dk.ver | 0)) >>> 0);
+    const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]);
+    // the hull is every deck's floor plus the wings
+    const solid = Hh.wingM.slice();
+    for (let k = 0; k < s.decks.length; k++) { const b = k === d ? base : deckBase(s, Hh, k); for (let i = 0; i < N; i++) if (b.cell[i] >= 0) solid[i] = 1; }
+    const rooms = [];
+    for (let i = 0; i < N; i++) { const id = cell[i]; if (id > 0) (rooms[id] || (rooms[id] = { id, cells: [] })).cells.push(i); }
+    const doors = base.doors.filter(e => { const a = e.v ? at(e.x - 1, e.y) : at(e.x, e.y - 1), b = at(e.x, e.y); return a !== b && (e.k === 'hatch' || e.k === 'bay' ? (a < 0) !== (b < 0) : a >= 0 && b >= 0); });
+    const cnt = {}, seen = {};
+    for (const o of rooms) if (o) { const ov = dk.rooms[o.id]; o.type = (ov && RT[ov.type] && ov.type) || base.types[o.id] || 'storage'; cnt[o.type] = (cnt[o.type] || 0) + 1; }
+    const props = [], windows = [];
+    for (const o of rooms) {
+      if (!o) continue;
+      const R = maxRect(o.cells, W); o.R = R; o.n = o.cells.length; o.c = [R.x + R.w / 2, R.y + R.h / 2];
+      seen[o.type] = (seen[o.type] || 0) + 1; o.label = RT[o.type][0] + (cnt[o.type] > 1 && o.type !== 'lift' && o.type !== 'airlock' ? ' ' + seen[o.type] : '');
+      const mine = (x, y) => at(x, y) === o.id, doorIn = [];
+      for (const e of doors) {
+        const ax = e.v ? e.x - 1 : e.x, ay = e.v ? e.y : e.y - 1;
+        if (mine(e.x, e.y)) doorIn.push([e.x, e.y, e.v ? 1 : 0, e.v ? 0 : 1]); else if (mine(ax, ay)) doorIn.push([ax, ay, e.v ? -1 : 0, e.v ? 0 : -1]);
+      }
+      // the side of its biggest rectangle that faces open space, for windows, guns and pods
+      let hullSide = -1, hb = 0;
+      for (let sd = 0; sd < 4; sd++) { let n = 0; const hz = sd % 2 === 0; for (let k = 0; k < (hz ? R.w : R.h); k++) { const x = hz ? R.x + k : sd === 1 ? R.x + R.w : R.x - 1, y = hz ? (sd === 0 ? R.y - 1 : R.y + R.h) : R.y + k; if (at(x, y) < 0) n++; } if (n > hb) { hb = n; hullSide = sd; } }
+      o.hull = hullSide;
+      for (const p of furnish(o.type, R, mine, doorIn, hullSide, r)) props.push(p);
+      if (VIEW.has(o.type)) for (const i of o.cells) {
+        const x = i % W, y = (i / W) | 0;
+        if (at(x - 1, y) < 0) windows.push({ x, y, v: 1, s: -1 }); if (at(x + 1, y) < 0) windows.push({ x: x + 1, y, v: 1, s: 1 });
+        if (at(x, y - 1) < 0) windows.push({ x, y, v: 0, s: -1 }); if (o.type !== 'cabin' && at(x, y + 1) < 0) windows.push({ x, y: y + 1, v: 0, s: 1 });
+      }
+    }
+    // corridor light strips along runs of three or more cells, and pipes along their walls
+    const strips = [], pipes = [], dset = new Set(doors.map(e => e.v + ':' + e.x + ':' + e.y));
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (at(x, y) !== 0) continue;
+      if (at(x - 1, y) !== 0) { let e = x; while (at(e + 1, y) === 0) e++; if (e - x >= 2) strips.push([x + 0.5, y + 0.5, e + 0.5, y + 0.5]); }
+      if (at(x, y - 1) !== 0) { let e = y; while (at(x, e + 1) === 0) e++; if (e - y >= 2) strips.push([x + 0.5, y + 0.5, x + 0.5, e + 0.5]); }
+    }
+    // pipes run along the left wall of corridors that go fore and aft, broken at doors
+    const pipeOk = (x, y) => at(x, y) === 0 && at(x - 1, y) !== 0 && !dset.has('1:' + x + ':' + y);
+    for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) { if (!pipeOk(x, y) || pipeOk(x, y - 1)) continue; let e = y; while (pipeOk(x, e + 1)) e++; if (e - y >= 1) pipes.push([x, y, x, e + 1]); }
+    let bx0 = W, by0 = H, bx1 = 0, by1 = 0;
+    for (let i = 0; i < N; i++) if (solid[i]) { const x = i % W, y = (i / W) | 0; if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
+    G = { kind: 'ship', W, H, cell, rooms, doors, props, windows, strips, pipes, solid, Hh, deck: d, decks: s.decks.length, role: Hh.roles[d], cls: s.cls, look: s.look,
+      box: bx1 >= bx0 ? [bx0 - 1, by0 - 1, bx1 + 2, by1 + 3.2] : [0, 0, W, H] };
+    shipCache.set(key, G); if (shipCache.size > 8) shipCache.delete(shipCache.keys().next().value);
+    return G;
+  }
+  // the hull's outline: a smooth line about two thirds of a cell outside every solid cell (marching squares over the
+  // distance to the nearest solid cell), so steps in the plan come out as bevels
+  function hullOutline(solid, W, H, off = 0.66) {
+    const pad = 3, w = W + pad * 2, h = H + pad * 2, val = new Float32Array(w * h), lev = 0.5 + off;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let best = 9;
+      for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) { const X = x - pad + i, Y = y - pad + j; if (X >= 0 && Y >= 0 && X < W && Y < H && solid[Y * W + X]) { const dd = Math.sqrt(i * i + j * j); if (dd < best) best = dd; } }
+      val[y * w + x] = lev - best;
+    }
+    const pts = new Map(), nb = new Map();
+    const pt = (id, ax, ay, bx, by) => { if (!pts.has(id)) { const va = val[ay * w + ax], vb = val[by * w + bx], t = va / (va - vb); pts.set(id, [ax + (bx - ax) * t - pad + 0.5, ay + (by - ay) * t - pad + 0.5]); } return id; };
+    const link = (a, b) => { if (!nb.has(a)) nb.set(a, []); if (!nb.has(b)) nb.set(b, []); nb.get(a).push(b); nb.get(b).push(a); };
+    for (let y = 0; y < h - 1; y++) for (let x = 0; x < w - 1; x++) {
+      const a = val[y * w + x] > 0, b = val[y * w + x + 1] > 0, c = val[(y + 1) * w + x + 1] > 0, d = val[(y + 1) * w + x] > 0, k = a | b << 1 | c << 2 | d << 3;
+      if (!k || k === 15) continue;
+      const T = () => pt((y * w + x) * 2, x, y, x + 1, y), Rr = () => pt((y * w + x + 1) * 2 + 1, x + 1, y, x + 1, y + 1), B = () => pt(((y + 1) * w + x) * 2, x, y + 1, x + 1, y + 1), Lf = () => pt((y * w + x) * 2 + 1, x, y, x, y + 1);
+      const cen = (val[y * w + x] + val[y * w + x + 1] + val[(y + 1) * w + x + 1] + val[(y + 1) * w + x]) > 0;
+      switch (k) {
+        case 1: case 14: link(T(), Lf()); break; case 2: case 13: link(T(), Rr()); break; case 4: case 11: link(Rr(), B()); break; case 8: case 7: link(B(), Lf()); break;
+        case 3: case 12: link(Lf(), Rr()); break; case 6: case 9: link(T(), B()); break;
+        case 5: if (cen) { link(T(), Rr()); link(B(), Lf()); } else { link(T(), Lf()); link(Rr(), B()); } break;
+        case 10: if (cen) { link(T(), Lf()); link(Rr(), B()); } else { link(T(), Rr()); link(B(), Lf()); } break;
+      }
+    }
+    const loops = [], used = new Set();
+    for (const start of nb.keys()) {
+      if (used.has(start)) continue;
+      const loop = []; let prev = -1, cur = start;
+      while (cur != null && !used.has(cur)) { used.add(cur); loop.push(pts.get(cur)); const nx = nb.get(cur).find(q => q !== prev && !used.has(q)); prev = cur; cur = nx; }
+      if (loop.length > 2) loops.push(loop);
+    }
+    return loops;
+  }
+
+  /* ---------- how ships look ---------- */
+  const LOOKS = {
+    industrial: {
+      bg: ['#0b1018', '#030406'], hull: '#5d6269', hullTint: ['#686d73', '#555a61', '#60656b', '#4c5157', '#72767b'], hullEdge: 'rgba(205,212,218,.55)',
+      plate: '#4a4f55', grate: ['#0a0c0f', '#5e646b'], diamond: '#5a5f66', tile: '#a6adb1', carpet: '#38424e', heavy: '#484c51', soil: '#3a291d',
+      gap: '#0c0e11', wall: '#1b1e22', wallHi: 'rgba(160,168,176,.55)', outer: '#101215', door: '#59616b', accent: '#f0b429', lock: '#ff4b3e', go: '#59ff8c',
+      metal: '#7b8289', metalDk: '#3e4349', metalLt: '#b5bbc1', screen: '#5fd2ff', fabric: '#c9ced3', cloth: ['#2f5670', '#6a3b36', '#3e5a3a', '#59496b'], desk: '#3a3f46',
+      crate: ['#c27a32', '#4a6886', '#68793c', '#b39b38', '#8a4b3b'], plant: ['#2d6a30', '#3f8a3c', '#5aa84b'], glass: ['#b4ecff', '#1b4b6c'],
+      light: '255,214,160', lightA: 0.2, plume: ['rgba(255,196,130,.95)', 'rgba(255,110,50,.4)'], core: '#a6ecff', strip: '255,200,120',
+      tint: { medbay: 'rgba(215,245,250,.09)', hydro: 'rgba(90,150,60,.13)', armoury: 'rgba(170,40,30,.11)', cryo: 'rgba(130,205,255,.08)', brig: 'rgba(160,60,40,.08)' },
+      label: '#eef2f5', halo: 'rgba(7,9,12,.85)',
+    },
+    sleek: {
+      bg: ['#0e1a2e', '#04070d'], hull: '#d3d8de', hullTint: ['#dde1e6', '#c9cfd6', '#d7dce1', '#e6e9ec', '#c3c9d0'], hullEdge: 'rgba(255,255,255,.8)',
+      plate: '#c4c9d0', grate: ['#4b545e', '#c3cad2'], diamond: '#b6bdc5', tile: '#eceff2', carpet: '#7a8ba0', heavy: '#aeb5be', soil: '#4a3727',
+      gap: '#2a3038', wall: '#566170', wallHi: 'rgba(255,255,255,.85)', outer: '#3d4652', door: '#e3e7eb', accent: '#3fb4ff', lock: '#ff5b6e', go: '#4dffc3',
+      metal: '#cfd5db', metalDk: '#8c96a1', metalLt: '#f4f6f8', screen: '#7fe9ff', fabric: '#f3f5f7', cloth: ['#3f7fb5', '#5b6f8c', '#7a9db8', '#9aa9bd'], desk: '#e1e5e9',
+      crate: ['#e6eaee', '#9fb4c8', '#5e86ad', '#c8d3de', '#7c8fa3'], plant: ['#2f7d4f', '#43a26a', '#6cc48a'], glass: ['#dff8ff', '#2e6f9c'],
+      light: '205,235,255', lightA: 0.16, plume: ['rgba(170,225,255,.95)', 'rgba(60,140,255,.4)'], core: '#d6f6ff', strip: '120,210,255',
+      tint: { medbay: 'rgba(200,245,255,.10)', hydro: 'rgba(90,170,110,.12)', armoury: 'rgba(80,110,160,.10)', cryo: 'rgba(140,215,255,.10)' },
+      label: '#142030', halo: 'rgba(244,248,252,.88)',
+    },
+    military: {
+      bg: ['#07090b', '#020303'], hull: '#3c4146', hullTint: ['#42474c', '#373c41', '#3f444a', '#33383d', '#474c51'], hullEdge: 'rgba(150,158,166,.45)',
+      plate: '#33383d', grate: ['#07080a', '#464c52'], diamond: '#3f454b', tile: '#697176', carpet: '#383b31', heavy: '#383c40', soil: '#2e2418',
+      gap: '#08090b', wall: '#0c0e10', wallHi: 'rgba(120,128,136,.45)', outer: '#08090a', door: '#454b51', accent: '#c9a33a', lock: '#ff3b30', go: '#7dff6a',
+      metal: '#5b6268', metalDk: '#2b3035', metalLt: '#8c949b', screen: '#ff8a5c', fabric: '#8e9177', cloth: ['#4c5236', '#3d4436', '#5b5a40', '#45493c'], desk: '#2c3136',
+      crate: ['#5c6236', '#4b5346', '#6b5e3a', '#3f4a3c', '#706a52'], plant: ['#2b5a2c', '#386f36', '#4b8441'], glass: ['#ffb4a0', '#4a1d1a'],
+      light: '255,140,120', lightA: 0.15, plume: ['rgba(255,170,120,.9)', 'rgba(255,70,40,.4)'], core: '#ff9f7a', strip: '255,80,60',
+      tint: { medbay: 'rgba(200,230,210,.07)', hydro: 'rgba(80,130,50,.12)', armoury: 'rgba(190,40,30,.12)', cryo: 'rgba(120,180,200,.07)', brig: 'rgba(180,50,40,.10)' },
+      label: '#e3e6e0', halo: 'rgba(4,5,6,.86)',
+    },
+    blueprint: { bp: 1, bg: ['#1b5394', '#0f3468'], line: 'rgba(228,242,255,.95)', faint: 'rgba(205,228,255,.16)', label: '#ffffff', halo: 'rgba(15,52,104,.85)', light: '255,255,255', strip: '255,255,255' },
+  };
+  // a blueprint only draws lines, but its furniture still asks for colours
+  LOOKS.blueprint = Object.assign({}, LOOKS.industrial, LOOKS.blueprint);
+
+  /* ---------- textures: tileable, drawn once per look and kept at several sizes so zoomed-out plans don't shimmer ---------- */
+  const TEXS = new Map();
+  const canvasOf = n => Object.assign(document.createElement('canvas'), { width: n, height: n });
+  // smooth noise that wraps at the edges, 0…1
+  function vnoise(n, r, p0, octs, pers = 0.5) {
+    const out = new Float32Array(n * n); let amp = 1;
+    for (let o = 0; o < octs; o++) {
+      const p = p0 << o; if (p > n) break;
+      const gr = new Float32Array(p * p); for (let i = 0; i < gr.length; i++) gr[i] = r();
+      const sc = p / n;
+      for (let y = 0; y < n; y++) {
+        const fy = y * sc, iy = fy | 0, ty = fy - iy, sy = ty * ty * (3 - 2 * ty), y0 = (iy % p) * p, y1 = ((iy + 1) % p) * p;
+        for (let x = 0; x < n; x++) {
+          const fx = x * sc, ix = fx | 0, tx = fx - ix, sx = tx * tx * (3 - 2 * tx), x0 = ix % p, x1 = (ix + 1) % p;
+          const a = gr[y0 + x0], b = gr[y0 + x1], c = gr[y1 + x0], d = gr[y1 + x1];
+          out[y * n + x] += amp * (a + (b - a) * sx + (c - a + (a - b + d - c) * sx) * sy);
+        }
+      }
+      amp *= pers;
+    }
+    let lo = Infinity, hi = -Infinity; for (const v of out) { if (v < lo) lo = v; if (v > hi) hi = v; }
+    for (let i = 0; i < out.length; i++) out[i] = (out[i] - lo) / (hi - lo || 1);
+    return out;
+  }
+  // a noise layer: colour col, opaque by amt where the noise is above lo
+  function noiseCv(n, r, p0, octs, col, lo, amt, pers) {
+    const v = vnoise(n, r, p0, octs, pers), c = canvasOf(n), x = c.getContext('2d'), im = x.createImageData(n, n), d = im.data;
+    for (let i = 0; i < n * n; i++) { const a = Math.min(1, Math.max(0, (v[i] - lo) / (1 - lo))) * amt; d[i * 4] = col[0]; d[i * 4 + 1] = col[1]; d[i * 4 + 2] = col[2]; d[i * 4 + 3] = a * 255; }
+    x.putImageData(im, 0, 0); return c;
+  }
+  function grainCv(n, r, amt) {
+    const c = canvasOf(n), x = c.getContext('2d'), im = x.createImageData(n, n), d = im.data;
+    for (let i = 0; i < n * n; i++) { const w = r() < 0.5 ? 255 : 0; d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = w; d[i * 4 + 3] = r() * amt * 255; }
+    x.putImageData(im, 0, 0); return c;
+  }
+  const hexRGB = hx => { const v = parseInt(hx.slice(1), 16); return [v >> 16 & 255, v >> 8 & 255, v & 255]; };
+  const SHADES = new Map();
+  // a colour lightened (f > 0) or darkened (f < 0)
+  function shade(hx, f) {
+    const key = hx + f; let v = SHADES.get(key); if (v) return v;
+    const [r0, g0, b0] = hexRGB(hx), t = f < 0 ? 0 : 255, p = Math.abs(f);
+    v = `rgb(${Math.round(r0 + (t - r0) * p)},${Math.round(g0 + (t - g0) * p)},${Math.round(b0 + (t - b0) * p)})`;
+    SHADES.set(key, v); return v;
+  }
+  function buildTex(look, name) {
+    const Lk = LOOKS[look], r = srng(seedOf(look + ':' + name)), cells = name === 'hull' || name === 'heavy' ? 4 : name === 'hazard' ? 0.5 : 2;
+    const S = name === 'hazard' ? 64 : 512, c = canvasOf(S), x = c.getContext('2d'), grain = grainCv(256, r, 1);
+    const fillR = (col, a, b, w, h) => { x.fillStyle = col; x.fillRect(a, b, w, h); };
+    const lineH = (y, w, col) => { x.fillStyle = col; x.fillRect(0, y - w / 2, S, w); };
+    const lineV = (xx, w, col) => { x.fillStyle = col; x.fillRect(xx - w / 2, 0, w, S); };
+    const noise = (p0, octs, col, lo, amt, pers) => x.drawImage(noiseCv(256, r, p0, octs, col, lo, amt, pers), 0, 0, S, S);
+    const grainy = a => { x.globalAlpha = a; for (let i = 0; i < S; i += 256) for (let j = 0; j < S; j += 256) x.drawImage(grain, i, j); x.globalAlpha = 1; };
+    const scratches = (n, col, a) => { x.strokeStyle = col; x.lineCap = 'round'; for (let i = 0; i < n; i++) { const l = 6 + r() * 46, px = l + r() * (S - 2 * l), py = l + r() * (S - 2 * l), an = r() * TAU; x.globalAlpha = a * (0.3 + r() * 0.7); x.lineWidth = 0.6 + r() * 1.3; x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + Math.cos(an) * l * 0.5 + (r() - 0.5) * 8, py + Math.sin(an) * l * 0.5 + (r() - 0.5) * 8, px + Math.cos(an) * l, py + Math.sin(an) * l); x.stroke(); } x.globalAlpha = 1; };
+    const bolt = (bx, by, rr, col) => { x.fillStyle = 'rgba(0,0,0,.5)'; x.beginPath(); x.arc(bx + rr * 0.25, by + rr * 0.3, rr * 1.05, 0, TAU); x.fill(); x.fillStyle = col; x.beginPath(); x.arc(bx, by, rr, 0, TAU); x.fill(); x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.arc(bx - rr * 0.3, by - rr * 0.3, rr * 0.45, 0, TAU); x.fill(); };
+    // a plate with a bevel: light along the top and left, shadow along the bottom and right
+    const bevel = (a, b, w, h, lt = 0.12, dk = 0.3, t = 2) => { fillR(`rgba(255,255,255,${lt})`, a, b, w, t); fillR(`rgba(255,255,255,${lt * 0.7})`, a, b, t, h); fillR(`rgba(0,0,0,${dk})`, a, b + h - t, w, t); fillR(`rgba(0,0,0,${dk * 0.8})`, a + w - t, b, t, h); };
+    switch (name) {
+      case 'plate': {
+        fillR(Lk.plate, 0, 0, S, S);
+        for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) fillR(r() < 0.5 ? `rgba(255,255,255,${r() * 0.05})` : `rgba(0,0,0,${r() * 0.08})`, i * 256, j * 256, 256, 256);
+        noise(4, 6, [0, 0, 0], 0.42, 0.42); noise(8, 5, [255, 255, 255], 0.6, 0.1);
+        // tread: rows of short raised bars on alternate plates
+        for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) if ((i + j) % 2) for (let yy = 20; yy < 240; yy += 22) for (let xx = 20; xx < 240; xx += 22) { fillR('rgba(0,0,0,.18)', i * 256 + xx + 1, j * 256 + yy + 2, 12, 4); fillR('rgba(255,255,255,.07)', i * 256 + xx, j * 256 + yy, 12, 3); }
+        for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) bevel(i * 256 + 3, j * 256 + 3, 250, 250, 0.1, 0.28, 3);
+        for (const p of [0, 256, 512]) { lineV(p, 5, 'rgba(0,0,0,.6)'); lineH(p, 5, 'rgba(0,0,0,.6)'); }
+        for (const p of [0, 256]) for (const q of [0, 256]) for (const [u, v] of [[16, 16], [240, 16], [16, 240], [240, 240]]) bolt(p + u, q + v, 5, shade(Lk.plate, 0.12));
+        scratches(80, 'rgba(255,255,255,1)', 0.12); scratches(30, 'rgba(0,0,0,1)', 0.16); grainy(0.06);
+        break;
+      }
+      case 'diamond': {
+        fillR(Lk.diamond, 0, 0, S, S); noise(4, 6, [0, 0, 0], 0.45, 0.36);
+        for (let j = 0; j < 16; j++) for (let i = 0; i < 16; i++) {
+          const cx0 = i * 32 + 16, cy0 = j * 32 + 16, a = (i + j) % 2 ? Math.PI / 4 : -Math.PI / 4;
+          x.save(); x.translate(cx0, cy0); x.rotate(a);
+          x.fillStyle = 'rgba(0,0,0,.42)'; x.beginPath(); x.ellipse(1.6, 1.6, 11, 3, 0, 0, TAU); x.fill();
+          x.fillStyle = shade(Lk.diamond, 0.16); x.beginPath(); x.ellipse(0, 0, 10.5, 2.7, 0, 0, TAU); x.fill();
+          x.fillStyle = 'rgba(255,255,255,.28)'; x.beginPath(); x.ellipse(-1.2, -0.8, 7, 1.1, 0, 0, TAU); x.fill();
+          x.restore();
+        }
+        noise(8, 5, [255, 255, 255], 0.62, 0.12);
+        for (const p of [0, 256, 512]) { lineV(p, 5, 'rgba(0,0,0,.65)'); lineH(p, 5, 'rgba(0,0,0,.65)'); }
+        for (const p of [0, 256]) for (const q of [0, 256]) for (const [u, v] of [[12, 12], [244, 12], [12, 244], [244, 244], [128, 12], [12, 128], [244, 128], [128, 244]]) bolt(p + u, q + v, 4, shade(Lk.diamond, 0.1));
+        scratches(60, 'rgba(255,255,255,1)', 0.1); grainy(0.06);
+        break;
+      }
+      case 'grate': {
+        fillR(Lk.grate[0], 0, 0, S, S);
+        // pipes and cables in the dark below
+        x.lineCap = 'round';
+        for (let k = 0; k < 5; k++) { const yy = r() * S, w = 18 + r() * 34; x.strokeStyle = `rgba(${90 + r() * 60},${90 + r() * 50},${80 + r() * 40},.22)`; x.lineWidth = w; x.beginPath(); x.moveTo(-20, yy); x.lineTo(S + 20, yy); x.stroke(); x.strokeStyle = 'rgba(255,255,255,.06)'; x.lineWidth = w * 0.25; x.beginPath(); x.moveTo(-20, yy - w * 0.2); x.lineTo(S + 20, yy - w * 0.2); x.stroke(); }
+        for (let yy = 0; yy < S; yy += 16) {
+          const gr = x.createLinearGradient(0, yy + 3, 0, yy + 12); gr.addColorStop(0, shade(Lk.grate[1], 0.25)); gr.addColorStop(0.35, Lk.grate[1]); gr.addColorStop(1, shade(Lk.grate[1], -0.45));
+          x.fillStyle = gr; x.fillRect(0, yy + 3, S, 9);
+        }
+        for (let xx = 0; xx < S; xx += 32) { fillR(shade(Lk.grate[1], -0.3), xx + 14, 0, 4, S); fillR('rgba(255,255,255,.12)', xx + 14, 0, 1, S); }
+        noise(4, 6, [0, 0, 0], 0.4, 0.45);
+        for (const p of [0, 256, 512]) {
+          for (const [fx, fy, w, h] of [[p - 9, 0, 18, S], [0, p - 9, S, 18]]) { const gr = x.createLinearGradient(fx, fy, fx + (w < h ? w : 0), fy + (h < w ? h : 0)); gr.addColorStop(0, shade(Lk.grate[1], 0.2)); gr.addColorStop(0.5, shade(Lk.grate[1], -0.05)); gr.addColorStop(1, shade(Lk.grate[1], -0.5)); x.fillStyle = gr; x.fillRect(fx, fy, w, h); }
+        }
+        for (const p of [0, 256]) for (const q of [0, 256]) for (const [u, v] of [[0, 0], [128, 0], [0, 128]]) bolt(p + u, q + v, 4.5, shade(Lk.grate[1], 0.1));
+        scratches(40, 'rgba(255,255,255,1)', 0.1); grainy(0.05);
+        break;
+      }
+      case 'tile': {
+        fillR(Lk.tile, 0, 0, S, S);
+        for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) {
+          fillR(r() < 0.5 ? `rgba(255,255,255,${r() * 0.1})` : `rgba(0,0,0,${r() * 0.06})`, i * 64, j * 64, 64, 64);
+          const gr = x.createLinearGradient(i * 64, j * 64, i * 64 + 64, j * 64 + 64); gr.addColorStop(0, 'rgba(255,255,255,.14)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.06)');
+          x.fillStyle = gr; x.fillRect(i * 64, j * 64, 64, 64);
+        }
+        noise(4, 6, [60, 50, 40], 0.5, 0.16);
+        for (let p = 0; p <= S; p += 64) { lineV(p, 3, 'rgba(40,40,40,.32)'); lineH(p, 3, 'rgba(40,40,40,.32)'); }
+        for (let p = 0; p <= S; p += 64) { lineV(p + 2, 1, 'rgba(255,255,255,.25)'); lineH(p + 2, 1, 'rgba(255,255,255,.25)'); }
+        scratches(30, 'rgba(0,0,0,1)', 0.06); grainy(0.04);
+        break;
+      }
+      case 'carpet': {
+        fillR(Lk.carpet, 0, 0, S, S);
+        for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) fillR((i + j) % 2 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.05)', i * 256, j * 256, 256, 256);
+        noise(4, 6, [0, 0, 0], 0.35, 0.22); noise(16, 4, [255, 255, 255], 0.55, 0.08);
+        x.globalAlpha = 0.05; for (let p = 0; p < S; p += 5) { lineH(p, 1.5, '#000'); } for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) if ((i + j) % 2) for (let p = 0; p < 256; p += 5) fillR('#000', i * 256 + p, j * 256, 1.5, 256); x.globalAlpha = 1;
+        grainy(0.16); grainy(0.1);
+        for (const p of [0, 256, 512]) { lineV(p, 2, 'rgba(0,0,0,.3)'); lineH(p, 2, 'rgba(0,0,0,.3)'); }
+        break;
+      }
+      case 'heavy': {
+        fillR(Lk.heavy, 0, 0, S, S);
+        for (let row = 0; row < 4; row++) for (let k = -1; k < 3; k++) { const px = k * 256 + (row % 2) * 128, py = row * 128; fillR(r() < 0.5 ? `rgba(255,255,255,${r() * 0.05})` : `rgba(0,0,0,${r() * 0.1})`, px, py, 256, 128); }
+        noise(4, 6, [0, 0, 0], 0.4, look === 'sleek' ? 0.18 : 0.4); noise(8, 5, [20, 16, 10], 0.66, look === 'sleek' ? 0.12 : 0.5);   // oil
+        x.lineCap = 'round'; for (let k = 0; k < 7; k++) { x.strokeStyle = 'rgba(0,0,0,.07)'; x.lineWidth = 10 + r() * 10; x.beginPath(); const y1 = r() * S; x.moveTo(-10, y1); x.bezierCurveTo(S * 0.3, y1 + (r() - 0.5) * 200, S * 0.7, y1 + (r() - 0.5) * 200, S + 10, y1); x.stroke(); }
+        for (let row = 0; row < 4; row++) for (let k = -1; k < 3; k++) { const px = k * 256 + (row % 2) * 128, py = row * 128; bevel(px + 4, py + 4, 248, 120, 0.1, 0.3, 3); for (const [u, v] of [[14, 14], [242, 14], [14, 114], [242, 114], [128, 14], [128, 114]]) bolt(px + u, py + v, 6, shade(Lk.heavy, 0.12)); }
+        for (let row = 0; row <= 4; row++) lineH(row * 128, 7, 'rgba(0,0,0,.62)');
+        for (let row = 0; row < 4; row++) for (let k = -1; k < 3; k++) fillR('rgba(0,0,0,.62)', k * 256 + (row % 2) * 128 - 3.5, row * 128, 7, 128);
+        scratches(90, 'rgba(255,255,255,1)', 0.12); grainy(0.06);
+        break;
+      }
+      case 'hull': {
+        fillR(Lk.hull, 0, 0, S, S);
+        const panels = [], cut = (a, b, w, h, dpt) => { if ((w < 110 && h < 110) || dpt > 5 || (w < 180 && h < 180 && r() < 0.3)) { panels.push([a, b, w, h]); return; } if (w >= h) { const t = Math.round((0.3 + r() * 0.4) * w / 16) * 16; cut(a, b, t, h, dpt + 1); cut(a + t, b, w - t, h, dpt + 1); } else { const t = Math.round((0.3 + r() * 0.4) * h / 16) * 16; cut(a, b, w, t, dpt + 1); cut(a, b + t, w, h - t, dpt + 1); } };
+        cut(0, 0, S, S, 0);
+        for (const [a, b, w, h] of panels) { fillR(pick(r, Lk.hullTint), a, b, w, h); bevel(a + 1.5, b + 1.5, w - 3, h - 3, 0.14, 0.32, 2); }
+        noise(4, 6, [0, 0, 0], 0.45, 0.3); noise(8, 5, [255, 255, 255], 0.62, 0.08);
+        // streaks swept back along the hull
+        for (let k = 0; k < 50; k++) { const xx = r() * S, w = 1 + r() * 6, y1 = r() * S, l = 40 + r() * 200; const gr = x.createLinearGradient(0, y1, 0, y1 + l); const dk = r() < 0.6; gr.addColorStop(0, dk ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.07)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(xx, y1, w, Math.min(l, S - y1)); }
+        for (const [a, b, w, h] of panels) {
+          x.fillStyle = 'rgba(0,0,0,.6)'; x.fillRect(a, b, w, 2.5); x.fillRect(a, b, 2.5, h);
+          if (r() < 0.55) for (let t = 8; t < w - 4; t += 10) bolt(a + t, b + 7, 1.6, shade(Lk.hull, 0.1));
+          if (r() < 0.35) for (let t = 8; t < h - 4; t += 10) bolt(a + 7, b + t, 1.6, shade(Lk.hull, 0.1));
+          if (w >= 64 && h >= 48 && r() < 0.2) { const vx = a + 12 + r() * (w - 52), vy = b + 12 + r() * (h - 36); fillR('rgba(0,0,0,.55)', vx, vy, 30, 18); for (let t = 0; t < 5; t++) fillR('rgba(255,255,255,.18)', vx + 2, vy + 2 + t * 3.4, 26, 1.2); }
+        }
+        lineV(0, 3, 'rgba(0,0,0,.6)'); lineV(S, 3, 'rgba(0,0,0,.6)'); lineH(0, 3, 'rgba(0,0,0,.6)'); lineH(S, 3, 'rgba(0,0,0,.6)');
+        scratches(60, 'rgba(255,255,255,1)', 0.1); grainy(0.07);
+        break;
+      }
+      case 'soil': {
+        fillR(Lk.soil, 0, 0, S, S); noise(8, 5, [0, 0, 0], 0.3, 0.5); noise(16, 4, [140, 110, 80], 0.55, 0.3);
+        for (let k = 0; k < 500; k++) { x.fillStyle = r() < 0.5 ? 'rgba(190,160,120,.35)' : 'rgba(0,0,0,.35)'; x.beginPath(); x.arc(4 + r() * (S - 8), 4 + r() * (S - 8), 0.8 + r() * 2.4, 0, TAU); x.fill(); }
+        grainy(0.2); break;
+      }
+      case 'hazard': {
+        fillR('#16171a', 0, 0, S, S); x.fillStyle = Lk.accent;
+        for (let k = -2; k < 3; k++) { x.beginPath(); x.moveTo(k * 32, S); x.lineTo(k * 32 + 16, S); x.lineTo(k * 32 + 16 + S, 0); x.lineTo(k * 32 + S, 0); x.fill(); }
+        x.drawImage(noiseCv(64, r, 4, 4, [0, 0, 0], 0.5, 0.5), 0, 0); x.globalAlpha = 0.3; x.drawImage(grain, 0, 0, 64, 64, 0, 0, 64, 64); x.globalAlpha = 1;
+        break;
+      }
+    }
+    const lv = [c];
+    for (let cur = c; cur.width > 16;) { const n = cur.width >> 1, h2 = canvasOf(n), hx = h2.getContext('2d'); hx.imageSmoothingQuality = 'high'; hx.drawImage(cur, 0, 0, n, n); lv.push(h2); cur = h2; }
+    return { lv, cells };
+  }
+  // a fill for the texture, scaled to world cells, at the size nearest the screen's
+  function texFill(g, look, name, k, dpr) {
+    const key = look + ':' + name; let T = TEXS.get(key);
+    if (!T) { T = buildTex(look, name); TEXS.set(key, T); }
+    const want = k * dpr * T.cells; let c = T.lv[0];
+    for (const cv of T.lv) if (cv.width >= want) c = cv;
+    const p = g.createPattern(c, 'repeat');
+    if (p && p.setTransform && window.DOMMatrix) { const s = T.cells / c.width; p.setTransform(new DOMMatrix([s, 0, 0, s, 0, 0])); return p; }
+    return LOOKS[look][name] || LOOKS[look].plate;
+  }
+  let STARS = null;
+  function starsCv() {
+    if (STARS) return STARS;
+    const n = 512, c = canvasOf(n), x = c.getContext('2d'), r = srng(4242);
+    for (let k = 0; k < 260; k++) { const a = Math.pow(r(), 2.2), px = r() * n, py = r() * n, s = 0.4 + Math.pow(r(), 6) * 1.6; x.fillStyle = r() < 0.12 ? `rgba(255,${200 + r() * 40},${160 + r() * 60},${0.35 + a * 0.6})` : r() < 0.2 ? `rgba(170,200,255,${0.35 + a * 0.6})` : `rgba(255,255,255,${0.25 + a * 0.7})`; x.beginPath(); x.arc(px, py, s, 0, TAU); x.fill(); if (s > 1.3) { const gr = x.createRadialGradient(px, py, 0, px, py, s * 5); gr.addColorStop(0, 'rgba(200,220,255,.25)'); gr.addColorStop(1, 'rgba(200,220,255,0)'); x.fillStyle = gr; x.fillRect(px - s * 5, py - s * 5, s * 10, s * 10); } }
+    return (STARS = c);
+  }
+
+  // ship geometry as paths: the hull outline, floors by kind, each room, walls, the outer bulkhead, light strips and pipes
+  function shipPaths(G) {
+    if (G.paths) return G.paths;
+    const { W, H, cell, rooms, doors } = G, at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]);
+    const P = { hull: new Path2D(), inner: new Path2D(), floors: {}, room: [], walls: new Path2D(), outer: new Path2D(), strips: new Path2D(), pipes: new Path2D(), shadow: new Path2D(), lights: [] };
+    for (const loop of hullOutline(G.solid, W, H)) { P.hull.moveTo(loop[0][0], loop[0][1]); for (let i = 1; i < loop.length; i++) P.hull.lineTo(loop[i][0], loop[i][1]); P.hull.lineTo(loop[0][0], loop[0][1]); }
+    const fl = id => (id === 0 ? 'grate' : RT[rooms[id].type][1]);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W;) {
+      const id = at(x, y); if (id < 0) { x++; continue; }
+      let e = x; while (at(e + 1, y) === id) e++;
+      const f = fl(id); (P.floors[f] || (P.floors[f] = new Path2D())).rect(x, y, e - x + 1, 1);
+      if (id > 0) (P.room[id] || (P.room[id] = new Path2D())).rect(x, y, e - x + 1, 1);
+      P.inner.rect(x, y, e - x + 1, 1); x = e + 1;
+    }
+    // walls between rooms and the bulkhead round the outside, in long runs, with gaps for the doors
+    const dset = new Set(doors.map(e => e.v + ':' + e.x + ':' + e.y)), kindOf = (a, b) => (a === b || (a < 0 && b < 0) ? null : a < 0 || b < 0 ? 'o' : 'w');
+    const run = (kind, x0, y0, x1, y1) => { if (!kind) return; const p = kind === 'o' ? P.outer : P.walls; p.moveTo(x0, y0); p.lineTo(x1, y1); };
+    for (let x = 0; x <= W; x++) { let s = 0, cur = null; for (let y = 0; y <= H; y++) { const k2 = y < H && !dset.has('1:' + x + ':' + y) ? kindOf(at(x - 1, y), at(x, y)) : null; if (k2 !== cur) { run(cur, x, s, x, y); s = y; cur = k2; } } }
+    for (let y = 0; y <= H; y++) { let s = 0, cur = null; for (let x = 0; x <= W; x++) { const k2 = x < W && !dset.has('0:' + x + ':' + y) ? kindOf(at(x, y - 1), at(x, y)) : null; if (k2 !== cur) { run(cur, s, y, x, y); s = x; cur = k2; } } }
+    for (const [a, b, c, d] of G.strips) { P.strips.moveTo(a, b); P.strips.lineTo(c, d); }
+    for (const [a, b, c, d] of G.pipes) { P.pipes.moveTo(a + 0.13, b + 0.08); P.pipes.lineTo(c + 0.13, d - 0.08); }
+    for (const p of G.props) if (!p.under && p.k !== 'pad') P.shadow.rect(p.x + 0.05, p.y + 0.08, p.w, p.h);
+    // running lights at the widest point, and white ones at the stern corners
+    let wy = 0, wl = W, wr = 0, ws = -1, sy = 0;
+    for (let y = 0; y < H; y++) { let a = -1, b = -1; for (let x = 0; x < W; x++) if (G.solid[y * W + x]) { if (a < 0) a = x; b = x; } if (a >= 0) { if (b - a > ws) { ws = b - a; wy = y; wl = a; wr = b; } sy = y; } }
+    if (ws >= 0) P.lights.push([wl - 0.42, wy + 0.5, '255,60,50'], [wr + 1.42, wy + 0.5, '70,255,120']);
+    { let a = -1, b = -1; for (let x = 0; x < W; x++) if (G.solid[sy * W + x]) { if (a < 0) a = x; b = x; } if (a >= 0) P.lights.push([a - 0.2, sy + 1.4, '255,255,255'], [b + 1.2, sy + 1.4, '255,255,255']); }
+    return (G.paths = P);
+  }
+  function rrect(g, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  // the space behind the ship, at screen scale; the stars pan with the plan
+  function shipBg(g, G, w, hh, ox, oy) {
+    const Lk = LOOKS[G.look] || LOOKS.industrial, gr = g.createRadialGradient(w * 0.5, hh * 0.45, 0, w * 0.5, hh * 0.5, Math.hypot(w, hh) * 0.7);
+    gr.addColorStop(0, Lk.bg[0]); gr.addColorStop(1, Lk.bg[1]); g.fillStyle = gr; g.fillRect(0, 0, w, hh);
+    if (Lk.bp) return;
+    const st = g.createPattern(starsCv(), 'repeat');
+    if (st && st.setTransform && window.DOMMatrix) { st.setTransform(new DOMMatrix([1, 0, 0, 1, ox % 512, oy % 512])); g.fillStyle = st; g.fillRect(0, 0, w, hh); }
+  }
+  function drawShip(g, G, k, dpr) {
+    const P = shipPaths(G), Lk = LOOKS[G.look] || LOOKS.industrial, BP = !!Lk.bp, lw = px => px / k, hi = k > 18, mid = k > 7, grad = k > 13, glows = [];
+    const tf = name => texFill(g, G.look, name, k, dpr), Hh = G.Hh, light = G.look === 'sleek';
+    // the part of the plan on the canvas, so things off it are skipped
+    const T = g.getTransform ? g.getTransform() : null, vx0 = T ? -T.e / T.a - 2 : -1e9, vy0 = T ? -T.f / T.d - 2 : -1e9, vx1 = T ? (g.canvas.width - T.e) / T.a + 2 : 1e9, vy1 = T ? (g.canvas.height - T.f) / T.d + 2 : 1e9;
+    const vis = (x, y, w, h) => x + w > vx0 && x < vx1 && y + h > vy0 && y < vy1;
+    const F = c => { if (BP) { g.strokeStyle = Lk.line; g.lineWidth = lw(1); g.stroke(); } else { g.fillStyle = c; g.fill(); } };
+    const ST = (c, w) => { g.strokeStyle = BP ? Lk.line : c; g.lineWidth = BP ? lw(1) : w; g.stroke(); };
+    const box = (x, y, w, h, rd = 0) => { g.beginPath(); if (rd > 0) rrect(g, x, y, w, h, rd); else g.rect(x, y, w, h); };
+    const ell = (x, y, rx, ry = rx) => { g.beginPath(); g.ellipse(x, y, Math.max(0.001, rx), Math.max(0.001, ry), 0, 0, TAU); };
+    const ln = (x0, y0, x1, y1) => { g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); };
+    // metal with light from the top left
+    // gradients are set in each piece's own frame, so pieces alike share them
+    const GC = new Map();
+    const mg = (x, y, w, h, c, f = 0.2) => { if (BP || !grad) return c; const key = 'm' + x + ',' + y + ',' + w + ',' + h + c + f; let gr = GC.get(key); if (gr) return gr; gr = g.createLinearGradient(x, y, x + w * 0.6, y + h); gr.addColorStop(0, shade(c, f)); gr.addColorStop(1, shade(c, -f * 1.3)); GC.set(key, gr); return gr; };
+    const cyl = (x, y, w, h, c, along) => { if (BP || !grad) return c; const key = 'c' + x + ',' + y + ',' + w + ',' + h + c + along; let gr = GC.get(key); if (gr) return gr; gr = along ? g.createLinearGradient(x, 0, x + w, 0) : g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, shade(c, -0.35)); gr.addColorStop(0.35, shade(c, 0.3)); gr.addColorStop(0.55, c); gr.addColorStop(1, shade(c, -0.5)); GC.set(key, gr); return gr; };
+    let pcx = 0, pcy = 0, ca = 1, sa = 0;
+    // (glows too small to see at this zoom are left out)
+    const glow = (lx, ly, rr, rgb, a) => { if (!BP && rr * k > 9) glows.push([pcx + lx * ca - ly * sa, pcy + lx * sa + ly * ca, rr, rgb, a]); };
+    const scr = hexRGB(Lk.screen || '#ffffff').join(','), acc = Lk.accent;
+    g.lineJoin = 'miter'; g.lineCap = 'butt';
+    if (BP) {
+      // blueprint: a fine grid in cells, heavier every five
+      const [x0, y0, x1, y1] = G.box, gp = new Path2D(), gp5 = new Path2D();
+      for (let x = Math.floor(x0) - 6; x <= x1 + 6; x++) { const p = x % 5 ? gp : gp5; p.moveTo(x, y0 - 6); p.lineTo(x, y1 + 6); }
+      for (let y = Math.floor(y0) - 6; y <= y1 + 6; y++) { const p = y % 5 ? gp : gp5; p.moveTo(x0 - 6, y); p.lineTo(x1 + 6, y); }
+      g.strokeStyle = Lk.faint; g.lineWidth = lw(1); g.stroke(gp); g.lineWidth = lw(1.6); g.stroke(gp5);
+    }
+    /* --- the outside: engine glow, engine bells, the hull, its lights --- */
+    if (!BP) {
+      g.globalCompositeOperation = 'lighter';
+      for (const n of Hh.nozzles) { const yy = n.y + 1.6, rr = n.w * 1.9 + 0.6, gr = g.createRadialGradient(n.x, yy, 0, n.x, yy, rr); gr.addColorStop(0, Lk.plume[0]); gr.addColorStop(0.35, Lk.plume[1]); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(n.x, yy + rr * 0.3, rr * 0.75, rr * 1.15, 0, 0, TAU); g.fill(); }
+      g.globalCompositeOperation = 'source-over';
+    }
+    for (const n of Hh.nozzles) {
+      const y0 = n.y + 0.35, y1 = n.y + 1.45, a = n.w / 2, b = n.w * 0.62;
+      g.beginPath(); g.moveTo(n.x - a, y0); g.lineTo(n.x + a, y0); g.lineTo(n.x + b, y1); g.lineTo(n.x - b, y1); g.closePath(); F(cyl(n.x - b, y0, b * 2, 1, Lk.metal || '#888', true));
+      if (!BP) { ell(n.x, y1, b, 0.16); F('#120d0b'); ell(n.x, y1, b * 0.62, 0.1); F(Lk.plume[0]); }
+      for (let t = 0.3; t < 1; t += 0.3) { const yy = y0 + (y1 - y0) * t, ww = a + (b - a) * t; ln(n.x - ww, yy, n.x + ww, yy); ST('rgba(0,0,0,.4)', lw(1.2)); }
+    }
+    g.fillStyle = BP ? 'rgba(255,255,255,.05)' : tf('hull'); g.fill(P.hull, 'evenodd');
+    if (!BP) {
+      const [bx0, by0, bx1, by1] = G.box, gr = g.createLinearGradient(bx0, by0, bx1, by1 * 0.6 + by0 * 0.4);
+      gr.addColorStop(0, 'rgba(255,255,255,.12)'); gr.addColorStop(0.5, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.3)'); g.fillStyle = gr; g.fill(P.hull, 'evenodd');
+      g.save(); g.clip(P.hull, 'evenodd'); g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 0.45; g.stroke(P.hull); g.strokeStyle = 'rgba(255,255,255,.1)'; g.lineWidth = 0.16; g.stroke(P.hull); g.restore();
+    }
+    g.strokeStyle = BP ? Lk.line : Lk.hullEdge; g.lineWidth = BP ? lw(2) : Math.max(lw(1), 0.035); g.stroke(P.hull);
+    for (const [x, y, rgb] of P.lights) { ell(x, y, 0.09); F(`rgb(${rgb})`); glows.push([x, y, 0.9, rgb, 0.55]); }
+    /* --- floors --- */
+    if (!BP) {
+      g.fillStyle = Lk.gap; g.fill(P.inner);
+      for (const f in P.floors) { g.fillStyle = tf(f); g.fill(P.floors[f]); }
+      for (const o of G.rooms) if (o && Lk.tint[o.type] && P.room[o.id]) { g.fillStyle = Lk.tint[o.type]; g.fill(P.room[o.id]); }
+    } else { g.fillStyle = 'rgba(255,255,255,.035)'; g.fill(P.inner); }
+    // floor markings
+    for (const p of G.props) if (p.under && vis(p.x, p.y, p.w, p.h)) drawProp(p);
+    if (!BP) {
+      g.save(); g.clip(P.inner);
+      const ao = light ? 0.55 : 1;
+      for (const [w, a] of [[1.1, 0.07], [0.62, 0.1], [0.3, 0.16]]) { g.strokeStyle = `rgba(0,0,0,${a * ao})`; g.lineWidth = w; g.stroke(P.walls); g.stroke(P.outer); }
+      if (mid) { g.fillStyle = `rgba(0,0,0,${light ? 0.18 : 0.38})`; g.fill(P.shadow); }
+      g.restore();
+    }
+    // pipes along the corridors
+    if (mid && !BP && G.look !== 'sleek') {
+      g.lineCap = 'round'; g.strokeStyle = '#1b1e22'; g.lineWidth = 0.15; g.stroke(P.pipes); g.strokeStyle = Lk.metal; g.lineWidth = 0.1; g.stroke(P.pipes);
+      g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 0.025; g.save(); g.translate(-0.025, 0); g.stroke(P.pipes); g.restore(); g.lineCap = 'butt';
+    }
+    /* --- furniture --- */
+    if (k >= 14 || BP) { if (k > 2.2) for (const p of G.props) if (!p.under && vis(p.x, p.y, p.w, p.h)) drawProp(p); }
+    else if (k > 2.2) {
+      // zoomed out, furniture is a few pixels across: blocks of its main colour, one fill per colour; the big pieces still drawn whole
+      const by = new Map(), add = (c, x, y, w, h) => { let p = by.get(c); if (!p) by.set(c, (p = new Path2D())); p.rect(x, y, w, h); };
+      const base = { bed: Lk.fabric, bed2: Lk.fabric, bunk: Lk.fabric, medbed: Lk.metalLt, pod: Lk.metalLt, cabinet: Lk.metalLt, bench: Lk.metalLt, counter: Lk.metal, sinks: Lk.metalLt, seat: Lk.cloth[0], sofa: Lk.cloth[1], desk: Lk.desk, ctable: Lk.desk, table: Lk.desk,
+        console: Lk.metalDk, servers: '#202429', shelf: Lk.metalDk, rack: Lk.metalDk, toolrack: Lk.metalDk, plant: Lk.plant[1], planter: Lk.plant[0], tank: Lk.metal, fan: Lk.metalDk, scrubber: Lk.metal, locker: Lk.metal, tube: Lk.metal, suit: '#d8dde2', fuel: '#a2382e', escpod: '#d0782e', arm: Lk.accent, cell: Lk.metalDk };
+      for (const p of G.props) {
+        if (p.under || !vis(p.x, p.y, p.w, p.h)) continue;
+        if (p.k === 'reactor' || p.k === 'engine' || p.k === 'craft' || p.k === 'helm' || p.k === 'holo') { drawProp(p); continue; }
+        const c = p.k === 'crate' || p.k === 'container' ? Lk.crate[p.v % Lk.crate.length] : base[p.k] || Lk.metal, m = Math.min(p.w, p.h) * 0.1;
+        add(c, p.x + m, p.y + m, p.w - 2 * m, p.h - 2 * m);
+      }
+      for (const [c, path] of by) { g.fillStyle = c; g.fill(path); }
+      if (k > 5) for (const p of G.props) if (p.k === 'console' || p.k === 'desk' || p.k === 'medbed' || p.k === 'screen') { pcx = p.x + p.w / 2; pcy = p.y + p.h / 2; ca = 1; sa = 0; glow(0, 0, Math.max(p.w, p.h) * 0.6, scr, 0.25); }
+    }
+    /* --- light: dim the rooms a little, then pools under the lights, glowing screens and strips --- */
+    if (!BP) {
+      g.save();
+      g.globalCompositeOperation = 'multiply'; g.fillStyle = light ? '#e4e8ee' : '#8f949a'; g.fill(P.inner);
+      g.globalCompositeOperation = 'lighter';
+      for (const o of G.rooms) {
+        if (!o || !P.room[o.id] || o.type === 'lift' || !vis(o.R.x - 2, o.R.y - 2, o.R.w + 4, o.R.h + 4)) continue;
+        const R = o.R, rr = Math.hypot(R.w, R.h) * 0.62 + 0.6, gr = g.createRadialGradient(o.c[0], o.c[1], 0, o.c[0], o.c[1], rr), a = Lk.lightA * (o.type === 'cargo' || o.type === 'hangar' ? 0.8 : 1);
+        gr.addColorStop(0, `rgba(${Lk.light},${a})`); gr.addColorStop(1, `rgba(${Lk.light},0)`);
+        g.fillStyle = gr; g.fill(P.room[o.id]);
+      }
+      g.lineCap = 'round';
+      g.strokeStyle = `rgba(${Lk.strip},.07)`; g.lineWidth = 0.7; g.stroke(P.strips);
+      g.strokeStyle = `rgba(${Lk.strip},.55)`; g.lineWidth = 0.06; g.stroke(P.strips);
+      for (const [x, y, rr, rgb, a] of glows) {
+        if (!vis(x - rr, y - rr, rr * 2, rr * 2)) continue;
+        const key = 'r' + rr + rgb + a; let gr = GC.get(key);
+        if (!gr) { gr = g.createRadialGradient(0, 0, 0, 0, 0, rr); gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},0)`); GC.set(key, gr); }
+        g.translate(x, y); g.fillStyle = gr; g.fillRect(-rr, -rr, rr * 2, rr * 2); g.translate(-x, -y);
+      }
+      g.restore();
+    } else { g.setLineDash([0.25, 0.2]); g.strokeStyle = Lk.faint; g.lineWidth = lw(1); g.stroke(P.strips); g.setLineDash([]); }
+    /* --- walls, doors and windows --- */
+    g.lineCap = 'square';
+    if (BP) { g.strokeStyle = Lk.line; g.lineWidth = Math.max(lw(1.6), 0.08); g.stroke(P.walls); g.lineWidth = Math.max(lw(2.4), 0.14); g.stroke(P.outer); }
+    else {
+      g.strokeStyle = Lk.outer; g.lineWidth = 0.34; g.stroke(P.outer);
+      g.strokeStyle = Lk.wall; g.lineWidth = 0.2; g.stroke(P.walls);
+      if (mid) { g.save(); g.translate(-0.035, -0.035); g.strokeStyle = Lk.wallHi; g.lineWidth = 0.045; g.stroke(P.walls); g.restore(); }
+    }
+    g.lineCap = 'butt';
+    for (const e of G.doors) if (vis(e.x - 1, e.y - 1, 2, 2)) drawDoor(e);
+    for (const wd of G.windows) {
+      if (!vis(wd.x - 1, wd.y - 1, 2, 2)) continue;
+      const s = wd.s, gx = wd.v ? wd.x + s * 0.17 : wd.x + 0.12, gy = wd.v ? wd.y + 0.12 : wd.y + s * 0.17, w = wd.v ? s * 0.34 : 0.76, h = wd.v ? 0.76 : s * 0.34;
+      const x0 = Math.min(gx, gx + w), y0 = Math.min(gy, gy + h), aw = Math.abs(w), ah = Math.abs(h);
+      box(x0, y0, aw, ah); F(BP ? null : mg(x0, y0, aw, ah, Lk.glass[0], 0.1));
+      if (!BP) { g.fillStyle = Lk.glass[1]; g.globalAlpha = 0.55; g.fillRect(wd.v ? x0 + aw * (s > 0 ? 0.45 : 0) : x0, wd.v ? y0 : y0 + ah * (s > 0 ? 0.45 : 0), wd.v ? aw * 0.55 : aw, wd.v ? ah : ah * 0.55); g.globalAlpha = 1; ST('#0d1014', 0.04); }
+      if (!BP && mid) { const mx = wd.v ? wd.x + s * 0.7 : wd.x + 0.5, my = wd.v ? wd.y + 0.5 : wd.y + s * 0.7; g.save(); g.globalCompositeOperation = 'lighter'; const gr = g.createRadialGradient(mx, my, 0, mx, my, 0.9); gr.addColorStop(0, `rgba(${Lk.light},.18)`); gr.addColorStop(1, `rgba(${Lk.light},0)`); g.fillStyle = gr; g.fillRect(mx - 0.9, my - 0.9, 1.8, 1.8); g.restore(); }
+    }
+
+    function drawDoor(e) {
+      g.save(); g.translate(e.v ? e.x : e.x + 0.5, e.v ? e.y + 0.5 : e.y); if (e.v) g.rotate(Math.PI / 2);
+      pcx = e.v ? e.x : e.x + 0.5; pcy = e.v ? e.y + 0.5 : e.y; ca = e.v ? 0 : 1; sa = e.v ? 1 : 0;
+      const big = e.k === 'heavy' || e.k === 'hatch' || e.k === 'bay', th = big ? 0.3 : 0.18;
+      if (BP) { ln(-0.5, -0.08, -0.5, 0.08); ST(); ln(0.5, -0.08, 0.5, 0.08); ST(); ln(-0.42, 0, 0.42, 0); g.setLineDash([0.08, 0.06]); ST(); g.setLineDash([]); g.restore(); return; }
+      if (!mid) { box(-0.45, -th / 2, 0.9, th); F(e.k === 'lock' ? Lk.lock : big ? acc : Lk.door); g.restore(); return; }
+      box(-0.58, -th * 0.75, 0.16, th * 1.5); F(Lk.wall); box(0.42, -th * 0.75, 0.16, th * 1.5); F(Lk.wall);
+      box(-0.44, -th / 2, 0.88, th); F(mg(-0.44, -th / 2, 0.88, th, Lk.door, 0.25));
+      if (big) { g.save(); box(-0.42, -th / 2 + 0.04, 0.84, th - 0.08); g.clip(); g.fillStyle = tf('hazard'); g.globalAlpha = 0.85; g.fillRect(-0.5, -0.5, 1, 1); g.restore(); }
+      else { box(-0.44, -0.025, 0.88, 0.05); F(e.k === 'lock' ? Lk.lock : acc); }
+      ln(0, -th / 2, 0, th / 2); ST('rgba(0,0,0,.65)', 0.03);
+      if (e.k === 'hatch') { ell(0, 0, 0.11); F('#111'); ell(0, 0, 0.07); F(Lk.glass ? Lk.glass[0] : '#9cf'); }
+      const col = e.k === 'lock' ? Lk.lock : e.k === 'hatch' || e.k === 'bay' ? acc : Lk.go;
+      ell(-0.5, -th * 0.55, 0.035); F(col); glow(-0.5, -th * 0.55, 0.28, hexRGB(col).join(','), 0.6);
+      g.restore();
+    }
+    // furniture in its own frame: u runs along the wall it backs onto, v away from it, the wall at v = -V/2
+    function drawProp(p) {
+      const A = p.a * Math.PI / 2, U = p.a % 2 ? p.h : p.w, Vd = p.a % 2 ? p.w : p.h, u = U / 2, v = Vd / 2;
+      pcx = p.x + p.w / 2; pcy = p.y + p.h / 2; ca = Math.cos(A); sa = Math.sin(A);
+      g.save(); g.translate(pcx, pcy); if (p.a) g.rotate(A);
+      const C = Lk, cl = C.cloth ? C.cloth[p.v % C.cloth.length] : '#888', cr = C.crate ? C.crate[p.v % C.crate.length] : '#888', M = C.metal, MD = C.metalDk, ML = C.metalLt;
+      const chair = (x, y, back) => { box(x - 0.17, y - 0.15, 0.34, 0.3, 0.07); F(mg(x - 0.17, y - 0.15, 0.34, 0.3, MD)); box(x - 0.17, y + (back > 0 ? 0.08 : -0.15), 0.34, 0.07, 0.03); F(shade(MD, -0.3)); };
+      switch (p.k) {
+        case 'console': {
+          box(-u + 0.04, -v, U - 0.08, Vd * 0.7, 0.05); F(mg(-u, -v, U, Vd, MD, 0.3));
+          box(-u + 0.12, -v + 0.07, U - 0.24, Vd * 0.34, 0.03); F(C.screen); glow(0, -v + 0.2, U * 0.55, scr, 0.32);
+          if (hi && !BP) { for (let t = -u + 0.16; t < u - 0.1; t += 0.12) { ell(t, -v + Vd * 0.55, 0.022); F(t * 7 % 2 > 1 ? acc : C.go); } }
+          chair(0, v + 0.1, 1); break;
+        }
+        case 'pilot': chair(0, 0, 1); box(-0.2, -0.2, 0.06, 0.38, 0.02); F(MD); box(0.14, -0.2, 0.06, 0.38, 0.02); F(MD); break;
+        case 'helm': case 'holo': {
+          const hy = p.k === 'helm' ? -v + 0.45 : 0;
+          ell(0, hy, 0.42); F(mg(-0.42, hy - 0.42, 0.84, 0.84, MD, 0.3)); ell(0, hy, 0.3); F('#0a1420');
+          if (!BP) { for (const rr of [0.12, 0.2, 0.27]) { ell(0, hy, rr); ST(`rgba(${scr},.75)`, 0.018); } glow(0, hy, 0.9, scr, 0.45); }
+          if (p.k === 'helm') { box(-0.26, v - 0.62, 0.52, 0.46, 0.1); F(mg(-0.26, v - 0.6, 0.52, 0.46, cl)); box(-0.26, v - 0.2, 0.52, 0.12, 0.05); F(shade(cl, -0.35)); box(-0.32, v - 0.58, 0.07, 0.36, 0.03); F(MD); box(0.25, v - 0.58, 0.07, 0.36, 0.03); F(MD); }
+          break;
+        }
+        case 'servers': {
+          box(-u + 0.03, -v + 0.02, U - 0.06, Vd - 0.06, 0.03); F(mg(-u, -v, U, Vd, '#202429', 0.3));
+          if (hi) for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) { ell(-u + 0.12 + i * (U - 0.24) / 3, -v + 0.12 + j * 0.11, 0.02); F([C.go, C.screen, acc][(i + j + p.v) % 3]); }
+          glow(0, 0, 0.35, scr, 0.18); break;
+        }
+        case 'bed': case 'bed2': case 'bunk': {
+          const vertical = p.k === 'bunk';   // a bunk stands out from the wall, a bed lies along it
+          box(-u, -v, U, Vd, 0.05); F(mg(-u, -v, U, Vd, MD));
+          box(-u + 0.04, -v + 0.04, U - 0.08, Vd - 0.08, 0.06); F(C.fabric);
+          if (vertical) { box(-u + 0.07, -v + 0.06, U - 0.14, 0.2, 0.06); F('#f2f4f6'); box(-u + 0.05, -v + 0.32, U - 0.1, Vd - 0.38, 0.05); F(mg(-u, 0, U, Vd, cl, 0.15)); if (hi) { ln(-u + 0.05, -v + 0.4, u - 0.05, -v + 0.4); ST('rgba(0,0,0,.25)', 0.02); } }
+          else {
+            const pw = p.k === 'bed2' ? U * 0.42 : U - 0.16;
+            for (let i = 0; i < (p.k === 'bed2' ? 2 : 1); i++) { box(-u + 0.08 + i * (pw + 0.06), -v + 0.06, pw, 0.2, 0.06); F('#f2f4f6'); }
+            if (p.k === 'bed2') { box(-u + 0.05, -v + 0.32, U - 0.1, Vd - 0.36, 0.05); F(mg(-u, -v, U, Vd, cl, 0.15)); }
+            else { box(-u + 0.38, -v + 0.05, U - 0.43, Vd - 0.1, 0.05); F(mg(-u, -v, U, Vd, cl, 0.15)); box(-u + 0.06, -v + 0.06, 0.26, Vd - 0.12, 0.05); F('#f2f4f6'); }
+          }
+          break;
+        }
+        case 'desk': {
+          box(-u + 0.04, -v + 0.03, U - 0.08, Vd * 0.7, 0.04); F(mg(-u, -v, U, Vd, C.desk, 0.2));
+          box(-u * 0.5, -v + 0.06, u, 0.06, 0.01); F(C.screen); glow(0, -v + 0.1, 0.5, scr, 0.25);
+          if (hi) { box(-u * 0.3, -v + 0.18, u * 0.6, 0.12, 0.02); F(shade(C.desk, -0.4)); }
+          chair(0, v + 0.05, 1); break;
+        }
+        case 'locker': case 'cabinet': {
+          box(-u + 0.03, -v + 0.02, U - 0.06, Vd - 0.06, 0.03); F(mg(-u, -v, U, Vd, p.k === 'cabinet' ? ML : M, 0.25));
+          for (let t = 1; t < Math.round(U / 0.5) + 1; t++) { const xx = -u + t * U / (Math.round(U / 0.5) + 1); ln(xx, -v + 0.05, xx, v - 0.06); ST('rgba(0,0,0,.45)', 0.02); }
+          if (hi) { for (let t = 0; t < 3; t++) { ln(-u + 0.08, v - 0.14 - t * 0.05, -u + 0.22, v - 0.14 - t * 0.05); ST('rgba(0,0,0,.4)', 0.015); } }
+          if (p.k === 'cabinet' && !BP) { box(-0.06, -0.02, 0.12, 0.04); F('#d33'); box(-0.02, -0.06, 0.04, 0.12); F('#d33'); }
+          break;
+        }
+        case 'sofa': {
+          box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.04, 0.1); F(mg(-u, -v, U, Vd, shade(cl, -0.25), 0.2));
+          box(-u + 0.1, -v + 0.03, U - 0.2, 0.15, 0.06); F(shade(cl, -0.1));
+          const n = Math.max(2, Math.round(U / 0.5)); for (let i = 0; i < n; i++) { const w2 = (U - 0.24) / n; box(-u + 0.12 + i * w2, -v + 0.18, w2 - 0.02, Vd - 0.25, 0.06); F(mg(0, -v, w2, Vd, cl, 0.15)); }
+          break;
+        }
+        case 'plant': {
+          ell(0, 0, Math.min(u, v) * 0.6); F(mg(-u, -v, U, Vd, MD));
+          if (!BP) for (let i = 0; i < 9; i++) { const an = i * 2.4 + p.v, rr = Math.min(u, v) * (0.35 + (i % 3) * 0.15); g.save(); g.rotate(an); ell(rr * 0.55, 0, rr * 0.55, rr * 0.22); F(C.plant[i % 3]); g.restore(); }
+          break;
+        }
+        case 'rug': box(-u, -v, U, Vd, 0.05); F(BP ? null : shade(cl, -0.2)); if (!BP) { box(-u + 0.1, -v + 0.1, U - 0.2, Vd - 0.2, 0.04); ST(shade(cl, 0.25), 0.04); } break;
+        case 'seat': box(-0.18, -0.16, 0.36, 0.34, 0.07); F(mg(-0.18, -0.16, 0.36, 0.36, cl)); box(-0.18, 0.12, 0.36, 0.09, 0.04); F(shade(cl, -0.35)); box(-0.21, -0.12, 0.04, 0.26, 0.02); F(MD); box(0.17, -0.12, 0.04, 0.26, 0.02); F(MD); break;
+        case 'counter': {
+          box(-u, -v, U, Vd - 0.04, 0.02); F(mg(-u, -v, U, Vd, p.v === 2 ? ML : M, 0.25));
+          if (p.v === 0) { ell(0, -v + Vd * 0.45, U * 0.22, Vd * 0.24); F('#2a3036'); ell(0, -v + 0.06, 0.03); F(ML); }
+          else if (p.v === 1) { for (const [a, b] of [[-0.2, -0.1], [0.2, -0.1], [-0.2, 0.1], [0.2, 0.1]]) { ell(a * U, b + 0.02, 0.07); F('#15181b'); if (!BP) { ell(a * U, b + 0.02, 0.07); ST('rgba(255,120,60,.6)', 0.012); } } }
+          else if (p.v === 2) { ln(-u + 0.05, 0, u - 0.05, 0); ST('rgba(0,0,0,.4)', 0.02); box(u - 0.14, -0.15, 0.04, 0.3); F(MD); }
+          else if (hi) { for (let i = 0; i < 3; i++) { box(-u + 0.1 + i * 0.28, -v + 0.08, 0.16, 0.14, 0.02); F(C.crate[(i + p.v) % 5]); } }
+          break;
+        }
+        case 'table': {
+          for (let i = -1; i <= 1; i++) { chair(i * 0.42, -0.5, -1); chair(i * 0.42, 0.5, 1); }
+          box(-0.66, -0.24, 1.32, 0.48, 0.06); F(mg(-0.66, -0.24, 1.32, 0.48, C.desk, 0.25));
+          if (hi && !BP) for (let i = -1; i <= 1; i++) { ell(i * 0.42, -0.12, 0.07); F('#e9edf0'); ell(i * 0.42, 0.12, 0.07); F('#e9edf0'); }
+          break;
+        }
+        case 'medbed': {
+          box(-u + 0.04, -v + 0.03, U - 0.08, Vd - 0.06, 0.06); F(mg(-u, -v, U, Vd, ML, 0.2)); box(-u + 0.08, -v + 0.25, U - 0.16, Vd - 0.34, 0.05); F(BP ? null : '#d6f2f4');
+          box(-u + 0.1, -v + 0.06, U - 0.2, 0.12, 0.03); F(C.screen); glow(0, -v + 0.12, 0.5, scr, 0.35);
+          if (!BP) { g.beginPath(); g.arc(0, 0.05, u * 0.9, Math.PI * 1.1, Math.PI * 1.9); ST(`rgba(${scr},.7)`, 0.025); }
+          break;
+        }
+        case 'surgery': box(-u + 0.12, -v + 0.1, U - 0.24, Vd - 0.2, 0.08); F(mg(-u, -v, U, Vd, ML)); ell(0, -v + 0.35, 0.22); F(BP ? null : '#fffbe8'); glow(0, -v + 0.35, 1.1, '255,250,230', 0.4); break;
+        case 'cross': box(-u, -v * 0.3, U, Vd * 0.3); F(BP ? null : 'rgba(80,210,140,.45)'); box(-u * 0.3, -v, U * 0.3, Vd); F(BP ? null : 'rgba(80,210,140,.45)'); break;
+        case 'bench': {
+          box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.06, 0.03); F(mg(-u, -v, U, Vd, ML, 0.25));
+          if (hi) { box(-u + 0.12, -v + 0.06, 0.3, 0.2, 0.02); F(MD); ell(0.1, -v + 0.17, 0.08); F(C.plant ? C.plant[1] : '#6c6'); glow(0.1, -v + 0.17, 0.3, '120,255,160', 0.25); box(u - 0.4, -v + 0.06, 0.28, 0.08, 0.01); F(C.screen); }
+          glow(u - 0.26, -v + 0.1, 0.4, scr, 0.2); break;
+        }
+        case 'tank': {
+          ell(0, 0, Math.min(u, v) * 0.9); F(cyl(-u, -v, U, Vd, M, true)); ell(0, 0, Math.min(u, v) * 0.62); F(BP ? null : '#123');
+          if (!BP) { const c2 = G.rooms && p.v % 2 ? '90,255,170' : '90,200,255'; ell(0, 0, Math.min(u, v) * 0.5); F(`rgba(${c2},.55)`); glow(0, 0, Math.min(u, v) * 1.4, c2, 0.3); }
+          if (hi) for (let i = 0; i < 8; i++) { const an = i * TAU / 8, rr = Math.min(u, v) * 0.76; ell(Math.cos(an) * rr, Math.sin(an) * rr, 0.025); F(MD); }
+          break;
+        }
+        case 'stall': box(-u + 0.03, -v + 0.03, U - 0.06, Vd - 0.06, 0.02); ST(MD, 0.04); ell(0, -v + 0.2, 0.1, 0.13); F('#f0f2f4'); break;
+        case 'shower': box(-u + 0.03, -v + 0.03, U - 0.06, Vd - 0.06, 0.02); F(BP ? null : 'rgba(150,200,230,.25)'); ST(C.glass ? C.glass[0] : '#9cf', 0.03); ell(0, 0, 0.05); F(MD); break;
+        case 'sinks': box(-u, -v, U, Vd * 0.7, 0.02); F(mg(-u, -v, U, Vd, ML)); for (const t of [-0.25, 0.25]) { ell(t * U, -v + Vd * 0.35, 0.12, 0.08); F('#c9d6de'); } break;
+        case 'screen': box(-u + 0.05, -v + 0.01, U - 0.1, 0.08, 0.01); F(C.screen); glow(0, -v + 0.06, U * 0.7, scr, 0.35); break;
+        case 'ctable': box(-u + 0.06, -v + 0.06, U - 0.12, Vd - 0.12, 0.08); F(mg(-u, -v, U, Vd, C.desk, 0.3)); break;
+        case 'scope': ell(0, 0, 0.2); F(mg(-0.2, -0.2, 0.4, 0.4, MD)); box(-0.05, -0.38, 0.1, 0.3, 0.03); F(M); break;
+        case 'hazard': if (!BP) { box(-u, -v, U, Vd); g.strokeStyle = tf('hazard'); g.lineWidth = 0.16; g.stroke(); } else { box(-u, -v, U, Vd); g.setLineDash([0.12, 0.1]); ST(); g.setLineDash([]); } break;
+        case 'container': {
+          box(-u + 0.04, -v + 0.04, U - 0.08, Vd - 0.08, 0.02); F(mg(-u, -v, U, Vd, cr, 0.25));
+          if (mid) for (let t = -u + 0.16; t < u - 0.1; t += 0.14) { ln(t, -v + 0.06, t, v - 0.06); ST('rgba(0,0,0,.28)', 0.025); }
+          for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { box(a * (u - 0.04) - (a > 0 ? 0.1 : 0), b * (v - 0.04) - (b > 0 ? 0.1 : 0), 0.1, 0.1); F(shade(cr, -0.5)); }
+          if (hi && !BP) { box(-u + 0.25, -0.08, 0.5, 0.16, 0.01); F('rgba(255,255,255,.6)'); }
+          break;
+        }
+        case 'crate': {
+          const s2 = Math.min(U, Vd) - 0.08; box(-s2 / 2, -s2 / 2, s2, s2, 0.02); F(mg(-s2 / 2, -s2 / 2, s2, s2, cr, 0.25));
+          if (mid) { box(-s2 / 2 + s2 * 0.1, -s2 / 2 + s2 * 0.1, s2 * 0.8, s2 * 0.8); ST('rgba(0,0,0,.35)', 0.025); ln(-s2 * 0.4, -s2 * 0.4, s2 * 0.4, s2 * 0.4); ST('rgba(0,0,0,.25)', 0.03); }
+          if (hi && !BP && p.v % 2) { box(-s2 * 0.2, s2 * 0.2, s2 * 0.4, s2 * 0.12); F('rgba(255,255,255,.55)'); }
+          break;
+        }
+        case 'pad': {
+          const rr = Math.min(u, v);
+          ell(0, 0, rr); ST(BP ? null : acc, 0.09); ell(0, 0, rr * 0.82); ST(BP ? null : 'rgba(255,255,255,.35)', 0.03);
+          box(-rr * 0.35, -rr * 0.4, rr * 0.12, rr * 0.8); F(BP ? null : 'rgba(255,255,255,.5)'); box(rr * 0.23, -rr * 0.4, rr * 0.12, rr * 0.8); F(BP ? null : 'rgba(255,255,255,.5)'); box(-rr * 0.25, -rr * 0.06, rr * 0.5, rr * 0.12); F(BP ? null : 'rgba(255,255,255,.5)');
+          break;
+        }
+        case 'craft': {
+          // a small shuttle parked on the pad, nose up
+          g.beginPath(); g.moveTo(0, -v + 0.1); g.lineTo(u * 0.38, -v + Vd * 0.35); g.lineTo(u * 0.95, v - 0.35); g.lineTo(u * 0.4, v - 0.15); g.lineTo(-u * 0.4, v - 0.15); g.lineTo(-u * 0.95, v - 0.35); g.lineTo(-u * 0.38, -v + Vd * 0.35); g.closePath();
+          F(mg(-u, -v, U, Vd, BP ? '#fff' : (G.look === 'sleek' ? '#e8ecef' : '#9aa1a8'), 0.3)); ST('rgba(0,0,0,.5)', 0.03);
+          ell(0, -v + Vd * 0.3, u * 0.16, Vd * 0.1); F(BP ? null : C.glass[1]);
+          for (const t of [-0.22, 0.22]) { box(t * U - 0.07, v - 0.2, 0.14, 0.12); F(MD); glow(t * U, v - 0.08, 0.35, '255,170,90', 0.3); }
+          break;
+        }
+        case 'fuel': ell(0, 0, Math.min(u, v) * 0.85); F(cyl(-u, -v, U, Vd, BP ? '#fff' : '#a2382e', true)); ell(0, 0, 0.07); F(MD); break;
+        case 'shelf': {
+          box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.06, 0.02); F(mg(-u, -v, U, Vd, MD, 0.2));
+          if (mid) for (let i = 0; i < Math.round(U / 0.3); i++) { box(-u + 0.06 + i * 0.3, -v + 0.06, 0.24, Vd - 0.16, 0.02); F(mg(0, 0, 0.24, 0.3, C.crate[(i + p.v) % 5], 0.2)); }
+          break;
+        }
+        case 'engine': {
+          // a drive housing running back to the stern, which is behind (v = -V/2)
+          box(-u + 0.1, -v, U - 0.2, Vd - 0.1, 0.25); F(cyl(-u + 0.1, -v, U - 0.2, Vd, M, true));
+          if (mid) for (let t = -v + 0.3; t < v - 0.25; t += 0.36) { box(-u + 0.06, t, U - 0.12, 0.09, 0.03); F(shade(MD, -0.2)); }
+          box(-0.07, -v + 0.1, 0.14, Vd - 0.4, 0.05); F(BP ? null : Lk.plume[0]);
+          if (!BP) { glow(0, -v + Vd * 0.4, U * 0.9, '255,160,90', 0.25); glow(0, -v + 0.2, U * 0.7, '255,180,120', 0.3); }
+          box(-0.18, v - 0.28, 0.36, 0.2, 0.05); F(MD); break;
+        }
+        case 'ring': if (!BP) { ell(0, 0, u, v); g.strokeStyle = tf('hazard'); g.lineWidth = 0.18; g.stroke(); } else { ell(0, 0, u, v); g.setLineDash([0.15, 0.1]); ST(); g.setLineDash([]); } break;
+        case 'reactor': {
+          const rr = Math.min(u, v);
+          for (let i = 0; i < 4; i++) { g.save(); g.rotate(i * Math.PI / 2 + Math.PI / 4); box(-0.09, rr * 0.6, 0.18, rr * 0.55); F(cyl(-0.09, 0, 0.18, 1, M, true)); g.restore(); }
+          ell(0, 0, rr * 0.86); F(mg(-rr, -rr, rr * 2, rr * 2, MD, 0.35));
+          if (mid) for (let i = 0; i < 12; i++) { g.save(); g.rotate(i * TAU / 12); box(-0.035, rr * 0.55, 0.07, rr * 0.28); F(shade(MD, -0.35)); g.restore(); }
+          ell(0, 0, rr * 0.55); F(mg(-rr, -rr, rr, rr, M, 0.3));
+          if (!BP) { const gr = g.createRadialGradient(0, 0, 0, 0, 0, rr * 0.45); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.4, C.core); gr.addColorStop(1, 'rgba(20,60,90,1)'); ell(0, 0, rr * 0.45); g.fillStyle = gr; g.fill(); glow(0, 0, rr * 2.2, hexRGB(C.core).join(','), 0.5); glow(0, 0, rr * 0.9, '255,255,255', 0.35); }
+          else { ell(0, 0, rr * 0.45); ST(); ell(0, 0, rr * 0.2); ST(); }
+          break;
+        }
+        case 'fan': {
+          box(-u + 0.05, -v + 0.05, U - 0.1, Vd - 0.1, 0.05); F(mg(-u, -v, U, Vd, MD, 0.25)); const rr = Math.min(u, v) * 0.78;
+          ell(0, 0, rr); F(BP ? null : '#0b0d10');
+          for (let i = 0; i < 6; i++) { g.save(); g.rotate(i * TAU / 6 + p.v); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(rr * 0.6, -rr * 0.35, rr * 0.92, -rr * 0.08); g.quadraticCurveTo(rr * 0.5, rr * 0.12, 0, 0); F(mg(0, -rr, rr, rr, M, 0.3)); g.restore(); }
+          ell(0, 0, rr * 0.2); F(ML); break;
+        }
+        case 'scrubber': box(-u + 0.03, -v + 0.03, U - 0.06, Vd - 0.08, 0.03); F(mg(-u, -v, U, Vd, M)); if (mid) for (let t = -u + 0.1; t < u - 0.05; t += 0.07) { ln(t, -v + 0.08, t, v - 0.12); ST('rgba(0,0,0,.4)', 0.018); } ell(u - 0.1, v - 0.12, 0.03); F(C.go); glow(u - 0.1, v - 0.12, 0.2, '90,255,140', 0.4); break;
+        case 'toolrack': box(-u + 0.03, -v + 0.02, U - 0.06, Vd * 0.55, 0.02); F(mg(-u, -v, U, Vd, MD)); if (hi) for (let i = 0; i < 5; i++) { ln(-u + 0.15 + i * (U - 0.3) / 4, -v + 0.06, -u + 0.15 + i * (U - 0.3) / 4 + 0.03, -v + Vd * 0.45); ST([acc, ML, '#c44', ML, C.go][i], 0.035); } break;
+        case 'arm': {
+          ell(0, 0.15, 0.24); F(mg(-0.24, -0.1, 0.48, 0.48, BP ? '#fff' : acc, 0.25));
+          g.lineCap = 'round'; ln(0, 0.15, 0.25, -0.2); ST(ML, 0.11); ln(0.25, -0.2, -0.05, -0.38); ST(ML, 0.08); g.lineCap = 'butt';
+          ell(0.25, -0.2, 0.06); F(MD); ln(-0.05, -0.38, -0.15, -0.3); ST(MD, 0.04); ln(-0.05, -0.38, -0.1, -0.46); ST(MD, 0.04); break;
+        }
+        case 'rack': box(-u + 0.02, -v + 0.02, U - 0.04, Vd * 0.65, 0.02); F(mg(-u, -v, U, Vd, MD)); if (mid) for (let i = 0; i < 5; i++) { const xx = -u + 0.12 + i * (U - 0.24) / 4; box(xx - 0.025, -v + 0.05, 0.05, Vd * 0.5); F(shade(MD, -0.4)); if (hi) { box(xx - 0.04, -v + Vd * 0.4, 0.08, 0.1, 0.02); F(M); } } break;
+        case 'cell': {
+          box(-u + 0.04, -v + 0.04, U * 0.45, 0.9, 0.04); F(mg(-u, -v, U, 1, MD)); box(-u + 0.07, -v + 0.07, U * 0.45 - 0.06, 0.84, 0.04); F(C.fabric);
+          ell(u - 0.22, -v + 0.2, 0.09, 0.11); F('#d8dde0');
+          for (let t = -u + 0.06; t < u - 0.02; t += 0.1) { ell(t, v - 0.06, 0.022); F(ML); }
+          ln(-u, v - 0.06, u, v - 0.06); ST(ML, 0.02); break;
+        }
+        case 'tube': box(-u + 0.06, -v + 0.02, U - 0.12, Vd - 0.08, 0.1); F(cyl(-u + 0.06, -v, U - 0.12, Vd, M, true)); ell(0, -v + 0.12, u * 0.55, 0.06); F('#0c0d0f'); box(-u + 0.06, v - 0.36, U - 0.12, 0.06); F(BP ? null : C.lock); box(-u + 0.06, v - 0.24, U - 0.12, 0.06); F(BP ? null : acc); break;
+        case 'pod': {
+          box(-u + 0.04, -v + 0.03, U - 0.08, Vd - 0.06, 0.22); F(mg(-u, -v, U, Vd, ML, 0.3));
+          box(-u + 0.09, -v + 0.2, U - 0.18, Vd - 0.36, 0.16); F(BP ? null : mg(-u, -v, U, Vd, C.glass[1], 0.3));
+          if (hi && !BP) { ell(0, -v + 0.32, 0.07); F('rgba(220,240,255,.55)'); box(-0.09, -v + 0.4, 0.18, Vd - 0.62, 0.08); F('rgba(220,240,255,.45)'); for (let i = 0; i < 6; i++) { ell(-u + 0.12 + ((i * 37 + p.v * 11) % 30) / 100, -v + 0.25 + ((i * 53) % 60) / 100, 0.012); F('rgba(255,255,255,.8)'); } }
+          ell(0, v - 0.08, 0.03); F(C.go); glow(0, 0, 0.6, '130,220,255', 0.28); glow(0, v - 0.08, 0.2, '90,255,140', 0.4);
+          break;
+        }
+        case 'planter': {
+          box(-u + 0.02, -v + 0.04, U - 0.04, Vd - 0.08, 0.04); F(mg(-u, -v, U, Vd, MD));
+          if (!BP) { box(-u + 0.06, -v + 0.08, U - 0.12, Vd - 0.16, 0.03); g.fillStyle = tf('soil'); g.fill(); }
+          if (mid && !BP) for (let t = -u + 0.12; t < u - 0.08; t += 0.2) for (let i = 0; i < 4; i++) { const an = i * 1.7 + t * 9, rr = 0.07 + (i % 2) * 0.03; ell(t + Math.cos(an) * 0.05, Math.sin(an) * 0.06, rr); F(C.plant[(i + Math.round(t * 10)) % 3]); }
+          glow(0, 0, Math.max(U, Vd) * 0.6, '255,170,240', 0.07); break;
+        }
+        case 'suit': {
+          box(-0.18, -0.16, 0.36, 0.38, 0.12); F(mg(-0.2, -0.2, 0.4, 0.4, BP ? '#fff' : '#d8dde2', 0.25)); box(-0.13, -0.24, 0.26, 0.1, 0.04); F(MD);
+          ell(0, -0.02, 0.11); F(mg(-0.11, -0.13, 0.22, 0.22, BP ? '#fff' : C.glass[1], 0.3)); if (!BP) { box(-0.2, 0.06, 0.4, 0.04); F(acc); } break;
+        }
+        case 'liftpad': {
+          box(-u + 0.1, -v + 0.1, U - 0.2, Vd - 0.2, 0.04); F(mg(-u, -v, U, Vd, MD, 0.2));
+          if (!BP) { box(-u + 0.1, -v + 0.1, U - 0.2, Vd - 0.2, 0.04); g.strokeStyle = tf('hazard'); g.lineWidth = 0.09; g.stroke(); }
+          for (const s of [-1, 1]) { g.beginPath(); g.moveTo(-0.16, s * 0.08); g.lineTo(0, s * 0.24); g.lineTo(0.16, s * 0.08); ST(BP ? null : acc, 0.05); }
+          glow(0, 0, 0.6, Lk.strip, 0.18); break;
+        }
+        case 'escpod': { const rr = Math.min(u, v) * 0.85; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, BP ? '#fff' : '#d0782e', 0.3)); ell(0, 0, rr * 0.55); F(mg(-rr, -rr, rr, rr, MD, 0.2)); ell(0, 0, rr * 0.3); F(BP ? null : C.glass[1]); if (!BP) { ell(0, 0, rr * 1.02); g.strokeStyle = tf('hazard'); g.lineWidth = 0.08; g.stroke(); } break; }
+      }
+      g.restore();
+    }
+  }
+
   /* ===================== the viewer ===================== */
   let V = null;
   const cache = new Map();
-  function layoutOf(p, m, kind) {
+  function layoutOf(p, m, kind, s) {
+    if (kind === 'ship') return shipLayout(s);
     const C = m.city, L = m.dun.levels[m.dun.cur];
     const key = kind === 'city' ? `c|${p.id}|${C.seed}|${C.size}|${C.style}|${C.walls}|${C.water}|${p.type}|${p.status}|${p.pop}|${S.meta.nameStyle}` : `d|${L.seed}|${L.size}|${L.style}`;
     if (!cache.has(key)) { cache.set(key, kind === 'city' ? genCity(p, C) : genDungeon(L)); if (cache.size > 6) cache.delete(cache.keys().next().value); }
@@ -7595,16 +8733,18 @@ const LocalMaps = (() => {
   }
   const MARKS = { monster: ['👹', 'Monster'], treasure: ['💰', 'Treasure'], trap: ['⚠️', 'Trap'], npc: ['🧙', 'Person'], secret: ['🗝️', 'Secret'], loot: ['📦', 'Supplies'], note: ['📝', 'Note'] };
   const POIK = () => MapView.POI_KINDS;
+  const deckOf = () => V.s.decks[V.s.cur];
   function pinsOf() {
     if (V.kind === 'city') return (V.p.poi || []).filter(q => q.mx != null).map(q => ({ x: q.mx, y: q.my, ic: (POIK()[q.kind] || POIK().other)[0], label: q.name, ref: q }));
-    return (V.m.dun.levels[V.m.dun.cur].marks || []).map(q => ({ x: q.x, y: q.y, ic: (MARKS[q.kind] || MARKS.note)[0], label: q.label, ref: q }));
+    return ((V.kind === 'ship' ? deckOf().marks : V.m.dun.levels[V.m.dun.cur].marks) || []).map(q => ({ x: q.x, y: q.y, ic: (MARKS[q.kind] || MARKS.note)[0], label: q.label, ref: q }));
   }
   function fit() {
     const G = V.G, w = V.cv.clientWidth, hh = V.cv.clientHeight;
     if (!w || !hh) { V.k = 0; return; }
-    const ext = G.kind === 'city' ? [-G.Vh * 0.82, -G.Vh * 0.82, G.Vh * 0.82, G.Vh * 0.82] : [G.box[0] - 1.5, G.box[1] - 1.5, G.box[2] + 1.5, G.box[3] + 1.5];
-    V.k = Math.min(w / (ext[2] - ext[0]), hh / (ext[3] - ext[1]));
-    V.ox = w / 2 - (ext[0] + ext[2]) / 2 * V.k; V.oy = hh / 2 - (ext[1] + ext[3]) / 2 * V.k;
+    const m = G.kind === 'ship' ? 1 : 1.5, ext = G.kind === 'city' ? [-G.Vh * 0.82, -G.Vh * 0.82, G.Vh * 0.82, G.Vh * 0.82] : [G.box[0] - m, G.box[1] - m, G.box[2] + m, G.box[3] + m];
+    const bar = G.kind === 'ship' ? Math.min(84, hh * 0.15) : 0;   // a ship's engines stay clear of the toolbar
+    V.k = Math.min(w / (ext[2] - ext[0]), (hh - bar) / (ext[3] - ext[1]));
+    V.ox = w / 2 - (ext[0] + ext[2]) / 2 * V.k; V.oy = (hh - bar) / 2 - (ext[1] + ext[3]) / 2 * V.k;
     V.kMin = V.k * 0.6;
   }
   const toWorld = (x, y) => [(x - V.ox) / V.k, (y - V.oy) / V.k];
@@ -7615,13 +8755,15 @@ const LocalMaps = (() => {
     g.strokeStyle = opts.halo || 'rgba(250,246,234,.92)'; g.lineWidth = size * 0.32; g.strokeText(text, x, y);
     g.fillStyle = opts.color || PAPER.label; g.fillText(text, x, y);
   }
+  const bgOf = G => (G.kind === 'city' ? cityBg(G) : G.kind === 'ship' ? (LOOKS[G.look] || LOOKS.industrial).bg[1] : '#ebe5d5');
   // the map into g (CSS pixels w × hh) with the view k/ox/oy; shared by the viewer, thumbnails and images
   function paint(g, G, w, hh, k, ox, oy, dpr, extras = {}) {
     const ty = extras.ty || 0;
-    g.setTransform(dpr, 0, 0, dpr, 0, ty); g.fillStyle = G.kind === 'city' ? cityBg(G) : '#ebe5d5'; g.fillRect(0, 0, w, hh);
+    g.setTransform(dpr, 0, 0, dpr, 0, ty); g.fillStyle = bgOf(G); g.fillRect(0, 0, w, hh);
+    if (G.kind === 'ship') shipBg(g, G, w, hh, ox, oy);
     g.save(); g.beginPath(); g.rect(0, 0, w, hh); g.clip();
     g.setTransform(dpr * k, 0, 0, dpr * k, dpr * ox, dpr * oy + ty);
-    if (G.kind === 'city') drawCity(g, G, k); else drawDungeon(g, G, k);
+    if (G.kind === 'city') drawCity(g, G, k); else if (G.kind === 'ship') drawShip(g, G, k, dpr); else drawDungeon(g, G, k);
     g.restore();
     g.setTransform(dpr, 0, 0, dpr, 0, ty);
     if (!extras.bare) overlay(g, G, k, ox, oy, extras);
@@ -7640,6 +8782,24 @@ const LocalMaps = (() => {
         if (boxes.some(b => bx[0] < b[2] && bx[2] > b[0] && bx[1] < b[3] && bx[3] > b[1])) continue;
         boxes.push(bx); label(g, t, x, y, big, { serif: true, weight: 700 });
       }
+    } else if (G.kind === 'ship') {
+      // room names where they fit; named rooms get a little more room to spill over
+      const Lk = LOOKS[G.look] || LOOKS.industrial, keyed = (extras.deck && extras.deck.rooms) || {}, fs = clamp(k * 0.34, 9.5, 13.5);
+      if (k > 5) {
+        for (const o of G.rooms) {
+          if (!o || (o.type === 'lift' && k < 40)) continue;
+          // the full name if it fits, else without its number, else a size smaller
+          const own = keyed[o.id] && keyed[o.id].name, full = (own || o.label).toUpperCase(), room = o.R.w * k * 0.94 + (own ? 40 : 0);
+          let t = null, f = fs, tw = 0;
+          for (const [c, s] of [[full, fs], [own ? full : RT[o.type][0].toUpperCase(), fs], [own ? full : RT[o.type][0].toUpperCase(), fs * 0.82]]) {
+            g.font = `750 ${s}px -apple-system, system-ui, sans-serif`; tw = g.measureText(c).width;
+            if (tw <= room && o.R.h * k >= s * 1.5) { t = c; f = s; break; }
+          }
+          if (!t) continue;
+          const [x, y] = sc(o.c[0], o.c[1]); label(g, t, x, y, f, { weight: 750, color: Lk.label, halo: Lk.halo });
+          if (keyed[o.id] && keyed[o.id].note && k > 24) { g.fillStyle = Lk.bp ? '#fff' : (Lk.accent || '#fc3'); g.beginPath(); g.arc(x + tw / 2 + 7, y - fs * 0.35, 3, 0, TAU); g.fill(); }
+        }
+      }
     } else {
       const names = extras.rooms || {}, fs = clamp(k * 0.75, 11, 18);
       for (const o of G.rooms) { const [x, y] = sc(o.cx + 0.5, o.cy + 0.5); const nm = names[o.n] && names[o.n].name; label(g, String(o.n), x, y, fs * 1.15, { weight: 800, serif: true }); if (nm && k > 14) label(g, nm, x, y + fs * 1.05, fs * 0.8, { weight: 650 }); }
@@ -7652,6 +8812,24 @@ const LocalMaps = (() => {
       if (pin.label) label(g, pin.label, x, y + rr + 10, 12.5, { weight: 700 });
     }
   }
+  // while painting a deck: a faint grid of the squares round the ship
+  function gridOverlay(g) {
+    const G = V.G, k = V.k; if (k < 6) return;
+    const [x0, y0] = toWorld(0, 0), [x1, y1] = toWorld(V.cv.clientWidth, V.cv.clientHeight);
+    const a = Math.max(Math.floor(x0), G.box[0] - 3), b = Math.min(Math.ceil(x1), G.box[2] + 3), c = Math.max(Math.floor(y0), G.box[1] - 3), d = Math.min(Math.ceil(y1), G.box[3] + 3);
+    if (a > b || c > d) return;
+    g.beginPath();
+    for (let x = a; x <= b; x++) { const sx = Math.round(x * k + V.ox) + 0.5; g.moveTo(sx, c * k + V.oy); g.lineTo(sx, d * k + V.oy); }
+    for (let y = c; y <= d; y++) { const sy = Math.round(y * k + V.oy) + 0.5; g.moveTo(a * k + V.ox, sy); g.lineTo(b * k + V.ox, sy); }
+    g.strokeStyle = 'rgba(255,255,255,.13)'; g.lineWidth = 1; g.stroke();
+  }
+  // while painting a deck: the cells the stroke covers so far
+  function strokeOverlay(g) {
+    const st = V.stroke; if (!st) return;
+    const col = st.t === 'erase' ? 'rgba(255,80,70,' : st.t === 'corr' ? 'rgba(120,200,255,' : 'rgba(255,200,80,';
+    g.fillStyle = col + '.35)'; g.strokeStyle = col + '.9)'; g.lineWidth = 1.5;
+    for (const [x, y] of st.cells.values()) { const [sx, sy] = toScreen(x, y); g.fillRect(sx, sy, V.k, V.k); g.strokeRect(sx + 0.75, sy + 0.75, V.k - 1.5, V.k - 1.5); }
+  }
   // while a finger or the wheel is moving the view, the last full drawing is moved and scaled instead of redrawn
   // (a big town takes a fifth of a second to draw); the full drawing follows once things settle
   function draw() {
@@ -7663,7 +8841,7 @@ const LocalMaps = (() => {
     const g = cv.getContext('2d'), sn = V.snap;
     if (V.fast && sn) {
       const f = V.k / sn.k;
-      g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = V.G.kind === 'city' ? cityBg(V.G) : '#ebe5d5'; g.fillRect(0, 0, cv.width, cv.height);
+      g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = bgOf(V.G); g.fillRect(0, 0, cv.width, cv.height);
       g.drawImage(sn.c, (V.ox - sn.ox * f) * dpr, (V.oy - sn.oy * f) * dpr, sn.c.width * f, sn.c.height * f);
     } else {
       paint(g, V.G, w, hh, V.k, V.ox, V.oy, dpr, { bare: true });
@@ -7673,7 +8851,9 @@ const LocalMaps = (() => {
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const pins = pinsOf().map(q => ({ ...q, on: V.drag && V.drag.pin && V.drag.pin.ref === q.ref }));
-    overlay(g, V.G, V.k, V.ox, V.oy, { pins, names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms });
+    overlay(g, V.G, V.k, V.ox, V.oy, V.kind === 'ship' ? { pins, deck: deckOf() } : { pins, names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms });
+    if (V.edit) gridOverlay(g);
+    if (V.stroke) strokeOverlay(g);
   }
   const redraw = fast => {
     if (!V) return;
@@ -7681,64 +8861,183 @@ const LocalMaps = (() => {
     if (!V.raf) V.raf = requestAnimationFrame(draw);
     if (fast) { clearTimeout(V.idle); V.idle = setTimeout(() => { if (V) { V.fast = false; if (!V.raf) V.raf = requestAnimationFrame(draw); } }, 160); }
   };
-  const persist = () => { V.p.lmap = V.m; save(); emit('data'); };
-  function rebuild(refit) { V.G = layoutOf(V.p, V.m, V.kind); V.snap = null; if (refit) fit(); renderChrome(); redraw(); }
+  const persist = () => { if (V.ship) V.ship.updated = Date.now(); if (V.p) V.p.lmap = V.m; save(); emit('data'); };
+  function rebuild(refit) { V.G = layoutOf(V.p, V.m, V.kind, V.s); V.snap = null; if (refit) fit(); renderChrome(); redraw(); }
+
+  /* ---------- ships and the codex: a ship is a codex entry, and a place on the map can show one ---------- */
+  const guessCls = p => { const n = +p.pop || 0; return !n ? 'freighter' : n < 10 ? 'shuttle' : n < 40 ? 'scout' : n < 200 ? 'freighter' : n < 1000 ? 'frigate' : 'colony'; };
+  function shipFor(p, create) {
+    let e = p.ship && S.codex.find(x => x.id === p.ship && x.kind === 'ship');
+    if (e || !create) return e || null;
+    e = normalizeEntry({ kind: 'ship', title: p.name, body: CODEX_TEMPLATES.ship || '', ship: { seed: seedOf(p.id + ':ship'), cls: guessCls(p) }, created: Date.now(), updated: Date.now() });
+    S.codex.push(e); p.ship = e.id; save(); emit('data');
+    return e;
+  }
+  // what a place's card shows before it has a ship of its own: the same ship it will get
+  const previewShip = p => (shipFor(p) || { ship: normShip({ seed: seedOf(p.id + ':ship'), cls: guessCls(p) }) }).ship;
+  const placeOfShip = e => everyPlace().find(p => p.ship === e.id) || null;
+  function putOnMap(e) {
+    const ll = MapView.centerLL(); let p = placeOfShip(e);
+    if (p && worldOfPlace(p) !== S.world) { const w = worldOfPlace(p); w.places = w.places.filter(x => x !== p); S.world.places.push(p); }
+    if (!p) { p = { id: uid(), name: e.title, type: 'ship', lat: 0, lon: 0, notes: '', always: false, ship: e.id, lmap: { kind: 'ship' } }; S.world.places.push(p); }
+    p.lat = +ll[0].toFixed(6); p.lon = +ll[1].toFixed(6);
+    save(); emit('data'); MapView.startMove(p);
+  }
+  async function offMap(e) {
+    const p = placeOfShip(e); if (!p) return;
+    if (!(await confirmDlg(`Take ${p.name} off the map? The ship and its deck plans stay in the codex.`, { ok: 'Take off', danger: false }))) return;
+    const u = undoable(['world.places', 'worlds', 'chars', 'events']), w = worldOfPlace(p);
+    if (w === S.world) S.world.places = S.world.places.filter(x => x !== p); else w.places = w.places.filter(x => x !== p);
+    for (const c of S.chars) { if (c.at === p.id) c.at = null; if (c.home === p.id) c.home = null; }
+    for (const ev of S.events) if (ev.place === p.id) ev.place = null;
+    save(); emit('data'); u(`${p.name} is off the map`);
+  }
 
   function open(p, kind) {
     if (V) close(true);
     const m = state(p); if (kind) m.kind = kind;
+    mount({ p, m, kind: m.kind });
+  }
+  function openShip(e) { if (V) close(true); e.ship = normShip(e.ship); mount({ p: null, m: null, kind: 'ship', ship: e }); }
+  function attachShip() { if (!V.ship) V.ship = shipFor(V.p, true); V.ship.ship = normShip(V.ship.ship); V.s = V.ship.ship; }
+  function mount(o) {
     const cv = h('canvas', { class: 'lm-cv' });
-    const el = h('div', { class: 'lm', role: 'dialog', 'aria-label': 'Local map' });
-    V = { p, m, kind: m.kind, el, cv, k: 0, ox: 0, oy: 0, mode: null, ptrs: new Map(), raf: 0 };
+    const el = h('div', { class: 'lm', role: 'dialog', 'aria-label': o.kind === 'ship' ? 'Deck plans' : 'Local map' });
+    V = Object.assign({ el, cv, k: 0, ox: 0, oy: 0, mode: null, edit: null, stroke: null, ptrs: new Map(), raf: 0, ship: null, s: null }, o);
+    if (V.kind === 'ship') attachShip();
     el.append(h('div', { class: 'lm-top' }), cv, h('div', { class: 'lm-hint glass' }), h('div', { class: 'lm-bar tools glass' }));
     document.body.append(el);
     wire(cv);
-    V.G = layoutOf(p, m, V.kind);
+    V.G = layoutOf(V.p, V.m, V.kind, V.s);
     renderChrome(); fit(); draw();
     if (!V.k) requestAnimationFrame(() => redraw());
-    V.onKey = e => { if (e.key === 'Escape' && !e.defaultPrevented && !sheetStack.length && V) { e.preventDefault(); close(); } };   // a sheet that Escape just closed has handled it
+    V.onKey = e => {
+      if (!V || e.defaultPrevented || sheetStack.length) return;   // a sheet that Escape just closed has handled it
+      if (e.key === 'Escape') { e.preventDefault(); if (V.edit) { V.edit = null; V.stroke = null; renderChrome(); redraw(); } else close(); }
+      else if (V.edit && (e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); undoEdit(); }
+    };
     document.addEventListener('keydown', V.onKey);
-    V.onResize = () => { V.snap = null; redraw(); };
+    // keep what was in the middle in the middle when the window changes size (or the phone turns)
+    V.size = [cv.clientWidth, cv.clientHeight];
+    V.onResize = () => { const w = V.cv.clientWidth, hh = V.cv.clientHeight; if (V.k && V.size[0] && w && hh) { V.ox += (w - V.size[0]) / 2; V.oy += (hh - V.size[1]) / 2; } V.size = [w, hh]; V.snap = null; redraw(); };
     window.addEventListener('resize', V.onResize);
   }
   function close(silent) {
     if (!V) return;
-    const p = V.p; document.removeEventListener('keydown', V.onKey); window.removeEventListener('resize', V.onResize);
+    const p = V.p, e = V.ship; document.removeEventListener('keydown', V.onKey); window.removeEventListener('resize', V.onResize);
     if (V.raf) cancelAnimationFrame(V.raf);
     clearTimeout(V.idle); V.el.remove(); V = null;
-    if (!silent) MapView.openPlace(p);
+    if (!silent) { if (p) MapView.openPlace(p); else if (e) Codex.open(e.id); }
   }
   function setMode(mode) { V.mode = mode; renderChrome(); }
+  const EDIT_HINT = { pan: 'Drag to move around the plan · pinch or scroll to zoom', corr: 'Drag across cells to make corridor', erase: 'Drag across cells to cut them away into open space', door: 'Tap a wall to add a door there, or tap a door to remove it' };
   function renderChrome() {
     const { el, m, p } = V, top = el.querySelector('.lm-top'), bar = el.querySelector('.lm-bar'), hint = el.querySelector('.lm-hint');
-    const city = V.kind === 'city', L = m.dun.levels[m.dun.cur], sub = city ? `${CITY[V.G.sz].name} · ${TSTYLE[V.G.style].name}` : `Level ${m.dun.cur + 1} of ${m.dun.levels.length}`;
+    const city = V.kind === 'city', ship = V.kind === 'ship';
+    const sub = city ? `${CITY[V.G.sz].name} · ${TSTYLE[V.G.style].name}` : ship ? `${SHIPS[V.s.cls].name} · deck ${V.s.cur + 1} of ${V.s.decks.length} · ${ROLE_NAME[V.G.role] || 'Deck'}` : `Level ${m.dun.cur + 1} of ${m.dun.levels.length}`;
+    V.cv.classList.toggle('ship', ship);
     top.innerHTML = '';
-    top.append(h('button', { class: 'icon-btn', 'aria-label': 'Back to the place', onclick: () => close() }, icon('back', 22)),
-      h('div', { class: 'lm-title' }, h('div', { class: 'lm-name' }, p.name), h('div', { class: 'lm-sub' }, sub)),
-      seg([['city', 'Town'], ['dungeon', 'Dungeon']], V.kind, v => { V.kind = v; m.kind = v; persist(); V.mode = null; rebuild(true); }));
-    if (!city && m.dun.levels.length > 1) top.append(seg(m.dun.levels.map((_, i) => [i, 'L' + (i + 1)]), m.dun.cur, v => { m.dun.cur = v; persist(); V.mode = null; rebuild(true); }, 'lm-levels'));
-    const b = (ic, word, on, fn) => h('button', { class: on ? 'on' : '', onclick: fn, 'aria-label': word }, icon(ic, 22), h('span', { class: 'tl' }, word));
+    top.append(h('button', { class: 'icon-btn', 'aria-label': p ? 'Back to the place' : 'Back to the codex', onclick: () => close() }, icon('back', 22)),
+      h('div', { class: 'lm-title' }, h('div', { class: 'lm-name' }, ship ? V.ship.title : p.name), h('div', { class: 'lm-sub' }, sub)));
+    if (p) top.append(seg([['city', 'Town'], ['dungeon', 'Dungeon'], ['ship', 'Ship']], V.kind, v => { V.kind = v; m.kind = v; if (v === 'ship') attachShip(); V.edit = null; persist(); V.mode = null; rebuild(true); }));
+    if (!city && !ship && m.dun.levels.length > 1) top.append(seg(m.dun.levels.map((_, i) => [i, 'L' + (i + 1)]), m.dun.cur, v => { m.dun.cur = v; persist(); V.mode = null; rebuild(true); }, 'lm-levels'));
+    if (ship && V.s.decks.length > 1) top.append(seg(V.s.decks.map((_, i) => [i, 'Deck ' + (i + 1)]), V.s.cur, v => { V.s.cur = v; V.stroke = null; persist(); V.mode = null; rebuild(true); }, 'lm-levels'));
+    const b = (ic, word, on, fn, off) => h('button', { class: on ? 'on' : '', onclick: fn, 'aria-label': word, disabled: off || null }, icon(ic, 22), h('span', { class: 'tl' }, word));
     bar.innerHTML = '';
+    if (V.edit) {
+      const E = V.edit, tool = t => () => { if (t === 'room' && E.tool === 'room') { roomPicker(); return; } E.tool = t; renderChrome(); };
+      bar.append(b('hand', 'Move', E.tool === 'pan', tool('pan')), b('brush', 'Room', E.tool === 'room', tool('room')), b('trail', 'Corridor', E.tool === 'corr', tool('corr')),
+        b('close', 'Erase', E.tool === 'erase', tool('erase')), b('door', 'Door', E.tool === 'door', tool('door')), b('undo', 'Undo', false, undoEdit, !E.undo.length),
+        b('check', 'Done', false, () => { V.edit = null; V.stroke = null; renderChrome(); redraw(); }));
+      hint.textContent = E.tool === 'room' ? `Drag a box to make ${/^[aeio]/i.test(RT[E.type][0]) ? 'an' : 'a'} ${RT[E.type][0].toLowerCase()} · tap Room again for another kind` : EDIT_HINT[E.tool];
+      hint.classList.add('show');
+      return;
+    }
     bar.append(b('pin', 'Pin', V.mode && V.mode.t === 'add', () => setMode(V.mode && V.mode.t === 'add' ? null : { t: 'add' })),
       b('list', city ? 'Places' : 'Key', false, listSheet),
+      ship ? b('brush', 'Paint', false, () => { V.mode = null; V.edit = { tool: 'room', type: 'cabin', undo: [] }; renderChrome(); }) : null,
       b('dice', 'Remake', false, remake),
       b('sliders', 'Options', false, optionsSheet),
       b('share', 'Image', false, exportImage));
-    const msg = V.mode && V.mode.t === 'add' ? (city ? 'Tap the map to add a place here: an inn, shop, temple…' : 'Tap the map to mark a monster, treasure, trap…')
+    const msg = V.mode && V.mode.t === 'add' ? (city ? 'Tap the map to add a place here: an inn, shop, temple…' : ship ? 'Tap the plan to mark crew, cargo, a hazard…' : 'Tap the map to mark a monster, treasure, trap…')
       : V.mode && V.mode.t === 'put' ? `Tap the map to put ${V.mode.q.name} there` : '';
     hint.textContent = msg; hint.classList.toggle('show', !!msg);
   }
 
+  /* ---------- painting a deck ---------- */
+  function roomPicker() {
+    let sh;
+    const groups = {}; for (const [t, v] of Object.entries(RT)) (groups[v[2]] || (groups[v[2]] = [])).push(t);
+    sh = openSheet({ title: 'Paint which kind of room?', body: h('div', null, Object.entries(groups).map(([gname, ts]) => [h('div', { class: 'grp-title' }, gname),
+      h('div', { class: 'chips' }, ts.map(t => h('button', { class: 'chip' + (V.edit.type === t ? ' on' : ''), onclick: () => { V.edit.type = t; V.edit.tool = 'room'; sh.close(); renderChrome(); } }, RT[t][3] + ' ' + RT[t][0])))])) });
+  }
+  function strokeTo(x, y) {
+    const st = V.stroke, Hh = shipHull(V.s), [wx, wy] = toWorld(x, y), cx = Math.floor(wx), cy = Math.floor(wy);
+    let [lx, ly] = st.last || [cx, cy];
+    if (!st.first) st.first = [cx, cy];
+    // rooms go in as a box from corner to corner; corridors and erasing follow the finger
+    if (st.t === 'room') {
+      st.cells.clear(); const [fx, fy] = st.first;
+      for (let Y = Math.max(0, Math.min(fy, cy)); Y <= Math.min(Hh.H - 1, Math.max(fy, cy)); Y++) for (let X = Math.max(0, Math.min(fx, cx)); X <= Math.min(Hh.W - 1, Math.max(fx, cx)); X++) st.cells.set(Y * Hh.W + X, [X, Y]);
+      st.last = [cx, cy]; return;
+    }
+    // every cell on the line from the last point, so a quick drag leaves no gaps
+    const n = Math.max(Math.abs(cx - lx), Math.abs(cy - ly), 1);
+    for (let i = 0; i <= n; i++) { const X = Math.round(lx + (cx - lx) * i / n), Y = Math.round(ly + (cy - ly) * i / n); if (X >= 0 && Y >= 0 && X < Hh.W && Y < Hh.H) st.cells.set(Y * Hh.W + X, [X, Y]); }
+    st.last = [cx, cy];
+  }
+  const pushUndo = () => { const dk = deckOf(); V.edit.undo.push({ d: V.s.cur, edit: dk.edit ? JSON.parse(JSON.stringify(dk.edit)) : null, rooms: JSON.parse(JSON.stringify(dk.rooms)) }); if (V.edit.undo.length > 50) V.edit.undo.shift(); };
+  function undoEdit() {
+    const u = V.edit && V.edit.undo.pop(); if (!u) return;
+    const dk = V.s.decks[u.d]; if (!dk) return;
+    dk.edit = u.edit; dk.rooms = u.rooms; dk.ver = (dk.ver | 0) + 1; V.s.cur = u.d; persist(); rebuild(false);
+  }
+  // the deck as it is now, ready to change: a copy of its grid, room kinds and doors
+  function editable() {
+    const s = V.s, Hh = shipHull(s), base = deckBase(s, Hh, s.cur), dk = deckOf();
+    return { Hh, dk, cell: base.cell.slice(), types: base.types.slice(), doors: base.doors.map(e => ({ ...e })), typeOf: id => (dk.rooms[id] && RT[dk.rooms[id].type] && dk.rooms[id].type) || base.types[id] };
+  }
+  const commitDeck = D => { D.dk.edit = encodeDeck(D, D.Hh.W, D.Hh.H); D.dk.ver = (D.dk.ver | 0) + 1; persist(); rebuild(false); };
+  function applyStroke(st) {
+    const D = editable(), { W } = D.Hh, { cell, types } = D;
+    let id = st.t === 'corr' ? 0 : st.t === 'erase' ? -1 : null, fresh = false;
+    if (st.t === 'room') { const v = cell[st.first[1] * W + st.first[0]]; if (v > 0 && D.typeOf(v) === st.type) id = v; else { types.push(st.type); id = types.length - 1; fresh = true; } }
+    let changed = false;
+    for (const i of st.cells.keys()) if (cell[i] !== id) { cell[i] = id; changed = true; }
+    if (!changed) { redraw(); return; }
+    // a new room gets a door onto the corridor it touches, if it touches one
+    if (fresh) {
+      const es = [];
+      for (const i of st.cells.keys()) { const x = i % W, y = (i / W) | 0; if (cell[i - 1] === 0) es.push({ x, y, v: 1 }); if (cell[i + 1] === 0) es.push({ x: x + 1, y, v: 1 }); if (cell[i - W] === 0) es.push({ x, y, v: 0 }); if (cell[i + W] === 0) es.push({ x, y: y + 1, v: 0 }); }
+      if (es.length) { es.sort((a, b) => a.v - b.v || a.x - b.x || a.y - b.y); D.doors.push({ ...es[(es.length - 1) >> 1], k: HEAVY.has(st.type) ? 'heavy' : 'door' }); }
+    }
+    pushUndo(); commitDeck(D);
+  }
+  function toggleDoor(wx, wy) {
+    const D = editable(), { W, H } = D.Hh, cx = Math.floor(wx), cy = Math.floor(wy), fx = wx - cx, fy = wy - cy;
+    const [dd, v, x, y] = [[fx, 1, cx, cy], [1 - fx, 1, cx + 1, cy], [fy, 0, cx, cy], [1 - fy, 0, cx, cy + 1]].sort((a, b) => a[0] - b[0])[0];
+    if (dd > 0.34) { toast('Tap closer to a wall'); return; }
+    const at = (X, Y) => (X < 0 || Y < 0 || X >= W || Y >= H ? -1 : D.cell[Y * W + X]), a = v ? at(x - 1, y) : at(x, y - 1), b = at(x, y);
+    if (a === b) { toast(a < 0 ? 'That is open space' : 'There is no wall there'); return; }
+    const i = D.doors.findIndex(e => e.v === v && e.x === x && e.y === y);
+    if (i >= 0) D.doors.splice(i, 1);
+    else { const ta = a > 0 ? D.typeOf(a) : null, tb = b > 0 ? D.typeOf(b) : null; D.doors.push({ x, y, v, k: a < 0 || b < 0 ? 'hatch' : ta === 'armoury' || tb === 'armoury' || ta === 'brig' || tb === 'brig' ? 'lock' : HEAVY.has(ta) || HEAVY.has(tb) ? 'heavy' : 'door' }); }
+    pushUndo(); commitDeck(D);
+  }
+
   /* ---------- gestures: drag to pan, pinch or wheel to zoom, tap for details, drag a pin to move it ---------- */
   function hitPin(x, y) { let best = null, bd = 22; for (const q of pinsOf()) { const [sx, sy] = toScreen(q.x, q.y), d = Math.hypot(sx - x, sy - y); if (d < bd) { bd = d; best = q; } } return best; }
-  function zoomAt(x, y, f, fast = true) { const nk = clamp(V.k * f, V.kMin || 0.02, V.G.kind === 'city' ? 40 : 120); f = nk / V.k; V.ox = x - (x - V.ox) * f; V.oy = y - (y - V.oy) * f; V.k = nk; redraw(fast); }
+  function zoomAt(x, y, f, fast = true) { const nk = clamp(V.k * f, V.kMin || 0.02, V.G.kind === 'city' ? 40 : V.G.kind === 'ship' ? 240 : 120); f = nk / V.k; V.ox = x - (x - V.ox) * f; V.oy = y - (y - V.oy) * f; V.k = nk; redraw(fast); }
   function wire(cv) {
     const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    cv.addEventListener('contextmenu', e => { if (V && V.edit) e.preventDefault(); });
     cv.addEventListener('pointerdown', e => {
       try { cv.setPointerCapture(e.pointerId); } catch (_) {}
       const [x, y] = pos(e); V.ptrs.set(e.pointerId, [x, y]);
-      if (V.ptrs.size === 1) { const pin = hitPin(x, y); V.drag = { x0: x, y0: y, lx: x, ly: y, moved: false, pin, t0: performance.now() }; }
-      else { V.drag = null; const [a, b] = [...V.ptrs.values()]; V.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; }
+      if (V.ptrs.size === 1) {
+        if (V.edit && ['room', 'corr', 'erase'].includes(V.edit.tool) && !e.button) { V.drag = null; V.stroke = { cells: new Map(), last: null, first: null, t: V.edit.tool, type: V.edit.type }; strokeTo(x, y); redraw(true); return; }
+        const pin = V.edit ? null : hitPin(x, y); V.drag = { x0: x, y0: y, lx: x, ly: y, moved: false, pin, t0: performance.now() };
+      } else { if (V.stroke) { V.stroke = null; redraw(true); } V.drag = null; const [a, b] = [...V.ptrs.values()]; V.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; }
     });
     cv.addEventListener('pointermove', e => {
       if (!V || !V.ptrs.has(e.pointerId)) return;
@@ -7747,6 +9046,7 @@ const LocalMaps = (() => {
         const [a, b] = [...V.ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         V.ox += mx - V.pinch.mx; V.oy += my - V.pinch.my; zoomAt(mx, my, d / V.pinch.d); V.pinch = { d, mx, my }; return;
       }
+      if (V.stroke) { strokeTo(x, y); redraw(true); return; }
       const D = V.drag; if (!D) return;
       if (!D.moved && Math.hypot(x - D.x0, y - D.y0) > 6) D.moved = true;
       if (!D.moved) return;
@@ -7758,6 +9058,7 @@ const LocalMaps = (() => {
       if (!V || !V.ptrs.has(e.pointerId)) return;
       V.ptrs.delete(e.pointerId);
       if (V.ptrs.size < 2) V.pinch = null;
+      if (V.stroke) { const st = V.stroke; V.stroke = null; if (e.type !== 'pointercancel' && !V.ptrs.size) applyStroke(st); else redraw(); return; }
       const D = V.drag; V.drag = null;
       if (!D || e.type === 'pointercancel') { redraw(); return; }
       if (D.moved) { if (D.pin) persist(); redraw(); return; }
@@ -7765,31 +9066,34 @@ const LocalMaps = (() => {
     };
     cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
     cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = pos(e); zoomAt(x, y, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0022))); }, { passive: false });
-    cv.addEventListener('dblclick', e => { const [x, y] = pos(e); zoomAt(x, y, 2, false); });
+    cv.addEventListener('dblclick', e => { if (V.edit) return; const [x, y] = pos(e); zoomAt(x, y, 2, false); });
   }
   function onTap(x, y, pin) {
     const [wx, wy] = toWorld(x, y);
+    if (V.edit) { if (V.edit.tool === 'door') toggleDoor(wx, wy); return; }
     if (V.mode && V.mode.t === 'put') { const q = V.mode.q; q.mx = +wx.toFixed(1); q.my = +wy.toFixed(1); persist(); setMode(null); redraw(); toast(`${q.name} is on the map`); return; }
     if (V.mode && V.mode.t === 'add') { setMode(null); pinSheet(null, wx, wy); return; }
     if (pin) { pinSheet(pin.ref); return; }
     if (V.kind === 'city') { const i = V.G.wards.findIndex(w => inside(w.P, wx, wy)); if (i >= 0) wardSheet(i); return; }
     const D = V.G, cx = Math.floor(wx), cy = Math.floor(wy);
-    if (cx >= 0 && cy >= 0 && cx < D.W && cy < D.H) { const ri = D.roomOf[cy * D.W + cx]; if (ri >= 0 && D.rooms[ri]) roomSheet(D.rooms[ri].n); }
+    if (cx < 0 || cy < 0 || cx >= D.W || cy >= D.H) return;
+    if (V.kind === 'ship') { const id = D.cell[cy * D.W + cx]; if (id > 0 && D.rooms[id]) shipRoomSheet(id); return; }
+    const ri = D.roomOf[cy * D.W + cx]; if (ri >= 0 && D.rooms[ri]) roomSheet(D.rooms[ri].n);
   }
 
   /* ---------- sheets: pins, districts, rooms, lists, options ---------- */
   function pinSheet(q, wx, wy) {
-    const city = V.kind === 'city', isNew = !q, KINDS = city ? POIK() : MARKS;
-    const d = q ? { ...q } : city ? { id: uid(), name: '', kind: 'inn', note: '', mx: +wx.toFixed(1), my: +wy.toFixed(1) } : { id: uid(), kind: 'monster', label: '', note: '', x: +wx.toFixed(2), y: +wy.toFixed(2) };
-    const name = h('input', { value: (city ? d.name : d.label) || '', placeholder: city ? 'e.g. The Rusty Anchor' : 'e.g. Goblin guards', autocomplete: 'off' });
+    const city = V.kind === 'city', ship = V.kind === 'ship', isNew = !q, KINDS = city ? POIK() : MARKS;
+    const d = q ? { ...q } : city ? { id: uid(), name: '', kind: 'inn', note: '', mx: +wx.toFixed(1), my: +wy.toFixed(1) } : { id: uid(), kind: ship ? 'npc' : 'monster', label: '', note: '', x: +wx.toFixed(2), y: +wy.toFixed(2) };
+    const name = h('input', { value: (city ? d.name : d.label) || '', placeholder: city ? 'e.g. The Rusty Anchor' : ship ? 'e.g. Chief engineer Okafor' : 'e.g. Goblin guards', autocomplete: 'off' });
     const kind = h('select', null, Object.entries(KINDS).map(([k, v]) => h('option', { value: k }, v[0] + '  ' + v[1]))); kind.value = KINDS[d.kind] ? d.kind : Object.keys(KINDS)[0];
     let noteV = d.note || '';
     const note = mdEditor(noteV, v => { noteV = v; }, { minHeight: '100px', placeholder: city ? 'Who runs it, prices, rumours… [[links]] work' : 'What is here, how it behaves, what it guards… {2d6} rolls work' });
     let sh;
-    const list = city ? (V.p.poi = V.p.poi || []) : V.m.dun.levels[V.m.dun.cur].marks;
+    const list = city ? (V.p.poi = V.p.poi || []) : ship ? deckOf().marks : V.m.dun.levels[V.m.dun.cur].marks;
     sh = openSheet({ title: isNew ? (city ? `Add to ${V.p.name}` : 'Mark the map') : (city ? d.name : d.label || KINDS[d.kind][1]), body: h('div', null, field('Name', name), field('Kind', kind), field('Notes', note)), foot: [
       !isNew ? h('button', { class: 'btn danger', onclick: () => {
-        const u = undoable(['world.places']); const i = list.indexOf(q);
+        const u = undoable([ship ? 'codex' : 'world.places']); const i = list.indexOf(q);
         if (city) { delete q.mx; delete q.my; } else if (i >= 0) list.splice(i, 1);
         persist(); sh.close(); redraw(); u(city ? `${d.name} taken off the map (still listed on the place)` : 'Mark removed', reopen);
       } }, icon('trash', 16), city ? 'Off the map' : 'Remove') : null,
@@ -7803,7 +9107,12 @@ const LocalMaps = (() => {
       } }, 'Save')].filter(Boolean) });
     if (isNew) setTimeout(() => name.focus(), 60);
   }
-  const reopen = () => { if (!V) return; const p = S.world.places.find(x => x.id === V.p.id); if (p) { V.p = p; V.m = state(p); rebuild(false); } };
+  const reopen = () => {
+    if (!V) return;
+    if (V.ship) { const e = S.codex.find(x => x.id === V.ship.id); if (e) { V.ship = e; e.ship = normShip(e.ship); V.s = e.ship; } }
+    if (V.p) { const p = everyPlace().find(x => x.id === V.p.id); if (p) { V.p = p; V.m = state(p); } }
+    rebuild(false);
+  };
   function wardSheet(i) {
     const w = V.G.wards[i], C = V.m.city, cur = (C.names || {})[i] || w.name;
     const name = h('input', { value: cur, autocomplete: 'off' });
@@ -7831,6 +9140,22 @@ const LocalMaps = (() => {
       persist(); sh.close(); redraw();
     } }, 'Save')] });
   }
+  // a room on a deck: its name, what it is, and notes
+  function shipRoomSheet(id) {
+    const dk = deckOf(), o = V.G.rooms[id], cur = dk.rooms[id] || {};
+    const name = h('input', { value: cur.name || '', placeholder: o.label, autocomplete: 'off' });
+    const groups = {}; for (const [t, v] of Object.entries(RT)) (groups[v[2]] || (groups[v[2]] = [])).push(t);
+    const type = h('select', null, Object.entries(groups).map(([gname, ts]) => h('optgroup', { label: gname }, ts.map(t => h('option', { value: t }, RT[t][3] + '  ' + RT[t][0]))))); type.value = o.type;
+    let noteV = cur.note || '';
+    const note = mdEditor(noteV, v => { noteV = v; }, { minHeight: '130px', placeholder: 'Who works here, what is stored, what is wrong with it… {2d6} rolls and [[links]] work' });
+    let sh;
+    sh = openSheet({ title: cur.name || o.label, body: h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:4px' }, `${RT[o.type][0]} · ${o.n} cells · about ${fmtInt(o.n * 4)} m²`),
+      field('Name', name), field('Room', type, 'Changing what a room is refits its furniture.'), field('Notes', note)), foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => {
+        dk.rooms = { ...dk.rooms }; const nm = name.value.trim(), nt = noteV.trim(), base = deckBase(V.s, shipHull(V.s), V.s.cur).types[id], ty = type.value !== base ? type.value : '';
+        if (nm || nt || ty) dk.rooms[id] = Object.assign({ name: nm, note: nt }, ty ? { type: ty } : {}); else delete dk.rooms[id];
+        persist(); sh.close(); rebuild(false);
+      } }, 'Save')] });
+  }
   function listSheet() {
     let sh;
     const go = (x, y, k) => { sh.close(); const w = V.cv.clientWidth, hh = V.cv.clientHeight; V.k = Math.max(V.k, k); V.ox = w / 2 - x * V.k; V.oy = hh / 2 - y * V.k; redraw(); };
@@ -7845,6 +9170,12 @@ const LocalMaps = (() => {
           h('button', { class: 'btn small', onclick: () => { sh.close(); setMode({ t: 'put', q }); } }, icon('pin', 14), 'Place')))] : null,
         h('div', { class: 'grp-title' }, 'Districts'),
         V.G.wards.map((w, i) => h('div', { class: 'list-row tap', onclick: () => go(w.c[0], w.c[1], 0.8) }, h('div', { class: 'main' }, h('div', { class: 'title' }, (V.m.city.names || {})[i] || w.name), (V.m.city.notes || {})[i] ? h('div', { class: 'sub' }, mdPlain(V.m.city.notes[i]).slice(0, 90)) : null), icon('chev', 16))));
+    } else if (V.kind === 'ship') {
+      const dk = deckOf(), rs = V.G.rooms.filter(o => o && o.type !== 'lift');
+      body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Tap a room on the plan to name it, change what it is or write notes.'),
+        rs.map(o => { const rm = dk.rooms[o.id] || {}; return h('div', { class: 'list-row tap', onclick: () => { go(o.c[0], o.c[1], 36); shipRoomSheet(o.id); } }, h('span', { class: 'poi-ic' }, RT[o.type][3]),
+          h('div', { class: 'main' }, h('div', { class: 'title' }, rm.name || o.label), h('div', { class: 'sub' }, [rm.name ? RT[o.type][0] : null, rm.note ? mdPlain(rm.note).slice(0, 90) : null].filter(Boolean).join(' · ') || `${o.n * 4} m²`)), icon('chev', 16)); }),
+        (dk.marks || []).length ? [h('div', { class: 'grp-title' }, 'Marks'), dk.marks.map(q => h('div', { class: 'list-row tap', onclick: () => go(q.x, q.y, 36) }, h('span', { class: 'poi-ic' }, (MARKS[q.kind] || MARKS.note)[0]), h('div', { class: 'main' }, h('div', { class: 'title' }, q.label || (MARKS[q.kind] || MARKS.note)[1])), icon('chev', 16)))] : null);
     } else {
       const L = V.m.dun.levels[V.m.dun.cur];
       body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Tap a room on the map to write its key.'),
@@ -7852,9 +9183,14 @@ const LocalMaps = (() => {
           h('div', { class: 'main' }, h('div', { class: 'title' + (rm.name ? '' : ' muted') }, rm.name || 'Unnamed'), rm.note ? h('div', { class: 'sub' }, mdPlain(rm.note).slice(0, 100)) : null), icon('chev', 16)); }),
         (L.marks || []).length ? [h('div', { class: 'grp-title' }, 'Marks'), L.marks.map(q => h('div', { class: 'list-row tap', onclick: () => go(q.x, q.y, 24) }, h('span', { class: 'poi-ic' }, (MARKS[q.kind] || MARKS.note)[0]), h('div', { class: 'main' }, h('div', { class: 'title' }, q.label || (MARKS[q.kind] || MARKS.note)[1])), icon('chev', 16)))] : null);
     }
-    sh = openSheet({ title: V.kind === 'city' ? `${V.p.name}: places & districts` : `Room key · level ${V.m.dun.cur + 1}`, body });
+    sh = openSheet({ title: V.kind === 'city' ? `${V.p.name}: places & districts` : V.kind === 'ship' ? `Deck ${V.s.cur + 1}: rooms` : `Room key · level ${V.m.dun.cur + 1}`, body });
   }
+  const freshDecks = n => Array.from({ length: n }, () => ({ rooms: {}, marks: [], edit: null, ver: 0 }));
   function remake() {
+    if (V.kind === 'ship') {
+      const u = undoable(['codex']), s = V.s; s.seed = newSeed(); s.decks = freshDecks(s.decks.length); normShip(s); V.edit = null; persist(); rebuild(true);
+      u('A new ship. Room names, notes, marks and painting start fresh.', reopen); return;
+    }
     const u = undoable(['world.places']);
     if (V.kind === 'city') { V.m.city.seed = newSeed(); V.m.city.names = {}; V.m.city.notes = {}; }
     else { const L = V.m.dun.levels[V.m.dun.cur]; L.seed = newSeed(); L.rooms = {}; L.marks = []; }
@@ -7863,7 +9199,28 @@ const LocalMaps = (() => {
   }
   function optionsSheet() {
     let sh, body;
-    if (V.kind === 'city') {
+    if (V.kind === 'ship') {
+      const s = V.s, Hh = shipHull(s), keyed = s.decks.some(d => d.edit || Object.keys(d.rooms).length || d.marks.length);
+      const rework = async (fn, msg) => {
+        if (keyed && !(await confirmDlg('This builds the ship again from scratch. Painted decks, room names, notes and marks start fresh.', { title: 'Rebuild the ship?', ok: 'Rebuild' }))) return;
+        const u = undoable(['codex']); fn(); s.decks = freshDecks(s.decks.length); normShip(s); V.edit = null; persist(); sh.close(); rebuild(true); u(msg, reopen);
+      };
+      body = h('div', null,
+        field('Class', seg(Object.entries(SHIPS).map(([k2, v]) => [k2, v.name.replace(' ship', '')]), s.cls, v => rework(() => { s.cls = v; s.decks = freshDecks(SHIPS[v].decks); }, `Now a ${SHIPS[v].name.toLowerCase()}`)),
+          `${Hh.L * CELL} m long and ${(Hh.M * 2 + 1) * CELL} m across. A new class builds a new hull.`),
+        field('Look', seg(Object.entries(SLOOK), s.look, v => { s.look = v; persist(); rebuild(false); }), 'Industrial is worn steel and grating, Sleek is white panels, Military is dark gunmetal, Blueprint is a line plan.'),
+        h('div', { class: 'grp-title' }, 'Decks'),
+        s.decks.map((d, i) => h('div', { class: 'list-row' }, h('div', { class: 'main' }, h('div', { class: 'title' }, `Deck ${i + 1}`), h('div', { class: 'sub' }, [ROLE_NAME[Hh.roles[i]], d.edit ? 'painted' : 'generated', Object.keys(d.rooms).length ? plural(Object.keys(d.rooms).length, 'room') + ' keyed' : null].filter(Boolean).join(' · '))),
+          d.edit ? h('button', { class: 'btn small', onclick: async () => { if (!(await confirmDlg(`Put deck ${i + 1} back to its generated layout? Your painting on it is lost.`, { ok: 'Reset deck' }))) return; const u = undoable(['codex']); d.edit = null; d.ver = (d.ver | 0) + 1; persist(); sh.close(); rebuild(false); u(`Deck ${i + 1} is generated again`, reopen); } }, 'Generated') : null,
+          s.decks.length > 1 ? h('button', { class: 'btn small danger', onclick: async () => { if (!(await confirmDlg(`Delete deck ${i + 1} with its room names, notes and marks?`))) return; const u = undoable(['codex']); s.decks.splice(i, 1); s.cur = Math.min(s.cur, s.decks.length - 1); persist(); sh.close(); rebuild(true); u(`Deck ${i + 1} deleted`, reopen); } }, 'Delete') : null)),
+        h('div', { class: 'row wrap', style: 'margin-top:10px' },
+          s.decks.length < 8 ? h('button', { class: 'btn', onclick: () => { s.decks.push(...freshDecks(1)); normShip(s); s.cur = s.decks.length - 1; persist(); sh.close(); rebuild(true); toast(`Deck ${s.decks.length} added; unpainted decks were laid out again`); } }, icon('plus', 16), 'Add a deck') : null,
+          h('button', { class: 'btn', onclick: async () => {
+            if (!(await confirmDlg(`Clear deck ${s.cur + 1} so you can paint it from scratch? Its rooms, names, notes and marks go.`, { ok: 'Clear deck' }))) return;
+            const u = undoable(['codex']), dk = deckOf(); dk.edit = encodeDeck({ cell: new Int16Array(Hh.W * Hh.H).fill(-1), types: [null], doors: [] }, Hh.W, Hh.H); dk.rooms = {}; dk.marks = []; dk.ver = (dk.ver | 0) + 1;
+            persist(); sh.close(); V.edit = { tool: 'room', type: 'cabin', undo: [] }; rebuild(false); u(`Deck ${s.cur + 1} cleared. Paint rooms and corridors onto it`, reopen);
+          } }, icon('brush', 16), 'Clear this deck')));
+    } else if (V.kind === 'city') {
       const C = V.m.city, set = (k, v) => { C[k] = v; persist(); rebuild(true); };
       body = h('div', null,
         field('Style', seg([['auto', 'From the land'], ['stone', 'Stone'], ['desert', 'Desert'], ['euro', 'European']], C.style || 'auto', v => set('style', v)),
@@ -7881,46 +9238,72 @@ const LocalMaps = (() => {
           lv.length > 1 ? h('button', { class: 'btn small danger', onclick: async () => { if (!(await confirmDlg(`Delete level ${i + 1} and its room key?`))) return; lv.splice(i, 1); V.m.dun.cur = Math.min(V.m.dun.cur, lv.length - 1); persist(); sh.close(); rebuild(true); } }, 'Delete') : null)),
         h('button', { class: 'btn', style: 'margin-top:10px', onclick: () => { lv.push(newLevel(L)); V.m.dun.cur = lv.length - 1; persist(); sh.close(); rebuild(true); toast(`Level ${lv.length} added`); } }, icon('plus', 16), 'Add a level below'));
     }
-    sh = openSheet({ title: V.kind === 'city' ? 'Town plan' : 'Dungeon', body, foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => sh.close() }, 'Done')] });
+    sh = openSheet({ title: V.kind === 'city' ? 'Town plan' : V.kind === 'ship' ? 'Ship' : 'Dungeon', body, foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => sh.close() }, 'Done')] });
   }
   async function exportImage() {
-    const G = V.G, city = G.kind === 'city', title = city ? V.p.name : `${V.p.name} · level ${V.m.dun.cur + 1}`;
-    const bw = city ? 0 : G.box[2] - G.box[0] + 3, bh = city ? 0 : G.box[3] - G.box[1] + 3;
-    const ext = city ? G.Vh * 1.64 : Math.max(bw, bh), size = 2400, k = size / ext, w = city ? size : bw * k, hh = city ? size : bh * k;
+    const G = V.G, city = G.kind === 'city', ship = G.kind === 'ship', title = city ? V.p.name : ship ? `${V.ship.title} · deck ${V.s.cur + 1}` : `${V.p.name} · level ${V.m.dun.cur + 1}`;
+    const mg = ship ? 2 : 3, bw = city ? 0 : G.box[2] - G.box[0] + mg, bh = city ? 0 : G.box[3] - G.box[1] + mg;
+    const ext = city ? G.Vh * 1.64 : Math.max(bw, bh), size = ship ? 2600 : 2400, k = size / ext, w = city ? size : bw * k, hh = city ? size : bh * k;
     const c = document.createElement('canvas'); c.width = Math.round(w); c.height = Math.round(hh + 70);
     const g = c.getContext('2d');
-    g.fillStyle = city ? cityBg(G) : '#ebe5d5'; g.fillRect(0, 0, c.width, c.height);
-    const ox = city ? w / 2 : (1.5 - G.box[0]) * k, oy = city ? hh / 2 : (1.5 - G.box[1]) * k;
-    paint(g, G, w, hh, k, ox, oy, 1, { pins: pinsOf(), names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms, ty: 70 });
+    g.fillStyle = bgOf(G); g.fillRect(0, 0, c.width, c.height);
+    const ox = city ? w / 2 : (mg / 2 - G.box[0]) * k, oy = city ? hh / 2 : (mg / 2 - G.box[1]) * k;
+    paint(g, G, w, hh, k, ox, oy, 1, ship ? { pins: pinsOf(), deck: deckOf(), ty: 70 } : { pins: pinsOf(), names: V.m.city.names, rooms: V.m.dun.levels[V.m.dun.cur].rooms, ty: 70 });
     g.setTransform(1, 0, 0, 1, 0, 0);
-    g.fillStyle = PAPER.label; g.font = '700 38px Georgia, "Times New Roman", serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(title, 28, 38);
+    g.fillStyle = ship ? (LOOKS[G.look] || LOOKS.industrial).label : PAPER.label; if (ship && !LOOKS[G.look].bp && G.look === 'sleek') g.fillStyle = '#eef3f8';
+    g.font = '700 38px Georgia, "Times New Roman", serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(title, 28, 38);
     if (city) { g.font = '600 20px -apple-system, system-ui, sans-serif'; g.textAlign = 'right'; g.fillText(`${CITY[G.sz].name} plan · ${fmtDist(G.Vh * 1.64)} across`, c.width - 28, 38); }
+    if (ship) { g.font = '600 20px -apple-system, system-ui, sans-serif'; g.textAlign = 'right'; g.fillText(`${SHIPS[V.s.cls].name} · ${ROLE_NAME[G.role] || 'Deck'} · 1 square = ${CELL} m`, c.width - 28, 38); }
     let blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
     if (!blob) { toast('Could not make the image'); return; }
     MapView.showShareResult(blob, c.width, c.height, title);
   }
 
-  /* ---------- the card on a place's page, with a small preview ---------- */
+  /* ---------- previews: the card on a place's page, and on a ship's codex entry ---------- */
+  // a small picture of a plan; a tall ship in a wide box is turned to fly left to right
+  function thumb(cv, G) {
+    const w = cv.clientWidth || 320, hh = cv.clientHeight || 140, dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(hh * dpr);
+    const city = G.kind === 'city', bw = city ? 0 : G.box[2] - G.box[0] + 2, bh = city ? 0 : G.box[3] - G.box[1] + 2;
+    const turn = G.kind === 'ship' && bh > bw * 1.15 && w > hh * 1.2, W2 = turn ? hh : w, H2 = turn ? w : hh;
+    const k = city ? w / (G.R * 2.4) : Math.min(W2 / bw, H2 / bh), ox = city ? w / 2 : W2 / 2 - (G.box[0] + G.box[2]) / 2 * k, oy = city ? hh / 2 : H2 / 2 - (G.box[1] + G.box[3]) / 2 * k;
+    if (!turn) { paint(cv.getContext('2d'), G, w, hh, k, ox, oy, dpr, { bare: true }); return; }
+    const off = Object.assign(document.createElement('canvas'), { width: cv.height, height: cv.width });
+    paint(off.getContext('2d'), G, W2, H2, k, ox, oy, dpr, { bare: true });
+    const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.translate(cv.width, 0); g.rotate(Math.PI / 2); g.drawImage(off, 0, 0);
+  }
   function card(p, closePage) {
     if (NO_MAP.has(p.type)) return null;
-    const m = state(p), kind = m.kind, word = kind === 'dungeon' ? 'Dungeon map' : (CITY[sizeKey(p, m.city)] || CITY.town).name + ' plan';
-    const cv = h('canvas', { class: 'lm-thumb' });
+    const m = state(p), kind = m.kind, s = kind === 'ship' ? previewShip(p) : null;
+    const word = s ? `${SHIPS[s.cls].name} deck plans` : kind === 'dungeon' ? 'Dungeon map' : (CITY[sizeKey(p, m.city)] || CITY.town).name + ' plan';
+    const cv = h('canvas', { class: 'lm-thumb' + (s ? ' ship' : '') });
     const el = h('div', { class: 'card lm-card tap', role: 'button', tabindex: 0, onclick: () => { closePage(); open(p); }, onkeydown: e => { if (e.key === 'Enter') { closePage(); open(p); } } },
-      h('div', { class: 'row' }, icon(kind === 'dungeon' ? 'door' : 'map', 18), h('div', { class: 'grow' }, h('div', { style: 'font-weight:700' }, word),
-        h('div', { class: 'small muted' }, kind === 'dungeon' ? `${m.dun.levels.length} level${m.dun.levels.length > 1 ? 's' : ''} · rooms, doors, stairs, notes` : 'Streets, districts and pins for its points of interest')), icon('chev', 16)),
+      h('div', { class: 'row' }, icon(s ? 'ship' : kind === 'dungeon' ? 'door' : 'map', 18), h('div', { class: 'grow' }, h('div', { style: 'font-weight:700' }, word),
+        h('div', { class: 'small muted' }, s ? `${s.decks.length} deck${s.decks.length > 1 ? 's' : ''} · rooms, doors, crew and cargo` : kind === 'dungeon' ? `${m.dun.levels.length} level${m.dun.levels.length > 1 ? 's' : ''} · rooms, doors, stairs, notes` : 'Streets, districts and pins for its points of interest')), icon('chev', 16)),
       cv);
-    setTimeout(() => {
-      if (!cv.isConnected) return;
-      const G = layoutOf(p, m, kind), w = cv.clientWidth || 320, hh = cv.clientHeight || 140, dpr = Math.min(2, window.devicePixelRatio || 1);
-      cv.width = Math.round(w * dpr); cv.height = Math.round(hh * dpr);
-      const bw = kind === 'city' ? 0 : G.box[2] - G.box[0] + 2, bh = kind === 'city' ? 0 : G.box[3] - G.box[1] + 2;
-      const k = kind === 'city' ? w / (G.R * 2.4) : Math.min(w / bw, hh / bh);
-      const ox = kind === 'city' ? w / 2 : w / 2 - (G.box[0] + G.box[2]) / 2 * k, oy = kind === 'city' ? hh / 2 : hh / 2 - (G.box[1] + G.box[3]) / 2 * k;
-      paint(cv.getContext('2d'), G, w, hh, k, ox, oy, dpr, { bare: true });
-    }, 40);
+    setTimeout(() => { if (cv.isConnected) thumb(cv, layoutOf(p, m, kind, s)); }, 40);
     return el;
   }
-  return { open, card, get isOpen() { return !!V; }, debug: { genCity, genDungeon, cityPaths, drawCity, state, layoutOf } };
+  function shipCard(e) {
+    const s = (e.ship = normShip(e.ship)), Hh = shipHull(s), pl = placeOfShip(e), w = pl && worldOfPlace(pl);
+    const cv = h('canvas', { class: 'lm-thumb ship' }), go = () => openShip(e);
+    const el = h('div', { class: 'card lm-card' },
+      h('div', { class: 'row tap', role: 'button', tabindex: 0, onclick: go, onkeydown: ev => { if (ev.key === 'Enter') go(); } }, icon('ship', 18),
+        h('div', { class: 'grow' }, h('div', { style: 'font-weight:700' }, 'Deck plans'), h('div', { class: 'small muted' }, `${SHIPS[s.cls].name} · ${Hh.L * CELL} m long · ${s.decks.length} deck${s.decks.length > 1 ? 's' : ''} · ${SLOOK[s.look]}`)), icon('chev', 16)),
+      h('div', { class: 'tap', onclick: go }, cv),
+      h('div', { class: 'row wrap', style: 'margin-top:10px;gap:6px' },
+        pl ? [h('span', { class: 'small grow' }, icon('pin', 13), ' ', pl.name, w && w !== S.world ? ` · on ${w.name}` : ''),
+          h('button', { class: 'btn small', onclick: () => gotoPlace(pl) }, 'Show'),
+          h('button', { class: 'btn small', onclick: () => putOnMap(e) }, w === S.world ? 'Move' : 'Bring here'),
+          h('button', { class: 'btn small', onclick: () => offMap(e) }, 'Off the map')]
+          : [h('span', { class: 'small muted grow' }, 'Not on the map'), h('button', { class: 'btn small', onclick: () => putOnMap(e) }, icon('pin', 14), 'Put on the map')]));
+    setTimeout(() => { if (cv.isConnected) thumb(cv, shipLayout(s)); }, 40);
+    return el;
+  }
+  // a little picture for a ship in a list
+  function shipThumb(e) { const cv = h('canvas', { class: 'lm-thumb ship sm' }); setTimeout(() => { if (cv.isConnected) { e.ship = normShip(e.ship); thumb(cv, shipLayout(e.ship)); } }, 60); return cv; }
+  const shipLine = e => { const s = (e.ship = normShip(e.ship)), pl = placeOfShip(e), w = pl && worldOfPlace(pl); return [SHIPS[s.cls].name, `${s.decks.length} deck${s.decks.length > 1 ? 's' : ''}`, pl ? (lc(pl.name) === lc(e.title) ? (w && w !== S.world ? `on ${w.name}` : 'on the map') : w && w !== S.world ? `at ${pl.name} on ${w.name}` : `at ${pl.name}`) : null].filter(Boolean).join(' · '); };
+  return { open, card, openShip, shipCard, shipThumb, shipLine, normShip, get isOpen() { return !!V; }, debug: { genCity, genDungeon, cityPaths, drawCity, state, layoutOf, shipLayout, shipHull, genDeck, drawShip, view: () => V && { k: V.k, ox: V.ox, oy: V.oy, G: V.G } } };
 })();
 
 const Chars = (() => {
@@ -9567,6 +10950,7 @@ const CODEX_KINDS = {
   lore: ['Lore', 'book', '#a77bf3'], location: ['Location', 'pin', '#3fb950'], faction: ['Faction', 'flag', '#ef6158'], person: ['Person', 'users', '#e9a23b'],
   creature: ['Creature', 'sparkle', '#f0883e'], item: ['Item', 'bag', '#d9ae3c'], religion: ['Religion', 'sun', '#4fb3bf'], culture: ['Culture', 'globe', '#58a6ff'],
   rule: ['Rule', 'list', '#9aa7b4'], note: ['Note', 'note', '#9aa7b4'], quest: ['Quest', 'target', '#e06aa8'], session: ['Session log', 'calendar', '#4fb3bf'],
+  ship: ['Ship', 'ship', '#5fb8ff'],
 };
 const QUEST_STATES = { active: ['Active', '#e9a23b'], hold: ['On hold', '#9aa7b4'], done: ['Completed', '#3fb950'], failed: ['Failed', '#ef6158'] };
 const CODEX_TEMPLATES = {
@@ -9576,6 +10960,7 @@ const CODEX_TEMPLATES = {
   creature: '## Habitat\n\n## Behaviour\n\n## Weaknesses\n',
   quest: '## Objectives\n- [ ] \n\n## Reward\n\n## Notes\n',
   session: '## Summary\n\n## What happened\n- \n\n## Loot and rewards\n\n## Threads to follow up\n- [ ] \n',
+  ship: '## Crew\n- \n\n## History\n\n## Cargo and quirks\n- \n',
 };
 function normalizeEntry(e) {
   e.id = e.id || uid(); e.title = String(e.title || 'Untitled'); e.kind = CODEX_KINDS[e.kind] ? e.kind : 'note';
@@ -9583,16 +10968,17 @@ function normalizeEntry(e) {
   e.created = e.created || Date.now(); e.updated = e.updated || e.created;
   if (e.kind === 'session') { if (e.day == null || !isFinite(e.day)) e.day = 0; e.chars = Array.isArray(e.chars) ? e.chars : []; }
   if (e.kind === 'quest' && !QUEST_STATES[e.status]) e.status = 'active';
+  if (e.kind === 'ship') e.ship = LocalMaps.normShip(e.ship);
   return e;
 }
 const Codex = (() => {
   const wrap = $('#codex-wrap'), listEl = $('#codex-list'), det = $('#codex-detail');
   let sel = null, editing = false, title0 = '', query = '', filter = 'all';
-  const mode = () => (['lore', 'quests', 'journal'].includes(S.ui.codexMode) ? S.ui.codexMode : 'lore');
-  const modeOf = e => (e.kind === 'session' ? 'journal' : e.kind === 'quest' ? 'quests' : 'lore');
+  const mode = () => (['lore', 'quests', 'journal', 'ships'].includes(S.ui.codexMode) ? S.ui.codexMode : 'lore');
+  const modeOf = e => (e.kind === 'session' ? 'journal' : e.kind === 'quest' ? 'quests' : e.kind === 'ship' ? 'ships' : 'lore');
   const kindOf = e => CODEX_KINDS[e.kind] || CODEX_KINDS.note;
   const byId = id => S.codex.find(e => e.id === id);
-  const NAME_KIND = { location: 'town', faction: 'faction', person: 'person', creature: 'creature', item: 'item', religion: 'religion', culture: 'region', quest: 'quest', lore: 'era' };
+  const NAME_KIND = { ship: 'ship', location: 'town', faction: 'faction', person: 'person', creature: 'creature', item: 'item', religion: 'religion', culture: 'region', quest: 'quest', lore: 'era' };
   const nextNum = () => Math.max(0, ...S.codex.filter(x => x.kind === 'session').map(x => +x.num || 0)) + 1;
   function render() { renderList(); renderDetail(); }
   const listSoon = debounce(() => renderList(), 350);
@@ -9603,10 +10989,10 @@ const Codex = (() => {
     det.scrollTop = 0;
   }
   function create(preset = {}) {
-    const kind = CODEX_KINDS[preset.kind] ? preset.kind : mode() === 'journal' ? 'session' : mode() === 'quests' ? 'quest' : 'lore';
+    const kind = CODEX_KINDS[preset.kind] ? preset.kind : mode() === 'journal' ? 'session' : mode() === 'quests' ? 'quest' : mode() === 'ships' ? 'ship' : 'lore';
     const e = normalizeEntry({ ...preset, kind, title: preset.title || '', body: preset.body ?? CODEX_TEMPLATES[kind] ?? '' });
     if (kind === 'session') { e.num = nextNum(); e.day = preset.day ?? S.meta.today; e.chars = preset.chars || S.chars.filter(c => c.role === 'PC' && c.status !== 'dead').map(c => c.id); }
-    if (!preset.title) e.title = kind === 'session' ? `Session ${e.num}` : 'New ' + kindOf(e)[0].toLowerCase();
+    if (!preset.title) e.title = kind === 'session' ? `Session ${e.num}` : kind === 'ship' ? Names.make('ship') : 'New ' + kindOf(e)[0].toLowerCase();
     S.codex.push(e); save();
     sel = e.id; S.ui.codexSel = e.id; editing = true; title0 = e.title; S.ui.codexMode = modeOf(e);
     if (S.ui.tab !== 'codex') setTab('codex'); else render();
@@ -9618,12 +11004,12 @@ const Codex = (() => {
     listEl.innerHTML = '';
     const m = mode();
     const pool = S.codex.filter(e => modeOf(e) === m);
-    const search = h('input', { type: 'search', placeholder: m === 'journal' ? 'Search the journal' : 'Search titles, tags and text', value: query, style: 'margin:8px 0 6px' });
+    const search = h('input', { type: 'search', placeholder: m === 'journal' ? 'Search the journal' : m === 'ships' ? 'Search ships' : 'Search titles, tags and text', value: query, style: 'margin:8px 0 6px' });
     const cards = h('div');
     search.addEventListener('input', () => { query = search.value; drawCards(); });
     listEl.append(
-      h('div', { class: 'pane-head' }, h('h2', null, 'Codex'), h('button', { class: 'btn small primary', onclick: () => create() }, icon('plus', 16), m === 'journal' ? 'Log session' : m === 'quests' ? 'Quest' : 'Entry')),
-      seg([['lore', 'Lore', 'book'], ['quests', 'Quests', 'target'], ['journal', 'Journal', 'calendar']], m, v => { S.ui.codexMode = v; filter = 'all'; save(); renderList(); }),
+      h('div', { class: 'pane-head' }, h('h2', null, 'Codex'), h('button', { class: 'btn small primary', onclick: () => create() }, icon('plus', 16), m === 'journal' ? 'Log session' : m === 'quests' ? 'Quest' : m === 'ships' ? 'Ship' : 'Entry')),
+      seg([['lore', 'Lore', 'book'], ['quests', 'Quests', 'target'], ['journal', 'Journal', 'calendar'], ['ships', 'Ships', 'ship']], m, v => { S.ui.codexMode = v; filter = 'all'; save(); renderList(); }),
       pool.length > 2 ? search : h('div', { style: 'height:8px' }));
     if (m === 'lore' && pool.length) {
       const kinds = [...new Set(pool.map(e => e.kind))], tags = [...new Set(pool.flatMap(e => e.tags))].sort((a, b) => a.localeCompare(b));
@@ -9651,7 +11037,7 @@ const Codex = (() => {
     drawCards();
   }
   function entryCard(e) {
-    const k = kindOf(e), snip = mdPlain(e.body).slice(0, 170), t = mdTasks(e.body);
+    const k = kindOf(e), snip = e.kind === 'ship' && e.body.trim() === CODEX_TEMPLATES.ship.trim() ? '' : mdPlain(e.body).slice(0, 170), t = mdTasks(e.body);
     const top = e.kind === 'session' ? `${e.num ? 'Session ' + e.num + ' · ' : ''}${Cal.fmt(e.day)}` : (e.pinned ? '★ ' : '') + k[0];
     return h('div', { class: 'card entry' + (e.id === sel ? ' sel' : ''), onclick: () => open(e.id) },
       h('div', { class: 'kind-tag', style: { color: k[2] } }, top),
@@ -9659,9 +11045,13 @@ const Codex = (() => {
       snip ? h('div', { class: 'snip' }, snip) : null,
       e.kind === 'quest' && t.n ? h('div', { class: 'row', style: 'margin-top:7px' }, h('div', { class: 'progress grow' }, h('i', { style: `width:${t.done / t.n * 100}%;background:${QUEST_STATES[e.status][1]}` })), h('span', { class: 'tiny muted num' }, `${t.done}/${t.n}`)) : null,
       e.kind === 'session' && e.chars.length ? h('div', { class: 'mini-av', style: 'margin-top:7px' }, e.chars.map(charById).filter(Boolean).slice(0, 10).map(c => avatar(c, 24))) : null,
+      e.kind === 'ship' ? [h('div', { class: 'small muted', style: 'margin-top:3px' }, LocalMaps.shipLine(e)), LocalMaps.shipThumb(e)] : null,
       e.tags.length ? h('div', { class: 'chips', style: 'margin-top:6px;gap:4px' }, e.tags.map(tg => h('span', { class: 'badge' }, '#' + tg))) : null);
   }
   function emptyState(m) {
+    if (m === 'ships') return h('div', { class: 'empty' }, h('div', { class: 'big' }, 'No ships yet'),
+      h('p', null, 'Make a starship with deck plans: a generated hull with rooms, doors and lifts on every deck. Paint rooms in or out, name them, pin crew and cargo, and put the ship on the map as a landing site.'),
+      h('div', { class: 'row', style: 'justify-content:center' }, h('button', { class: 'btn primary', onclick: () => create() }, 'New ship'), h('button', { class: 'btn', onclick: () => create({ kind: 'ship', ship: { cls: 'colony' } }) }, 'A colony ship')));
     const [big, txt, btn] = m === 'journal'
       ? ['No session logs yet', 'Log each session: what happened, who was there, loot, and threads to follow up. Logs sit on the timeline and in each character’s life story.', 'Log a session']
       : m === 'quests' ? ['No quests yet', 'Track quests with their objectives as checkboxes, and tick them off as the party gets there.', 'New quest']
@@ -9689,6 +11079,7 @@ const Codex = (() => {
       h('button', { class: 'btn small', onclick: () => startEdit(e) }, icon('edit', 14), 'Edit'),
       h('button', { class: 'icon-btn', 'aria-label': 'More', onclick: () => entryMenu(e) }, icon('more', 20))),
       h('div', { class: 'entry-head' }, e.title));
+    if (e.kind === 'ship') out.append(LocalMaps.shipCard(e));
     if (e.kind === 'session') {
       out.append(h('div', { class: 'small muted' }, Cal.fmt(e.day) + (Earth.on() ? ' · Earth ' + Earth.fmt(e.day) : '') + (e.day !== S.meta.today ? ` · ${e.day < S.meta.today ? Cal.span(S.meta.today - e.day) + ' ago' : 'in ' + Cal.span(e.day - S.meta.today)}` : ' · today')));
       const present = e.chars.map(charById).filter(Boolean);
@@ -9707,7 +11098,7 @@ const Codex = (() => {
       const evs = S.events.filter(ev => ev.start === e.day || (ev.end != null && ev.start <= e.day && ev.end >= e.day));
       if (evs.length) out.append(h('div', { class: 'card' }, h('h3', null, icon('timeline', 15), 'On the timeline that day'), evs.map(ev => h('div', { class: 'list-row tap', onclick: () => Timeline.focusEvent(ev.id) }, h('div', { class: 'main' }, h('div', { class: 'title' }, ev.title), h('div', { class: 'sub' }, ev.cat || 'General')), icon('chev', 16)))));
     }
-    const pl = everyPlace().find(p => lc(p.name) === lc(e.title)), ch = S.chars.find(c => lc(c.name) === lc(e.title));
+    const pl = e.kind === 'ship' ? null : everyPlace().find(p => lc(p.name) === lc(e.title)), ch = S.chars.find(c => lc(c.name) === lc(e.title));
     if (pl || ch) out.append(h('div', { class: 'row wrap', style: 'margin:4px 0' },
       pl ? h('button', { class: 'btn small', onclick: () => gotoPlace(pl, false) }, icon('pin', 14), worldOfPlace(pl) === S.world ? 'On the map' : 'On ' + worldOfPlace(pl).name) : null,
       ch ? h('button', { class: 'btn small', onclick: () => Chars.open(ch.id) }, icon('users', 14), 'Character sheet') : null));
