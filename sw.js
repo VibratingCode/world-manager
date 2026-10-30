@@ -1,6 +1,6 @@
 /* Offline support. The page itself is fetched network-first (so updates show up straight away)
    with a quick fallback to the cached copy when offline; icons and the manifest are cache-first. */
-const CACHE = 'world-manager-v21';
+const CACHE = 'world-manager-v22';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

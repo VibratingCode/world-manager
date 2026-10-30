@@ -8061,7 +8061,7 @@ const LocalMaps = (() => {
     const doors = base.doors.filter(e => { const a = e.v ? at(e.x - 1, e.y) : at(e.x, e.y - 1), b = at(e.x, e.y); return a !== b && (e.k === 'hatch' || e.k === 'bay' ? (a < 0) !== (b < 0) : a >= 0 && b >= 0); });
     const cnt = {}, seen = {};
     for (const o of rooms) if (o) { const ov = dk.rooms[o.id]; o.type = (ov && RT[ov.type] && ov.type) || base.types[o.id] || 'storage'; cnt[o.type] = (cnt[o.type] || 0) + 1; }
-    const props = [], windows = [];
+    const props = [], windows = [], furnished = new Map(), cellKey = list => list.slice().sort((a, b) => a - b).join(',');
     for (const o of rooms) {
       if (!o) continue;
       const R = maxRect(o.cells, W); o.R = R; o.n = o.cells.length; o.c = [R.x + R.w / 2, R.y + R.h / 2];
@@ -8075,7 +8075,12 @@ const LocalMaps = (() => {
       let hullSide = -1, hb = 0;
       for (let sd = 0; sd < 4; sd++) { let n = 0; const hz = sd % 2 === 0; for (let k = 0; k < (hz ? R.w : R.h); k++) { const x = hz ? R.x + k : sd === 1 ? R.x + R.w : R.x - 1, y = hz ? (sd === 0 ? R.y - 1 : R.y + R.h) : R.y + k; if (at(x, y) < 0) n++; } if (n > hb) { hb = n; hullSide = sd; } }
       o.hull = hullSide;
-      for (const p of furnish(o.type, R, mine, doorIn, hullSide, r)) props.push(p);
+      // a room whose exact mirror image is already furnished, with its doors in the same places, copies it flipped
+      const cxm = Hh.cx, flipCell = i => ((i / W) | 0) * W + 2 * cxm - i % W, dk1 = doorIn.map(q => q[0] + ':' + q[1]).sort().join(), dk2 = doorIn.map(q => (2 * cxm - q[0]) + ':' + q[1]).sort().join();
+      const tw = furnished.get(cellKey(o.cells.map(flipCell)));
+      const made = tw && tw.type === o.type && tw.doors === dk2 ? tw.props.map(p => ({ ...p, x: 2 * cxm + 1 - p.x - p.w, a: p.a % 2 ? 4 - p.a : p.a, fl: !p.fl })) : furnish(o.type, R, mine, doorIn, hullSide, r);
+      furnished.set(cellKey(o.cells), { type: o.type, doors: dk1, props: made });
+      for (const p of made) props.push(p);
       if (VIEW.has(o.type) && !(dk.rooms[o.id] || {}).nowin) for (const i of o.cells) {
         const x = i % W, y = (i / W) | 0;
         if (at(x - 1, y) < 0) windows.push({ x, y, v: 1, s: -1 }); if (at(x + 1, y) < 0) windows.push({ x: x + 1, y, v: 1, s: 1 });
@@ -8439,9 +8444,9 @@ const LocalMaps = (() => {
     const GC = new Map();
     const mg = (x, y, w, h, c, f = 0.2) => { if (BP || !grad) return c; const key = 'm' + x + ',' + y + ',' + w + ',' + h + c + f; let gr = GC.get(key); if (gr) return gr; gr = g.createLinearGradient(x, y, x + w * 0.6, y + h); gr.addColorStop(0, shade(c, f)); gr.addColorStop(1, shade(c, -f * 1.3)); GC.set(key, gr); return gr; };
     const cyl = (x, y, w, h, c, along) => { if (BP || !grad) return c; const key = 'c' + x + ',' + y + ',' + w + ',' + h + c + along; let gr = GC.get(key); if (gr) return gr; gr = along ? g.createLinearGradient(x, 0, x + w, 0) : g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, shade(c, -0.35)); gr.addColorStop(0.35, shade(c, 0.3)); gr.addColorStop(0.55, c); gr.addColorStop(1, shade(c, -0.5)); GC.set(key, gr); return gr; };
-    let pcx = 0, pcy = 0, ca = 1, sa = 0;
+    let pcx = 0, pcy = 0, ca = 1, sa = 0, pfl = false;
     // (glows too small to see at this zoom are left out)
-    const glow = (lx, ly, rr, rgb, a) => { if (!BP && rr * k > 9) glows.push([pcx + lx * ca - ly * sa, pcy + lx * sa + ly * ca, rr, rgb, a]); };
+    const glow = (lx, ly, rr, rgb, a) => { if (!BP && rr * k > 9) glows.push([pcx + (pfl ? -lx : lx) * ca - ly * sa, pcy + (pfl ? -lx : lx) * sa + ly * ca, rr, rgb, a]); };
     const scr = hexRGB(Lk.screen || '#ffffff').join(','), acc = Lk.accent;
     g.lineJoin = 'miter'; g.lineCap = 'butt';
     if (BP) {
@@ -8550,7 +8555,7 @@ const LocalMaps = (() => {
 
     function drawDoor(e) {
       g.save(); g.translate(e.v ? e.x : e.x + 0.5, e.v ? e.y + 0.5 : e.y); if (e.v) g.rotate(Math.PI / 2);
-      pcx = e.v ? e.x : e.x + 0.5; pcy = e.v ? e.y + 0.5 : e.y; ca = e.v ? 0 : 1; sa = e.v ? 1 : 0;
+      pfl = false; pcx = e.v ? e.x : e.x + 0.5; pcy = e.v ? e.y + 0.5 : e.y; ca = e.v ? 0 : 1; sa = e.v ? 1 : 0;
       const big = e.k === 'heavy' || e.k === 'hatch' || e.k === 'bay', th = big ? 0.3 : 0.18;
       if (BP) { ln(-0.5, -0.08, -0.5, 0.08); ST(); ln(0.5, -0.08, 0.5, 0.08); ST(); ln(-0.42, 0, 0.42, 0); g.setLineDash([0.08, 0.06]); ST(); g.setLineDash([]); g.restore(); return; }
       if (!mid) { box(-0.45, -th / 2, 0.9, th); F(e.k === 'lock' ? Lk.lock : big ? acc : Lk.door); g.restore(); return; }
@@ -8568,7 +8573,7 @@ const LocalMaps = (() => {
     function drawProp(p) {
       const A = p.a * Math.PI / 2, U = p.a % 2 ? p.h : p.w, Vd = p.a % 2 ? p.w : p.h, u = U / 2, v = Vd / 2;
       pcx = p.x + p.w / 2; pcy = p.y + p.h / 2; ca = Math.cos(A); sa = Math.sin(A);
-      g.save(); g.translate(pcx, pcy); if (p.a) g.rotate(A);
+      pfl = !!p.fl; g.save(); g.translate(pcx, pcy); if (p.a) g.rotate(A); if (p.fl) g.scale(-1, 1);
       const C = Lk, cl = C.cloth ? C.cloth[p.v % C.cloth.length] : '#888', cr = C.crate ? C.crate[p.v % C.crate.length] : '#888', M = C.metal, MD = C.metalDk, ML = C.metalLt;
       const chair = (x, y, back) => { box(x - 0.17, y - 0.15, 0.34, 0.3, 0.07); F(mg(x - 0.17, y - 0.15, 0.34, 0.3, MD)); box(x - 0.17, y + (back > 0 ? 0.08 : -0.15), 0.34, 0.07, 0.03); F(shade(MD, -0.3)); };
       switch (p.k) {
@@ -9002,11 +9007,11 @@ const LocalMaps = (() => {
     if (building) {
       renderTray(tray);
       const E = V.edit, n = shipChecks().warn.length;
-      bar.append(b('undo', 'Undo', false, undoEdit, !E.undo.length), b('redo', 'Redo', false, redoEdit, !E.redo.length), b('alert', n ? `Check ${n}` : 'Check', false, checkSheet), b('check', 'Done', false, () => { V.edit = null; renderChrome(); redraw(); }));
+      bar.append(b('copy', 'Mirror', E.mirror, () => { E.mirror = !E.mirror; aim(); renderChrome(); redraw(); }), b('undo', 'Undo', false, undoEdit, !E.undo.length), b('redo', 'Redo', false, redoEdit, !E.redo.length), b('alert', n ? `Check ${n}` : 'Check', false, checkSheet), b('check', 'Done', false, () => { V.edit = null; renderChrome(); redraw(); }));
       const lab = E.mod && E.mod.n;
       hint.textContent = E.mode === 'add' ? (!E.mod ? 'Pick a module' : E.ghost ? `${lab}: tap it again to place, or drag on the plan` : `No room for ${lab} here`)
         : E.mode === 'move' ? (E.mod ? `Drag ${lab} into place` : 'Drag a room or corridor to move it · tap it for more') : E.mode === 'doors' ? 'Tap a wall to add a door · drag a door to move it · tap a door to change it' : E.mode === 'windows' ? 'Tap or drag the outer wall'
-          : E.brush === 'room' ? `Drag a box to make ${RT[E.type][0].toLowerCase()}` : E.brush === 'corr' ? 'Drag to draw corridor' : 'Drag to cut squares away';
+          : E.brush === 'fill' ? `Tap a gap to fill it with ${RT[E.type][0].toLowerCase()}, or a room to change it` : E.brush === 'fillc' ? 'Tap a gap to fill it with corridor' : E.brush === 'room' ? `Drag a box to make ${RT[E.type][0].toLowerCase()}` : E.brush === 'corr' ? 'Drag to draw corridor' : 'Drag to cut squares away';
       hint.classList.add('show');
       return;
     }
@@ -9027,7 +9032,7 @@ const LocalMaps = (() => {
     ['Whole ships', 'Starter ship', '🚀', [['bridge', 0, 0, 5, 4], ['corr', 2, 4, 1, 8], ['engine', 0, 12, 5, 4]]],
     ['Corridors', 'Corridor', '➖', [['corr', 0, 0, 1, 4]]], ['Corridors', 'Long corridor', '➖', [['corr', 0, 0, 1, 8]]], ['Corridors', 'Crossing', '➕', [['corr', 0, 2, 5, 1], ['corr', 2, 0, 1, 5]]],
     ['Corridors', 'T-junction', '🔱', [['corr', 0, 0, 5, 1], ['corr', 2, 1, 1, 3]]], ['Corridors', 'Corner', '↩️', [['corr', 0, 0, 3, 1], ['corr', 0, 1, 1, 2]]],
-    ['Command', 'Bridge', '🧭', [['bridge', 0, 0, 6, 4]]], ['Command', 'Cockpit', '🕹️', [['cockpit', 0, 0, 3, 2]]], ['Command', 'Comms', '📡', [['comms', 0, 0, 3, 2]]], ['Command', 'Captain', '⭐', [['captain', 0, 0, 4, 3]]],
+    ['Command', 'Bridge', '🧭', [['bridge', 0, 0, 7, 4]]], ['Command', 'Cockpit', '🕹️', [['cockpit', 0, 0, 3, 2]]], ['Command', 'Comms', '📡', [['comms', 0, 0, 3, 2]]], ['Command', 'Captain', '⭐', [['captain', 0, 0, 4, 3]]],
     ['Command', 'Observation', '🔭', [['observation', 0, 0, 5, 3]]], ['Command', 'Armoury', '🛡️', [['armoury', 0, 0, 3, 3]]], ['Command', 'Brig', '🔒', [['brig', 0, 0, 4, 3]]],
     ['Living', 'Cabin', '🛏️', [['cabin', 0, 0, 3, 2]]], ['Living', 'Cabin pair', '🛏️', [['cabin', 0, 0, 3, 2], ['corr', 3, 0, 1, 2], ['cabin', 4, 0, 3, 2]]], ['Living', 'Bunk room', '🛌', [['quarters', 0, 0, 4, 3]]], ['Living', 'Seats', '💺', [['seats', 0, 0, 4, 4]]],
     ['Living', 'Mess', '🍽️', [['mess', 0, 0, 5, 4]]], ['Living', 'Galley', '🍳', [['galley', 0, 0, 3, 3]]], ['Living', 'Washroom', '🚿', [['wash', 0, 0, 3, 2]]], ['Living', 'Lounge', '🛋️', [['rec', 0, 0, 4, 3]]],
@@ -9045,7 +9050,8 @@ const LocalMaps = (() => {
     ['Whole ships', 'Courier', '🚀', [['bridge', 1, 0, 5, 3], ['corr', 3, 3, 1, 9], ['cabin', 0, 3, 3, 2], ['cabin', 4, 3, 3, 2], ['mess', 0, 5, 3, 3], ['medbay', 4, 5, 3, 3], ['cargo', 0, 8, 3, 4], ['cargo', 4, 8, 3, 4], ['engine', 0, 12, 7, 4]]],
     ['Whole ships', 'Freighter', '🚛', [['bridge', 2, 0, 7, 4], ['corr', 5, 4, 1, 16], ['cabin', 2, 4, 3, 2], ['cabin', 6, 4, 3, 2], ['mess', 2, 6, 3, 2], ['medbay', 6, 6, 3, 2], ['cargo', 0, 8, 5, 6], ['cargo', 6, 8, 5, 6], ['cargo', 0, 14, 5, 6], ['cargo', 6, 14, 5, 6], ['engine', 0, 20, 3, 5], ['reactor', 3, 20, 5, 5], ['engine', 8, 20, 3, 5]]],
   ].map(([g, n, ic, p]) => ({ g, n, ic, p }));
-  const newEdit = mode => ({ tool: 'build', mode, cat: 'Recent', q: '', mod: null, rot: 0, mirror: true, ghost: null, target: null, brush: 'room', type: 'cabin', undo: [], redo: [] });
+  const SIZES = [0.5, 0.75, 1, 1.5, 2, 3];
+  const newEdit = mode => ({ scale: 1, tool: 'build', mode, cat: 'Recent', q: '', mod: null, rot: 0, mirror: true, ghost: null, target: null, brush: 'room', type: 'cabin', undo: [], redo: [] });
   const modIcon = m => {
     const c = Object.assign(document.createElement('canvas'), { width: 88, height: 52 }), g = c.getContext('2d'), cs = modCells(m, 0), w = Math.max(...cs.map(q => q[0])) + 1, hh = Math.max(...cs.map(q => q[1])) + 1, k = Math.min(84 / w, 48 / hh), ox = (88 - w * k) / 2, oy = (52 - hh * k) / 2;
     for (const [x, y, i, t] of cs) { g.fillStyle = t === 'corr' ? '#6ec8ff' : ['#7fd99a', '#e3c15c', '#d99a7f', '#a7a0e6'][i % 4]; g.fillRect(ox + x * k, oy + y * k, Math.ceil(k), Math.ceil(k)); }
@@ -9058,7 +9064,8 @@ const LocalMaps = (() => {
     tray.append(h('div', { class: 'lm-modes' }, [['add', 'Add'], ['move', 'Move'], ['doors', 'Doors'], ['windows', 'Windows'], ['paint', 'Paint']].map(([m, l]) => h('button', { class: E.mode === m ? 'on' : '', onclick: () => setMode(m) }, l))));
     const row = (...kids) => { const r = h('div', { class: 'lm-row' }, ...kids); tray.append(r); return r; }, btn = (l, fn, off, on) => h('button', { class: 'btn small' + (on ? ' primary' : ''), onclick: fn, disabled: off || null }, l);
     if (E.mode === 'add') {
-      row(btn('Turn', () => { E.rot = (E.rot + 1) % 4; aim(); redraw(); }, !E.mod), btn('Mirror', () => { E.mirror = !E.mirror; renderChrome(); redraw(); }, false, E.mirror), btn('Place', placeModule, !E.ghost, !!E.ghost));
+      const size = d => { E.scale = SIZES[clamp(SIZES.indexOf(E.scale) + d, 0, SIZES.length - 1)]; aim(); renderChrome(); redraw(); };
+      row(btn('Turn', () => { E.rot = (E.rot + 1) % 4; aim(); redraw(); }, !E.mod), btn('Smaller', () => size(-1), E.scale === SIZES[0]), h('span', { class: 'small', style: 'flex:none;font-weight:700' }, '×' + E.scale), btn('Bigger', () => size(1), E.scale === SIZES[SIZES.length - 1]), btn('Place', placeModule, !E.ghost, !!E.ghost));
       const cats = ['Recent', ...new Set(MODS.map(m => m.g))];
       if (E.cat === 'Recent' && !recent().length) E.cat = V.G.cell.some(c => c >= 0) ? 'Corridors' : 'Whole ships';
       const search = h('input', { type: 'search', placeholder: 'Search', value: E.q, autocomplete: 'off' });
@@ -9071,12 +9078,13 @@ const LocalMaps = (() => {
       };
       search.addEventListener('input', () => { E.q = search.value; fill(); }); fill();
     } else if (E.mode === 'doors') row(btn('Redo all doors', () => { const D = editable(); D.doors = D.doors.filter(e => e.k === 'hatch' || e.k === 'bay'); autoDoors(D); pushUndo(); commitDeck(D); toast('Doors laid out again'); }), btn('Doors for rooms without one', fixDoors));
+    else if (E.mode === 'move') row(btn('Centre on the line', centreDeck));
     else if (E.mode === 'windows') {
       const setWin = w => { pushUndo(); deckOf().win = w; persist(); rebuild(false); };
       row(btn('All round', () => { const G = V.G, set = {}; for (const [k] of outerEdges(G)) set[k] = 1; setWin({ none: true, set }); }), btn('None', () => setWin({ none: true, set: {} })), btn('Automatic', () => setWin(null)));
     } else if (E.mode === 'paint') {
-      row(...[['room', 'Room'], ['corr', 'Corridor'], ['erase', 'Erase']].map(([b2, l]) => btn(l, () => { E.brush = b2; renderChrome(); }, false, E.brush === b2)));
-      row(...Object.keys(RT).map(t => h('button', { class: 'chip' + (E.type === t && E.brush === 'room' ? ' on' : ''), onclick: () => { E.type = t; E.brush = 'room'; renderChrome(); } }, RT[t][3] + ' ' + RT[t][0])));
+      row(...[['fill', 'Fill in'], ['fillc', 'Fill corridor'], ['room', 'Room'], ['corr', 'Corridor'], ['erase', 'Erase']].map(([b2, l]) => btn(l, () => { E.brush = b2; renderChrome(); }, false, E.brush === b2)));
+      row(...Object.keys(RT).map(t => h('button', { class: 'chip' + (E.type === t && (E.brush === 'room' || E.brush === 'fill') ? ' on' : ''), onclick: () => { E.type = t; if (E.brush !== 'fill') E.brush = 'room'; renderChrome(); } }, RT[t][3] + ' ' + RT[t][0])));
     }
     [...tray.querySelectorAll('.lm-row')].forEach((r, i) => { r.scrollLeft = keep[i] || 0; });
   }
@@ -9098,7 +9106,7 @@ const LocalMaps = (() => {
   function commitWindows(q) {
     if (!q.keys.size) return;
     pushUndo(); const dk = deckOf(), w = dk.win = { none: !!(dk.win && dk.win.none), set: { ...((dk.win && dk.win.set) || {}) } };
-    for (const k of q.keys) w.set[k] = q.val;
+    for (const k of q.keys) { w.set[k] = q.val; if (V.edit.mirror) { const [v, x, y] = k.split(':').map(Number), f = flipEdge({ v, x, y }); w.set[v + ':' + f.x + ':' + y] = q.val; } }
     persist(); rebuild(false);
   }
   function trayShown(on) { V.el.querySelector('.lm-tray').style.visibility = on ? '' : 'hidden'; }
@@ -9122,9 +9130,40 @@ const LocalMaps = (() => {
     };
     addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   }
+  function centreDeck() {
+    const D = editable(), { W, H, cx } = D.Hh; let a = W, b = -1;
+    for (let i = 0; i < D.cell.length; i++) if (D.cell[i] >= 0) { const x = i % W; if (x < a) a = x; if (x > b) b = x; }
+    const dx = cx - ((a + b) >> 1); if (b < 0 || !dx) { toast('Already centred'); return; }
+    if (a + dx < 1 || b + dx > W - 2) return;
+    const c = new Int16Array(D.cell.length).fill(-1); for (let i = 0; i < c.length; i++) if (D.cell[i] >= 0) c[i + dx] = D.cell[i];
+    D.cell = c; D.doors = D.doors.map(e => ({ ...e, x: e.x + dx })); pushUndo();
+    const dk = D.dk; if (dk.win && dk.win.set) { const n = {}; for (const k in dk.win.set) { const [v, x, y] = k.split(':'); n[v + ':' + (+x + dx) + ':' + y] = dk.win.set[k]; } dk.win = { ...dk.win, set: n }; }
+    for (const m of dk.marks) m.x += dx;
+    commitDeck(D); toast('Centred');
+  }
   function renameShip() {
     let sh; const name = h('input', { value: V.ship.title, autocomplete: 'off' });
     sh = openSheet({ title: 'Name this ship', body: field('Name', Names.field(name, () => 'ship')), foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => { const nm = name.value.trim(), old = V.ship.title; if (nm && nm !== old) { V.ship.title = nm; renameLinks(old, nm); persist(); renderChrome(); } sh.close(); } }, 'Save')] });
+  }
+  // Fill in: tap a gap inside the ship to floor it, or a room to change what it is
+  function fillAt(wx, wy) {
+    const E = V.edit, D = editable(), { W, H } = D.Hh, { cell, types } = D, x = Math.floor(wx), y = Math.floor(wy), i0 = y * W + x, corr = E.brush === 'fillc', cx = D.Hh.cx, solid = V.G.solid;
+    if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) return;
+    if (cell[i0] > 0) {
+      if (corr) { toast('Tap a gap to fill it with corridor'); return; }
+      const L = liftable(x, y), T = E.mirror ? twinOf(L) : null; types[cell[i0]] = E.type; delete D.dk.rooms[cell[i0]]; if (T && T.id) { types[T.id] = E.type; delete D.dk.rooms[T.id]; }
+      autoDoors(D); pushUndo(); commitDeck(D); return;
+    }
+    if (cell[i0] === 0) return;
+    const r0 = new Int16Array(H).fill(W), r1 = new Int16Array(H).fill(-1), c0 = new Int16Array(W).fill(H), c1 = new Int16Array(W).fill(-1);
+    for (let i = 0; i < cell.length; i++) if (cell[i] >= 0) { const a = i % W, b = (i / W) | 0; if (a < r0[b]) r0[b] = a; if (a > r1[b]) r1[b] = a; if (b < c0[a]) c0[a] = b; if (b > c1[a]) c1[a] = b; }
+    const gap = i => { const a = i % W, b = (i / W) | 0; return cell[i] < 0 && a > 0 && b > 0 && a < W - 1 && b < H - 1 && (solid[i] || (a > r0[b] && a < r1[b] && b > c0[a] && b < c1[a])); };
+    if (!gap(i0)) { toast('Tap a gap inside the ship'); return; }
+    const flood = st => { const q = [st], seen = new Set(q); while (q.length) { const v = q.pop(); for (const u of [v - 1, v + 1, v - W, v + W]) if (!seen.has(u) && gap(u)) { seen.add(u); q.push(u); } } return seen; };
+    const put = set => { let id = 0; if (!corr) { types.push(E.type); id = types.length - 1; } for (const i of set) cell[i] = id; };
+    const A = flood(i0), m0 = y * W + 2 * cx - x, B = E.mirror && !A.has(m0) && gap(m0) ? flood(m0) : null;
+    put(A); if (B) put(B);
+    autoDoors(D); pushUndo(); commitDeck(D);
   }
   function fixDoors() { const D = editable(); autoDoors(D); pushUndo(); commitDeck(D); }
   /* ---------- checks: what the whole ship has, and what looks wrong ---------- */
@@ -9162,17 +9201,29 @@ const LocalMaps = (() => {
   }
   function startBuild() { V.mode = null; V.edit = newEdit('add'); if (!V.G.cell.some(c => c >= 0)) { V.edit.cat = 'Whole ships'; V.edit.mod = MODS[0]; } fit(); V.snap = null; aim(); renderChrome(); redraw(); }
   // the module's squares, turned: [x, y, part, type], starting at 0, 0
-  function modCells(m, rot) {
-    let c = m.cells ? m.cells.map(q => q.slice()) : []; if (!m.cells) m.p.forEach(([t, x, y, w, h], i) => { for (let b = y; b < y + h; b++) for (let a = x; a < x + w; a++) c.push([a, b, i, t]); });
+  function modCells(m, rot, f = 1) {
+    let c = m.cells ? m.cells.map(q => q.slice()) : []; const taken = new Set();
+    if (!m.cells) m.p.forEach(([t, x, y, w, h], i) => {
+      const line = (p, l) => (t === 'corr' && l === 1 ? [Math.round((p + 0.5) * f - 0.5), 1] : [Math.round(p * f), Math.max(1, Math.round((p + l) * f) - Math.round(p * f))]);
+      const [X, W2] = line(x, w), [Y, H2] = line(y, h);
+      for (let b = Y; b < Y + H2; b++) for (let a = X; a < X + W2; a++) { const k = a + ',' + b; if (!taken.has(k)) { taken.add(k); c.push([a, b, i, t]); } }
+    });
     for (let k = 0; k < rot; k++) c = c.map(([x, y, i, t]) => [-y, x, i, t]);
     const mx = Math.min(...c.map(q => q[0])), my = Math.min(...c.map(q => q[1]));
     return c.map(([x, y, i, t]) => [x - mx, y - my, i, t]);
   }
   // the nearest spot to (tx, ty) where the module is clear of everything and touches the ship; joining a corridor counts for a lot
+  const symOn = () => { const E = V.edit; return !!(E && E.mirror && E.mod && (E.mode === 'add' || E.mod.twin)); };
   function findSnap(m, rot, tx, ty) {
-    const G = V.G, { W, H, cell } = G, c = modCells(m, rot), bw = Math.max(...c.map(q => q[0])) + 1, bh = Math.max(...c.map(q => q[1])) + 1;
-    const free = (ox, oy) => c.every(([x, y]) => { const X = ox + x, Y = oy + y; return X > 0 && Y > 0 && X < W - 1 && Y < H - 1 && cell[Y * W + X] < 0; });
-    if (!cell.some(v => v >= 0)) { const ox = clamp(Math.round(tx - bw / 2), 1, W - bw - 1), oy = clamp(Math.round(ty - bh / 2), 1, H - bh - 1); return { x: ox, y: oy, c }; }
+    const G = V.G, { W, H, cell } = G, c = modCells(m, rot, m.cells ? 1 : (V.edit.scale || 1)), bw = Math.max(...c.map(q => q[0])) + 1, bh = Math.max(...c.map(q => q[1])) + 1;
+    const cxm = G.Hh.cx, sym = symOn();
+    const free = (ox, oy) => {
+      if (!c.every(([x, y]) => { const X = ox + x, Y = oy + y; return X > 0 && Y > 0 && X < W - 1 && Y < H - 1 && cell[Y * W + X] < 0; })) return false;
+      if (!sym) return true;
+      if (ox <= cxm && ox + bw - 1 >= cxm) return Math.abs(2 * ox + bw - 1 - 2 * cxm) <= 1;   // across the line it must be centred on it
+      return c.every(([x, y]) => { const X = 2 * cxm - ox - x, Y = oy + y; return X > 0 && X < W - 1 && cell[Y * W + X] < 0; });
+    };
+    if (!cell.some(v => v >= 0)) { const ox = sym ? cxm - (bw >> 1) : clamp(Math.round(tx - bw / 2), 1, W - bw - 1), oy = clamp(Math.round(ty - bh / 2), 1, H - bh - 1); return { x: ox, y: oy, c }; }
     if (V.placing) {
       // near the ship it snaps on; further out it goes exactly where it's dropped
       const fx = Math.round(tx - bw / 2), fy = Math.round(ty - bh / 2); let near = null, nd = 10;
@@ -9206,6 +9257,7 @@ const LocalMaps = (() => {
   }
   function ghostOverlay(g) {
     const E = V.edit, gh = E.ghost;
+    if (E.mirror) { const ax = (V.G.Hh.cx + 0.5) * V.k + V.ox; g.save(); g.setLineDash([8, 6]); g.strokeStyle = 'rgba(255,190,70,.9)'; g.lineWidth = 2; g.beginPath(); g.moveTo(ax, 0); g.lineTo(ax, V.cv.clientHeight); g.stroke(); g.restore(); }
     if (E.mode === 'windows') {
       const q = V.winDrag;
       for (const [k, x, y] of outerEdges(V.G)) { const [sx, sy] = toScreen(x, y), hit = q && q.keys.has(k); g.beginPath(); g.arc(sx, sy, hit ? 6 : 3, 0, TAU); g.fillStyle = hit ? (q.val ? 'rgba(110,235,150,.95)' : 'rgba(255,90,80,.95)') : 'rgba(255,255,255,.55)'; g.fill(); }
@@ -9234,19 +9286,23 @@ const LocalMaps = (() => {
       const t = D.typeOf(+id), e = mid(corr[id] || room[id]); has.add(+id);
       if (!corr[id]) { const a = e.v ? cell[e.y * W + e.x - 1] : cell[(e.y - 1) * W + e.x], b = cell[e.y * W + e.x]; has.add(a); has.add(b); }
       doors.push({ ...e, k: HEAVY.has(t) ? 'heavy' : 'door' });
+      if (V.edit && V.edit.mirror) { const f = flipEdge(e), a = f.v ? cell[f.y * W + f.x - 1] : cell[(f.y - 1) * W + f.x], b = cell[f.y * W + f.x]; if (a !== b && a >= 0 && b >= 0 && !(has.has(a) && has.has(b)) && !doors.some(q => q.x === f.x && q.y === f.y && q.v === f.v)) { doors.push({ ...f, k: HEAVY.has(t) ? 'heavy' : 'door' }); has.add(a); has.add(b); } }
     }
     for (const id of Object.keys(out)) {
       const t = D.typeOf(+id); if ((t !== 'airlock' && t !== 'hangar') || has.has('o' + id)) continue;
       const es = out[id].filter(e => e.v); if (!es.length) continue;
-      if (t === 'airlock') doors.push({ ...mid(es), k: 'hatch' });
+      if (t === 'airlock') {
+        const e = mid(es); doors.push({ ...e, k: 'hatch' });
+        if (V.edit && V.edit.mirror) { const f = flipEdge(e), a = cell[f.y * W + f.x - 1], b = cell[f.y * W + f.x]; if ((a < 0) !== (b < 0)) { doors.push({ ...f, k: 'hatch' }); has.add('o' + Math.max(a, b)); } }
+      }
       else { const col = es.filter(e => e.x === es[0].x), a = Math.max(0, (col.length >> 1) - 1); for (const e of col.slice(a, a + 3)) doors.push({ ...e, k: 'bay' }); }
     }
   }
   function placeModule() {
     const E = V.edit, gh = E && E.ghost; if (!gh) { if (E && E.carry) { undoEdit(); toast('No room there, so it went back'); } else if (E && E.mod) toast('No room for that here'); return; }
-    const D = editable(), { W } = D.Hh, mc = E.mirror && E.mode === 'add' ? mirrorOf(gh) : null, keep = E.mod.keep;
-    const put = list => { const ids = {}; for (const [x, y, i, t] of list) { if (t === 'corr') ids[i] = 0; else if (ids[i] == null && keep) ids[i] = keep; else if (ids[i] == null) { D.types.push(t); ids[i] = D.types.length - 1; } D.cell[y * W + x] = ids[i]; } };
-    put(gh.c.map(([x, y, i, t]) => [gh.x + x, gh.y + y, i, t])); if (mc) put(mc);
+    const D = editable(), { W } = D.Hh, mc = symOn() ? mirrorOf(gh) : null, keep = E.mod.keep, twin = E.mod.twin;
+    const put = (list, keep) => { const ids = {}; for (const [x, y, i, t] of list) { if (t === 'corr') ids[i] = 0; else if (ids[i] == null && keep) ids[i] = keep; else if (ids[i] == null) { D.types.push(t); ids[i] = D.types.length - 1; } D.cell[y * W + x] = ids[i]; } };
+    put(gh.c.map(([x, y, i, t]) => [gh.x + x, gh.y + y, i, t]), keep); if (mc) put(mc, twin);
     autoDoors(D); if (E.carry) E.carry = false; else pushUndo();
     if (!E.mod.cells) { S.ui.shipRecent = [E.mod.n, ...(S.ui.shipRecent || []).filter(n => n !== E.mod.n)].slice(0, 12); }
     const bw = Math.max(...gh.c.map(q => q[0])), bh = Math.max(...gh.c.map(q => q[1]));
@@ -9264,6 +9320,7 @@ const LocalMaps = (() => {
   function removeAt(wx, wy) {
     const D = editable(), { W, H } = D.Hh, { cell } = D, x = Math.floor(wx), y = Math.floor(wy); if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) return;
     const id = cell[y * W + x]; if (id < 0) return;
+    const L = V.edit.mirror ? liftable(x, y) : null, T = L && twinOf(L); if (T) for (const i of T.idx) cell[i] = -1;
     if (id > 0) { for (let i = 0; i < cell.length; i++) if (cell[i] === id) cell[i] = -1; }
     else for (const i of corridorPiece(cell, W, y * W + x)) cell[i] = -1;
     pushUndo(); commitDeck(D);
@@ -9274,17 +9331,56 @@ const LocalMaps = (() => {
     const idx = id > 0 ? G.rooms[id].cells : [...corridorPiece(cell, W, y * W + x)], t = id > 0 ? G.rooms[id].type : 'corr';
     return { n: id > 0 ? G.rooms[id].label : 'Corridor', id, idx, cells: idx.map(i => [i % W, (i / W) | 0, 0, t]) };
   }
+  // the same shape on the other side of the line, if there is one
+  function twinOf(L) {
+    const G = V.G, { W, cell } = G, cx = G.Hh.cx, m = L.idx.map(i => ((i / W) | 0) * W + 2 * cx - i % W), own = new Set(L.idx);
+    if (m.some(i => own.has(i))) return null;
+    const id = cell[m[0]]; if (id < 0 || (id === 0) !== (L.id === 0)) return null;
+    if (id > 0) { const o = G.rooms[id]; if (o.cells.length !== m.length || !m.every(i => cell[i] === id) || o.type !== G.rooms[L.id].type) return null; }
+    else if (!m.every(i => cell[i] === 0)) return null;
+    return { id, idx: m };
+  }
+  // a wall's mirror image
+  const flipEdge = e => ({ ...e, x: 2 * V.G.Hh.cx - e.x + (e.v ? 1 : 0) });
   function pickUp(x, y) {
     const L = liftable(x, y), E = V.edit; if (!L) return false;
-    const D = editable(); for (const i of L.idx) D.cell[i] = -1;
-    pushUndo(); E.carry = true; E.mod = { n: L.n, cells: L.cells, keep: L.id > 0 ? L.id : 0 }; E.rot = 0; commitDeck(D);
+    const D = editable(), T = E.mirror ? twinOf(L) : null; for (const i of L.idx) D.cell[i] = -1; if (T) for (const i of T.idx) D.cell[i] = -1;
+    pushUndo(); E.carry = true; E.mod = { n: L.n, cells: L.cells, keep: L.id > 0 ? L.id : 0, twin: T ? T.id || 1 : 0 }; if (T && !T.id) E.mod.twin = true; E.rot = 0; commitDeck(D);
     return true;
+  }
+  // one row or column on or off a room; x-changes happen on the mirrored side of its twin
+  function stretch(D, id, ax, grow, dir) {
+    const { W, H } = D.Hh, cell = D.cell, list = []; for (let i = 0; i < cell.length; i++) if (cell[i] === id) list.push(i);
+    if (!list.length) return false;
+    const step = ax === 'x' ? dir : dir * W, pos = i => (ax === 'x' ? i % W : (i / W) | 0);
+    if (grow) {
+      const add = list.map(i => i + step).filter(u => cell[u] !== id);
+      if (!add.every(u => cell[u] < 0 && u % W > 0 && u % W < W - 1 && u > W && u < W * (H - 1))) return false;
+      for (const u of add) cell[u] = id; return true;
+    }
+    const ps = list.map(pos), end = dir > 0 ? Math.max(...ps) : Math.min(...ps); if (Math.max(...ps) === Math.min(...ps)) return false;
+    for (const i of list) if (pos(i) === end) cell[i] = -1; return true;
+  }
+  function resizeRoom(L, ax, grow) {
+    const D = editable(), T = V.edit.mirror ? twinOf(L) : null, cx = D.Hh.cx, { W } = D.Hh, mid = L.idx.reduce((a, i) => a + i % W, 0) / L.idx.length, out = mid < cx + 0.5 ? -1 : 1;
+    // grow away from the corridor if it can, and take away the side that touches it least
+    const touches = dir => L.idx.filter(i => D.cell[i + (ax === 'x' ? dir : dir * W)] === 0).length;
+    const dirs = ax === 'x' ? [out, -out] : [1, -1]; if (!grow) dirs.sort((a, b) => touches(a) - touches(b));
+    let ok = false;
+    for (const dir of dirs) {
+      const snap = D.cell.slice();
+      if (stretch(D, L.id, ax, grow, dir) && (!T || T.id === 0 || stretch(D, T.id, ax, grow, ax === 'x' ? -dir : dir))) { ok = true; break; }
+      D.cell.set(snap);
+    }
+    if (!ok) { toast(grow ? 'Something is in the way' : 'It can’t get any smaller'); return false; }
+    autoDoors(D); pushUndo(); commitDeck(D); return true;
   }
   function moduleSheet(x, y) {
     const L = liftable(x, y), E = V.edit; if (!L) return; let sh;
     const act = (l, fn, cls) => h('button', { class: 'btn block' + (cls ? ' ' + cls : ''), style: 'margin:5px 0', onclick: () => { sh.close(); fn(); } }, l);
     const again = rot => { pickUp(x, y); E.rot = rot; E.target = [x, y]; aim(); renderChrome(); redraw(); };
     sh = openSheet({ title: L.n, body: h('div', null,
+      L.id > 0 ? h('div', { class: 'row wrap', style: 'gap:6px;margin-bottom:6px' }, [['Wider', 'x', 1], ['Narrower', 'x', 0], ['Longer', 'y', 1], ['Shorter', 'y', 0]].map(([l, ax, g]) => h('button', { class: 'btn small', onclick: () => { const c = liftable(x, y); if (c) resizeRoom(c, ax, !!g); } }, l))) : null,
       act('Turn it', () => { again(1); if (E.ghost) placeModule(); }),
       act('Copy it', () => { E.mode = 'add'; E.mod = { n: L.n, cells: L.cells }; E.rot = 0; E.target = [x + 2, y]; aim(); renderChrome(); redraw(); }),
       L.id > 0 ? act('Name, kind, windows and notes', () => shipRoomSheet(L.id)) : null,
@@ -9305,11 +9401,12 @@ const LocalMaps = (() => {
     const D = editable(), i = D.doors.findIndex(q => q.x === e.x && q.y === e.y && q.v === e.v); if (i < 0) return;
     if (D.doors.some(q => q.x === to.x && q.y === to.y && q.v === to.v)) { toast('There is already a door there'); return; }
     D.doors[i] = { x: to.x, y: to.y, v: to.v, k: (to.a < 0 || to.b < 0) ? 'hatch' : e.k === 'hatch' || e.k === 'bay' ? doorKind(D, to.a, to.b) : e.k };
+    if (V.edit.mirror) { const f0 = flipEdge(e), j = D.doors.findIndex(q => q.x === f0.x && q.y === f0.y && q.v === f0.v), f1 = flipEdge(to); if (j >= 0 && j !== i && !D.doors.some(q => q.x === f1.x && q.y === f1.y && q.v === f1.v)) D.doors[j] = { ...D.doors[j], x: f1.x, y: f1.y, v: f1.v, k: D.doors[i].k }; }
     pushUndo(); commitDeck(D);
   }
   function doorSheet(e) {
     let sh; const space = (e.k === 'hatch' || e.k === 'bay');
-    const set = fn => { const D = editable(), i = D.doors.findIndex(q => q.x === e.x && q.y === e.y && q.v === e.v); if (i < 0) return; fn(D, i); pushUndo(); commitDeck(D); sh.close(); };
+    const set = fn => { const D = editable(), i = D.doors.findIndex(q => q.x === e.x && q.y === e.y && q.v === e.v); if (i < 0) return; const f = V.edit.mirror ? flipEdge(e) : null, j = f ? D.doors.findIndex(q => q.x === f.x && q.y === f.y && q.v === f.v) : -1; if (j >= 0 && j !== i) { fn(D, Math.max(i, j)); fn(D, Math.min(i, j)); } else fn(D, i); pushUndo(); commitDeck(D); sh.close(); };
     sh = openSheet({ title: 'Door', body: h('div', null,
       space ? null : field('Kind', seg([['door', 'Normal'], ['heavy', 'Heavy'], ['lock', 'Locked']], e.k, v => set((D, i) => { D.doors[i].k = v; }))),
       h('div', { class: 'small muted', style: 'margin:6px 0' }, 'Drag a door along the walls to move it.'),
@@ -9354,6 +9451,12 @@ const LocalMaps = (() => {
     if (st.t === 'room') { const v = cell[st.first[1] * W + st.first[0]]; if (v > 0 && D.typeOf(v) === st.type) id = v; else { types.push(st.type); id = types.length - 1; fresh = true; } }
     let changed = false;
     for (const i of st.cells.keys()) if (cell[i] !== id) { cell[i] = id; changed = true; }
+    if (V.edit.mirror) {
+      const cx = D.Hh.cx, flip = [...st.cells.keys()].map(i => ((i / W) | 0) * W + 2 * cx - i % W).filter(i => !st.cells.has(i));
+      let id2 = id; if (fresh || st.t === 'room') { types.push(st.type); id2 = types.length - 1; }
+      for (const i of flip) if (cell[i] !== id2) { cell[i] = id2; changed = true; }
+      if (st.t === 'room') autoDoors(D);
+    }
     if (!changed) { redraw(); return; }
     // a new room gets a door onto the corridor it touches, if it touches one
     if (fresh) {
@@ -9366,7 +9469,9 @@ const LocalMaps = (() => {
   function addDoor(wx, wy) {
     const w = wallEdge(wx, wy); if (!w) { toast('Tap on or near a wall'); return; }
     const D = editable(); if (D.doors.some(q => q.x === w.x && q.y === w.y && q.v === w.v)) return;
-    D.doors.push({ x: w.x, y: w.y, v: w.v, k: doorKind(D, w.a, w.b) }); pushUndo(); commitDeck(D);
+    D.doors.push({ x: w.x, y: w.y, v: w.v, k: doorKind(D, w.a, w.b) });
+    if (V.edit.mirror) { const f = flipEdge(w), { W } = D.Hh, a = f.v ? D.cell[f.y * W + f.x - 1] : D.cell[(f.y - 1) * W + f.x], b = D.cell[f.y * W + f.x]; if (a !== b && !D.doors.some(q => q.x === f.x && q.y === f.y && q.v === f.v)) D.doors.push({ x: f.x, y: f.y, v: f.v, k: doorKind(D, a, b) }); }
+    pushUndo(); commitDeck(D);
   }
 
   /* ---------- gestures: drag to pan, pinch or wheel to zoom, tap for details, drag a pin to move it ---------- */
@@ -9379,7 +9484,7 @@ const LocalMaps = (() => {
       try { cv.setPointerCapture(e.pointerId); } catch (_) {}
       const [x, y] = pos(e); V.ptrs.set(e.pointerId, [x, y]);
       if (V.ptrs.size === 1) {
-        if (V.edit && V.edit.mode === 'paint' && !e.button) { V.drag = null; V.stroke = { cells: new Map(), last: null, first: null, t: V.edit.brush, type: V.edit.type }; strokeTo(x, y); redraw(true); return; }
+        if (V.edit && V.edit.mode === 'paint' && !V.edit.brush.startsWith('fill') && !e.button) { V.drag = null; V.stroke = { cells: new Map(), last: null, first: null, t: V.edit.brush, type: V.edit.type }; strokeTo(x, y); redraw(true); return; }
         if (V.edit && V.edit.mode === 'doors' && !e.button) { const dr = doorAt(x, y); if (dr) { V.drag = null; V.doorDrag = { e: dr, x0: x, y0: y, moved: false, to: null }; redraw(true); return; } }
         if (V.edit && V.edit.mode === 'move' && !e.button) { const [wx, wy] = toWorld(x, y), cx = Math.floor(wx), cy = Math.floor(wy), G = V.G; if (cx >= 0 && cy >= 0 && cx < G.W && cy < G.H && G.cell[cy * G.W + cx] >= 0) { V.drag = null; V.pick = { x0: x, y0: y, cx, cy }; return; } }
         if (V.edit && V.edit.mode === 'windows' && !e.button) { V.drag = null; V.winDrag = { keys: new Set(), val: null }; winTo(x, y); redraw(true); return; }
@@ -9426,7 +9531,7 @@ const LocalMaps = (() => {
   }
   function onTap(x, y, pin) {
     const [wx, wy] = toWorld(x, y);
-    if (V.edit) { if (V.edit.mode === 'doors') addDoor(wx, wy); return; }
+    if (V.edit) { if (V.edit.mode === 'doors') addDoor(wx, wy); else if (V.edit.mode === 'paint') fillAt(wx, wy); return; }
     if (V.mode && V.mode.t === 'put') { const q = V.mode.q; q.mx = +wx.toFixed(1); q.my = +wy.toFixed(1); persist(); setMode(null); redraw(); toast(`${q.name} is on the map`); return; }
     if (V.mode && V.mode.t === 'add') { setMode(null); pinSheet(null, wx, wy); return; }
     if (pin) { pinSheet(pin.ref); return; }
