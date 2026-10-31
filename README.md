@@ -178,12 +178,12 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 - The map keeps its colours at every zoom. To get USGS-style map sheets when zoomed in, turn on *Switch to USGS sheets when zoomed in* in Layers, or pick the Topographic style. *Lock zoom at 10 miles across* in Layers stops close-ups there.
 - The layers button switches styles and overlays (*Sharp* render quality looks best on Retina screens) and opens the **Legend** and **Saved views**. A saved view bookmarks a spot and zoom level, with a thumbnail.
 - **Share or print an area** (the arrow-out-of-box button):
-  1. Pick a format: square, 4:5, story, wide or screen.
+  1. Pick a format: square, 4:5, story, wide or screen. Your last format and style are remembered.
   2. Pick a style:
      - **Map sheet**: a paper border, corner coordinates, and a title block with the CS and Earth dates, scale bar and north arrow.
      - **Clean**: the map edge to edge with a caption.
-  3. Give it a title, then pan and zoom to frame the area.
-  4. Tap **Create image**. It renders at full resolution (about 1080 px, or double for printing). On iPhone, Share sends it to Photos, Messages, social apps or AirPrint. In a browser there's a Print button too.
+  3. Give it a title, then drag and zoom to frame the area. The frame shows the whole page as it will come out, and can take in the whole planet.
+  4. Tap **Create image**. It renders at full resolution (about 1080 px, or *Double size* for printing). On iPhone, Share sends it to Photos, Messages, social apps or AirPrint. In a browser there's a Print button too.
 
 **Characters**
 - The list filters by PC, NPC, stash, status and tag, and sorts by name, lowest HP, age or role. Search also finds tags and carried items.
