@@ -4,6 +4,19 @@ A self-contained web app for running a fictional colony world: a generated plane
 
 Live copy: https://vibratingcode.github.io/world-manager/
 
+## The look: Orbit
+
+The app is always dark and opens on your planet: the real terrain of the world on the map, drawn live on a globe with cloud, sunlight and air. It turns slowly on its axis. Drag it any way you like, over either pole and right round, and tap the capital's pin to go there.
+
+- **Home** is a menu of big words: Map, People, Time, Codex and Ships, each with how many places, people, events, entries or ships you have, and Settings, Search, Dice and Saves underneath. There is no tab bar. **Menu** at the top left of every screen comes back here (keys 0 or M).
+- **People** is one person at a time: their name, a ring, and the actions beside it, with the rest of the party along the bottom. *All* shows everyone. The ring follows the tab: health on Vitals, what they carry on Items, their pool on Magic, the cycle or pregnancy on Fertility.
+- **Places** open under their own town plan or dungeon map, with their actions as plain words and their facts as a list. Tap the plan to go in.
+- **Time** is a rail running down the screen. Drag to move through time and pinch from days to aeons. The huge faint number is the year you are in, and the Earth calendar runs down the right edge.
+- **Codex** entries open like a page, under the planet. **Settings** is an index of topics.
+- **On a computer** everything uses the width: the planet sits beside the menu, People and Codex show a list beside the page, tabs split into two columns, Settings has its index down the side, and Time adds each event's description.
+- **Sheets** take over a phone's screen and slide in as a side panel on a computer.
+- The typeface is Jost (SIL Open Font License), built into `index.html` so it works offline. The planet is sampled once for each version of a world and kept on the device. It only animates on the home screen.
+
 Everything lives in `index.html`. The other files make it installable and offline-capable:
 
 | File | Purpose |
@@ -35,8 +48,8 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 
 - Every change is kept automatically on the device, in the browser's storage (IndexedDB).
 - **Worlds**: a campaign can have several worlds (planets, moons, other planes), each with its own map: terrain, sculpting, paint, places, roads and territory. Characters, the timeline, the codex, the calendar and species are shared by all of them.
-  - Tap the campaign's name at the top left (or Layers → Worlds, or Settings → Worlds) to see them. **Go** puts another world on the map, **New world** starts a blank planet from a fresh seed, and ⋯ renames or deletes one (an automatic save is made first).
-  - With more than one world, the top bar shows the world on the map, with the campaign underneath.
+  - Tap the campaign's name at the top left of the home screen (or Layers → Worlds, or Settings → Worlds) to see them. **Go** puts another world on the map, **New world** starts a blank planet from a fresh seed, and ⋯ renames or deletes one (an automatic save is made first).
+  - With more than one world, the home screen shows the world on the map, with the campaign underneath.
   - A character can be at a place on any world, and an event can happen on any of them: place pickers group places by world, and other worlds' places are shown as "First Landing (Home world)". Opening one of them (from a character, an event, a [[link]] or search) takes you to that world and that place.
 - **Save & load** is the disk button at the top. Tap it (or press Ctrl/⌘ + S on a keyboard) to:
   - **Save** a named snapshot of the whole campaign: every world's map and edits, characters and timeline, with a small picture of the map.
@@ -94,10 +107,10 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
   - **Pins** are the place's points of interest: tap *Pin* and then the map to add an inn, shop, temple and so on, or put existing ones on the map from *Places*. Drag a pin to move it. Tap a district to rename it and write notes about it.
   - **Dungeons** come as rooms and corridors or as caves, in three sizes, with doors (some locked or secret), pillars, pools and stairs up and down. Rooms are numbered from the entrance; tap a room to write its key (names, read-aloud text, monsters, treasure, {dice}). *Pin* marks monsters, treasure, traps, people and secrets. Add as many levels as you like under *Options*.
   - **Remake** draws a fresh layout (with Undo), and **Image** saves or shares a print-quality picture.
-- **Ships and deck plans**: Codex → **Ships** lists the campaign's starships. Each one is a codex entry (so `[[links]]`, search and backlinks work) with deck plans drawn on a grid of 2 m squares, nose up.
+- **Ships and deck plans**: **Ships** on the home screen lists the campaign's starships. Each one is a codex entry (so `[[links]]`, search and backlinks work) with deck plans drawn on a grid of 2 m squares, nose up.
   - **Classes**: Shuttle, Scout, Freighter, Frigate and Colony ship, from a 25 m shuttle to a 150 m colony ship with four decks. Every deck is cut from one hull, so the lift shafts line up. Decks have jobs: the command deck has the bridge, comms, the captain's cabin and an armoury; crew and habitat decks have cabins, bunk rooms, a mess and galley, medbay, washrooms, labs and hydroponics; a cryo deck is rows of sleeper pods; cargo and engineering decks have holds, a hangar with a parked craft, workshops, life support, weapons bays, the reactor and the engines. Airlocks sit where corridors meet the hull.
   - **Looks** (Options → Look): *Industrial* (worn steel plate, grated corridors, hazard stripes, warm light), *Sleek* (white panels, blue light), *Military* (dark gunmetal, red light) and *Blueprint* (a white line plan on blue). Floors, hull plating, grating, tiles and carpet are textures drawn in the app, with lighting, shadows along the walls, glowing screens and windows, engine glow, and furniture in every room.
-  - **The console**: ship screens are a dark, full-screen console with their own type, icons and cut-corner plates. Decks run down the left, *Undo*, *Redo*, *Mirror* and *Frame* down the right, and the tools along the bottom. The camera keeps the ship framed as panels come and go until you zoom or pan yourself. On a wide screen, or a phone on its side, the library becomes a sidebar, and big screens add a readout of length, beam, floor, rooms and berths.
+  - **The deck plans**: ship screens fill the display. Deck numbers run along the top, *Undo*, *Redo*, *Mirror* and *Frame* down the right, and the tools along the bottom as plain words. The camera keeps the ship framed as panels come and go until you zoom or pan yourself. On a wide screen, or a phone on its side, the library becomes a sidebar, and big screens add a readout of length, beam, floor, rooms and berths.
   - **Build** has five tools. **Add**: a library of modules drawn as real renders in the ship's own look, grouped (Recent, Hulls, Sections, Corridors, Command, Living, Working, Engines) with search. Tap one to see it on the plan with its measurements and green seams where it joins, then press *Place* or tap it again. **Select**: tap a room for handles and an inspector with its name, type, *Width*, *Length*, *Turn*, *Copy*, *Notes* and *Remove*; drag a room or corridor piece to move it. **Doors**: tap a wall to add a door, drag a door to move it, tap one to change its kind or remove it, or redo all the doors. **Windows** and **Paint** are below. Undo and Redo cover all of it. The status chip in the header (*Clear* or *3 to check*) opens floor area, rooms, berths and problems such as rooms with no door or no engine.
   - **Keyboard**: 1–5 switch tools, R turns, M mirrors, F frames the ship, Enter places, Delete removes, + and − change size, Esc backs out, Ctrl+Z and Ctrl+Y undo and redo.
   - **Placing**: drag a module out of the library, or drag on the plan. It sits above your finger, the tools get out of the way, the plan scrolls at the edges, and it snaps on near the ship or stays exactly where you drop it. Dropping it on the dock cancels. With a mouse, the module follows the pointer and a click places it.
