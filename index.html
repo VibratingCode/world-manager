@@ -11411,9 +11411,17 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
     if (V.placing) {
       // near the ship it snaps on; further out it goes exactly where it's dropped
       const fx = Math.round(tx - bw / 2), fy = Math.round(ty - bh / 2); let near = null, nd = 10;
+      const touching = (ox, oy) => c.some(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([i, j]) => G.solid[(oy + y + j) * W + ox + x + i]));
+      // held across the centre line it stays there: just one, in the middle, unless something on the line is in the way
+      if (sym && fx <= cxm && fx + bw - 1 >= cxm) {
+        const ox = bw % 2 || fx > cxm - (bw >> 1) ? cxm - ((bw - 1) >> 1) : cxm - (bw >> 1); let on = null, od = 4;
+        for (let oy = Math.max(1, fy - 3); oy <= fy + 3 && oy + bh < H; oy++) { const d = Math.abs(oy - fy); if (d < od && free(ox, oy) && touching(ox, oy)) { od = d; on = { x: ox, y: oy, c }; } }
+        if (on) return on;
+        if (fy > 0 && fy + bh < H && free(ox, fy)) return { x: ox, y: fy, c };
+      }
       for (let oy = Math.max(1, fy - 3); oy <= fy + 3 && oy + bh < H; oy++) for (let ox = Math.max(1, fx - 3); ox <= fx + 3 && ox + bw < W; ox++) {
         const d = (ox - fx) ** 2 + (oy - fy) ** 2; if (d >= nd || !free(ox, oy)) continue;
-        if (c.some(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([i, j]) => G.solid[(oy + y + j) * W + ox + x + i]))) { nd = d; near = { x: ox, y: oy, c }; }
+        if (touching(ox, oy)) { nd = d; near = { x: ox, y: oy, c }; }
       }
       if (near) return near;
       if (fx > 0 && fy > 0 && fx + bw < W && fy + bh < H && free(fx, fy)) return { x: fx, y: fy, c };
@@ -11611,8 +11619,8 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
     let changed = false;
     for (const i of st.cells.keys()) if (cell[i] !== id) { cell[i] = id; changed = true; }
     if (V.edit.mirror) {
-      const cx = D.Hh.cx, flip = [...st.cells.keys()].map(i => ((i / W) | 0) * W + 2 * cx - i % W).filter(i => !st.cells.has(i));
-      let id2 = id; if (fresh || st.t === 'room') { types.push(st.type); id2 = types.length - 1; }
+      const cx = D.Hh.cx, flip = [...st.cells.keys()].map(i => ((i / W) | 0) * W + 2 * cx - i % W).filter(i => !st.cells.has(i)), across = [...st.cells.keys()].some(i => i % W === cx);
+      let id2 = id; if ((fresh || st.t === 'room') && !across) { types.push(st.type); id2 = types.length - 1; }   // a room across the centre line is one room, not two
       for (const i of flip) if (cell[i] !== id2) { cell[i] = id2; changed = true; }
       if (st.t === 'room') autoDoors(D);
     }
