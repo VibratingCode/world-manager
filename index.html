@@ -218,6 +218,8 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .biome-sw i.stamp-ic { background: var(--card2); color: var(--text); display: grid; place-items: center; }
 .biome-sw.on i.stamp-ic { color: var(--accent); }
 @media (max-width: 400px) { .tools button { width: 47px; font-size: 10.5px; } }
+.hud-panel.big .hud-cards { flex-wrap: wrap; overflow-x: hidden; overflow-y: auto; max-height: 50vh; max-height: 50dvh; align-content: flex-start; padding-bottom: 8px; }
+.hud-panel.big .hud-card { width: calc(33.33% - 8px) !important; touch-action: pan-y; }
 .map-chip { position: absolute; left: 10px; right: 10px; bottom: 74px; max-width: 560px; margin: 0 auto; z-index: 3; padding: 12px 14px;
   border-radius: 18px; display: none; background: var(--glass-strong); font-size: 14.5px; }
 .map-chip.show { display: block; animation: sheetup .18s ease; }
@@ -896,6 +898,7 @@ input[type="range"] { accent-color: #86D6F7; }
 #map-tools button.on { background: none; color: #fff; border-bottom-color: var(--ice); }
 .map-panel, .map-chip { left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 50px); max-width: none; border-radius: 0; background: rgba(5, 7, 12, .96); -webkit-backdrop-filter: none; backdrop-filter: none; padding: 14px calc(env(safe-area-inset-right) + 18px) 14px calc(env(safe-area-inset-left) + 18px); border-top: 1px solid var(--line); }
 @media (min-width: 720px) { .map-panel, .map-chip { left: auto; right: 0; top: 0; bottom: 0; width: 420px; max-height: none; border-top: 0; border-left: 1px solid var(--line); padding-top: calc(var(--top) + 8px); } .map-chip { top: auto; bottom: 50px; border-top: 1px solid var(--line); padding-top: 14px; } }
+@media (min-width: 900px), (orientation: landscape) and (min-width: 640px) and (min-height: 501px) { .hud-tabs { gap: 0 13px !important; } .hud-tab { height: 27px !important; font-size: 13.5px !important; } .hud-search { flex: none; height: 36px; margin-bottom: 6px; } }
 /* framing a picture: the panel lies along the bottom at every width and the frame has the rest */
 #view-map.framing .map-busy { top: calc(var(--top) - 34px); }
 #view-map.framing .map-panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: calc(100% - var(--top) - 96px); border-left: 0; border-top: 1px solid var(--line); padding-top: 6px; padding-bottom: calc(env(safe-area-inset-bottom) + 14px); }
@@ -8484,6 +8487,7 @@ const LocalMaps = (() => {
     freighter: { name: 'Freighter', L: [30, 40], B: [13, 15], decks: 2, wing: [0, 1], shapes: ['brick', 'hammer'] },
     frigate: { name: 'Frigate', L: [42, 52], B: [15, 17], decks: 3, wing: [3, 5], shapes: ['dart', 'hammer'] },
     colony: { name: 'Colony ship', L: [60, 76], B: [19, 23], decks: 4, wing: [0, 2], shapes: ['spine', 'brick', 'hammer'] },
+    vee: { name: 'V-wing', L: [26, 36], B: [37, 49], decks: 2, wing: [0, 0], shapes: ['chev', 'slim', 'fat'], vee: true },   // two swept arms; rooms are fitted along a corridor in each
     custom: { name: 'Custom', L: [70, 70], B: [41, 41], decks: 1, wing: [0, 0], shapes: ['brick'] },   // starts empty, built from modules
   };
   const SLOOK = { industrial: 'Industrial', sleek: 'Sleek', military: 'Military', blueprint: 'Blueprint' };
@@ -8501,7 +8505,214 @@ const LocalMaps = (() => {
   };
   const HEAVY = new Set(['reactor', 'engine', 'armoury', 'hangar', 'cargo', 'brig', 'weapons']);
   const UNIQUE = new Set(['bridge', 'cockpit', 'captain', 'reactor', 'galley', 'hangar', 'brig', 'comms']);
-  const ROLES = { shuttle: ['flight'], scout: ['scout'], freighter: ['command', 'cargo'], frigate: ['command', 'crew', 'engineering'], colony: ['command', 'habitat', 'cryo', 'cargo'] };
+  // more kinds of room. The last item says how one is furnished, as steps split by | (sizes in half squares, so 1 m):
+  //   A0-3 along the best walls, L0-1 the long walls, E0-1 the short walls, T0-3 a set wall (0 fore, 1 right, 2 aft, 3 left), H the wall facing open space: kind length depth gap most
+  //   C kind w h: in the middle. B kind margin square: as big as the room allows. G kind width: along the room's length, aimed out. F kind w h gapx gapy margin chance: a grid. R kind depth step from: rows. D kind inset: a floor marking
+  //   9:… only in a room of at least 9 squares
+  for (const [g, ts] of Object.entries({ Crew: ['cabin', 'quarters', 'seats', 'wash'], Food: ['mess', 'galley'], Social: ['rec'], Medical: ['medbay'], Science: ['lab'], Colony: ['hydro', 'cryo'], Cargo: ['cargo', 'storage'], Hangars: ['hangar'], Weapons: ['weapons'], Access: ['airlock', 'escape', 'lift'], Engineering: ['workshop', 'life'], Drives: ['engine', 'reactor'] })) for (const t of ts) RT[t][2] = g;
+  Object.assign(RT, {
+    cic: ['Combat centre', 'plate', 'Command', '', 'T0 console 2 1 0|E0 console 2 1 1|E1 console 2 1 1|B maptable 2|T2 servers 1 1 0'],
+    warroom: ['War room', 'carpet', 'Command', '', 'B maptable 2|A0 screen 3 1 1|A1 locker 1 1 1|A2 plant 1 1 3 2'],
+    chart: ['Chart room', 'carpet', 'Command', '', 'B maptable 2|A0 drawers 2 1 0|A1 bookcase 2 1 0'],
+    sensor: ['Sensor suite', 'plate', 'Command', '', 'A0 console 2 1 0|A1 servers 1 1 0|A2 console 2 1 1|A3 servers 1 1 0|C dish 4 4'],
+    aux: ['Auxiliary bridge', 'plate', 'Command', '', 'T0 console 2 1 0|E0 console 2 1 1 2|E1 console 2 1 1 2|C holo 2 2'],
+    officer: ['Officer’s cabin', 'carpet', 'Command', '', 'A0 bed 2 1 0 1|A1 desk 2 1 0 1|A2 locker 1 1 0 3|A3 plant 1 1 0 1|9:C armchair 2 2|12:D rug 1'],
+    ready: ['Ready room', 'carpet', 'Command', '', 'A0 desk 2 1 0 1|A1 sofa 3 1 0 1|A2 bookcase 2 1 0 2|A3 plant 1 1 0 1|9:D rug 1'],
+    briefing: ['Briefing room', 'carpet', 'Command', '', 'T0 screen 3 1 0 1|F seat 1 1 1 1 2'],
+    conference: ['Conference room', 'carpet', 'Command', '', 'B conftable 2|T0 screen 4 1 1|A2 plant 1 1 3 2'],
+    security: ['Security office', 'diamond', 'Command', '', 'A0 console 2 1 0|A1 rack 2 1 0|A2 desk 2 1 1|A3 locker 1 1 0|9:C ctable 2 2'],
+    purser: ['Purser’s office', 'carpet', 'Command', '', 'A0 desk 2 1 0 1|A1 drawers 2 1 0|A2 safe 2 2 0 1'],
+    vault: ['Vault', 'diamond', 'Command', '', 'A0 safe 2 2 1|A1 shelf 2 1 0|A2 shelf 2 1 0|A3 shelf 2 1 0|F crate 1 1 0 0 2 .4'],
+    interrog: ['Interrogation room', 'plate', 'Command', '', 'C rtable 3 3|A0 screen 2 1 0 1|A1 locker 1 1 0 2|A2 desk 2 1 0 1'],
+
+    single: ['Single berth', 'carpet', 'Crew', '', 'A0 bed 2 1 0 1|A1 locker 1 1 0 1|A2 desk 2 1 0 1'],
+    guest: ['Guest cabin', 'carpet', 'Crew', '', 'A0 bed2 2 2 0 1|A1 sofa 3 1 0 1|A2 locker 1 1 0 2|A3 plant 1 1 0 1|C ctable 2 1'],
+    suite: ['Stateroom', 'carpet', 'Crew', '', 'A0 bed2 2 2 1 2|A1 sofa 3 1 1 2|A2 desk 2 1 0 2|A3 plant 1 1 1 3|9:C ctable 2 1|9:D rug 1'],
+    family: ['Family cabin', 'carpet', 'Crew', '', 'A0 bed2 2 2 0 1|A1 bunk 1 2 0 3|A2 ctable 2 1 0 2|A3 locker 1 1 0 3|12:C rtable 3 3|12:D rug 1'],
+    barracks: ['Barracks', 'plate', 'Crew', '', 'L0 bunk 1 2 0|L1 bunk 1 2 0|E0 locker 1 1|E1 locker 1 1'],
+    capberth: ['Capsule berths', 'plate', 'Crew', '', 'L0 capsule 1 2 0|L1 capsule 1 2 0|E0 locker 1 1'],
+    hammocks: ['Hammock deck', 'wood', 'Crew', '', 'F hammock 1 3 1 1 0|E0 locker 1 1'],
+    lockers: ['Locker room', 'plate', 'Crew', '', 'L0 locker 1 1|L1 locker 1 1|C pew 3 1'],
+    laundry: ['Laundry', 'tile', 'Crew', '', 'A0 washer 2 2 0|A1 washer 2 2 0|C bench 3 1'],
+    showers: ['Shower block', 'tile', 'Crew', '', 'L0 shower 1 1|L1 shower 1 1|E0 sinks 2 1 0 1'],
+    heads: ['Heads', 'tile', 'Crew', '', 'A0 stall 1 1|A1 sinks 2 1 0 2'],
+    lobby: ['Lobby', 'carpet', 'Crew', '', 'A0 till 4 1 0 1|A1 sofa 3 1 1|A2 sofa 3 1 1|A3 plant 1 1 2 3|C plant 2 2'],
+
+    wardroom: ['Wardroom', 'carpet', 'Food', '', 'B conftable 2|A0 counter 2 1 0 3|A1 bookcase 2 1 0|A2 plant 1 1 3 2'],
+    cafe: ['Café', 'wood', 'Food', '', 'A0 bar 3 2 0 1|F rtable 3 3 1 1 1 .9'],
+    diner: ['Diner', 'tile', 'Food', '', 'L0 booth 3 3 0|E0 bar 3 2 0 1'],
+    pantry: ['Pantry', 'plate', 'Food', '', 'A0 shelf 2 1 0|A1 shelf 2 1 0|A2 shelf 2 1 0|F barrel 1 1 1 1 1 .5'],
+    coldroom: ['Cold room', 'tile', 'Food', '', 'A0 fridge 2 1 0|A1 fridge 2 1 0|A2 fridge 2 1 0|A3 fridge 2 1 0|F crate 1 1 1 1 3 .5'],
+    bakery: ['Bakery', 'tile', 'Food', '', 'A0 oven 2 1 0|A1 counter 2 1 0|A2 shelf 2 1 0|9:C counter 4 2'],
+    brewery: ['Brewery', 'heavy', 'Food', '', 'F vat 3 3 1 1 1|A0 pipes 3 1 0 2'],
+    scullery: ['Scullery', 'tile', 'Food', '', 'A0 sinks 2 1 0|A1 washer 2 2 0 2|A2 shelf 2 1 0 2'],
+    synth: ['Food synthesiser', 'plate', 'Food', '', 'A0 printer 2 2 0|A1 counter 2 1 0|A2 tank 2 2 0 2|A3 shelf 2 1 0'],
+
+    gym: ['Gym', 'rubber', 'Social', '', 'A0 weights 2 2 1|A1 treadmill 1 2 1|A2 treadmill 1 2 1|9:D mat 1'],
+    pool: ['Swimming pool', 'tile', 'Social', '', 'B pool 1|A0 pew 3 1 1 2'],
+    sauna: ['Sauna', 'wood', 'Social', '', 'L0 slats 3 2 0|L1 slats 3 2 0|C stove 1 1'],
+    spa: ['Spa', 'tile', 'Social', '', 'C hottub 4 4|A0 slats 3 1 0 2|A1 plant 1 1 1 3'],
+    bar: ['Bar', 'wood', 'Social', '', 'A0 bar 3 2 0 1|F rtable 3 3 1 1 1 .85|A3 plant 1 1 0 1'],
+    theatre: ['Theatre', 'carpet', 'Social', '', 'T0 screen 6 1 0 1|F seat 1 1 0 1 2'],
+    arcade: ['Arcade', 'carpet', 'Social', '', 'A0 arcade 1 1 0|A1 arcade 1 1 0|A2 arcade 1 1 0|9:C pooltable 4 2'],
+    games: ['Games room', 'carpet', 'Social', '', 'C pooltable 4 2|A0 sofa 3 1 0 1|A1 arcade 1 1 1 3|A2 bar 3 2 0 1'],
+    library: ['Library', 'wood', 'Social', '', 'A0 bookcase 2 1 0|A1 bookcase 2 1 0|A2 bookcase 2 1 0|C armchair 1 1|9:A3 armchair 1 1 2 3'],
+    school: ['Classroom', 'carpet', 'Social', '', 'T0 board 4 1 0 1|F schooldesk 2 2 0 0 2'],
+    nursery: ['Nursery', 'carpet', 'Social', '', 'F crib 2 2 1 1 1 .8|A0 plant 1 1 2 2|9:D rug 1'],
+    playroom: ['Playroom', 'rubber', 'Social', '', 'F toybox 1 1 2 2 1 .8|A0 sofa 3 1 0 1|9:D mat 1'],
+    chapel: ['Chapel', 'wood', 'Social', '', 'T0 altar 3 2 0 1|F pew 6 1 1 1 2'],
+    garden: ['Garden', 'soil', 'Social', '', 'F tree 3 3 2 2 1 .85|A0 planter 3 1 1 3|A1 pew 3 1 2 2'],
+    salon: ['Salon', 'tile', 'Social', '', 'A0 salon 2 2 1|A1 sinks 2 1 0 2|A2 sofa 3 1 0 1'],
+    shop: ['Shop', 'carpet', 'Social', '', 'A0 shelf 2 1 0|A1 shelf 2 1 0|A2 shelf 2 1 0|C till 3 1|12:F shelf 4 1 1 2 3'],
+    holo: ['Holo room', 'plate', 'Social', '', 'D holofloor 0|C holo 2 2'],
+    museum: ['Museum', 'carpet', 'Social', '', 'F pedestal 2 2 2 2 1|A0 bookcase 2 1 2 2'],
+    ballroom: ['Ballroom', 'wood', 'Social', '', 'A0 bar 3 2 0 1|E0 sofa 3 1 1|E1 sofa 3 1 1|D rug 2|C rtable 3 3'],
+    casino: ['Casino', 'carpet', 'Social', '', 'F rtable 3 3 1 1 1|A0 arcade 1 1 0|A1 bar 3 2 0 1'],
+
+    opsuite: ['Operating theatre', 'tile', 'Medical', '', 'C surgery 2 3|A0 cabinet 2 1 0|A1 console 2 1 0 1|A2 sinks 2 1 0 1'],
+    icu: ['Intensive care', 'tile', 'Medical', '', 'L0 medbed 1 2 1|L1 medbed 1 2 1|E0 console 2 1 0 1'],
+    ward: ['Ward', 'tile', 'Medical', '', 'L0 medbed 1 2 1|L1 medbed 1 2 1|E0 cabinet 2 1 0 1'],
+    quarantine: ['Quarantine', 'tile', 'Medical', '', 'F isocell 3 4 1 1 1|A0 console 2 1 0 1'],
+    pharmacy: ['Pharmacy', 'tile', 'Medical', '', 'A0 cabinet 2 1 0|A1 cabinet 2 1 0|C till 3 1'],
+    morgue: ['Morgue', 'tile', 'Medical', '', 'A0 drawers 2 1 0|A1 drawers 2 1 0|A2 cabinet 2 1 0 1|C surgery 2 3'],
+    dental: ['Dental surgery', 'tile', 'Medical', '', 'C dentchair 2 3|A0 cabinet 2 1 0 1|A1 sinks 2 1 0 1'],
+    counsel: ['Counselling', 'carpet', 'Medical', '', 'C ctable 2 1|A0 armchair 1 1 1 2|A1 plant 1 1 0 1|A2 bookcase 2 1 0 1'],
+    scanroom: ['Scanner room', 'tile', 'Medical', '', 'C scanner 3 5|A0 console 2 1 0 1|A1 cabinet 2 1 0 1'],
+    clinic: ['Clinic', 'tile', 'Medical', '', 'A0 desk 2 1 0 1|A1 medbed 1 2 1|A2 cabinet 2 1 0'],
+    cloning: ['Cloning vats', 'tile', 'Medical', '', 'F specimen 2 2 1 1 1|A0 console 2 1 0 1'],
+
+    biolab: ['Biology lab', 'tile', 'Science', '', 'A0 bench 3 1 0|A1 cabinet 2 1 0|A2 bench 3 1 0|C specimen 2 2'],
+    chemlab: ['Chemistry lab', 'tile', 'Science', '', 'A0 bench 3 1 0|A1 glovebox 2 1 0|A2 bench 3 1 0|C centrifuge 2 2'],
+    physlab: ['Physics lab', 'plate', 'Science', '', 'A0 console 2 1 0|A1 servers 1 1 0|C gravcoil 3 3'],
+    xenolab: ['Xenobiology lab', 'diamond', 'Science', '', 'F specimen 2 2 1 1 1|A0 console 2 1 0 2'],
+    astrolab: ['Astrometrics', 'carpet', 'Science', '', 'C planet 4 4|A0 console 2 1 0|A1 servers 1 1 0|A2 console 2 1 1'],
+    geolab: ['Geology lab', 'plate', 'Science', '', 'A0 bench 3 1 0|F rocks 2 2 0 0 1 .7'],
+    specimens: ['Specimen store', 'tile', 'Science', '', 'A0 specimen 2 2 0|A1 specimen 2 2 0|A2 drawers 2 1 0'],
+    cleanroom: ['Clean room', 'tile', 'Science', '', 'A0 glovebox 2 1 0|A1 glovebox 2 1 0|A2 bench 3 1 0|C bench 3 1'],
+    probes: ['Probe bay', 'heavy', 'Science', '', 'F probe 3 3 1 1 1|A0 rack 2 1 0 2'],
+    telescope: ['Telescope room', 'plate', 'Science', '', 'G bigscope 4|A0 console 2 1 0 1'],
+    archive: ['Archive', 'carpet', 'Science', '', 'A0 bookcase 2 1 0|A1 drawers 2 1 0|C core 2 2'],
+    botany: ['Botany lab', 'plate', 'Science', '', 'R planter 1 2|A0 bench 3 1 0 1'],
+
+    coldhold: ['Cold hold', 'heavy', 'Cargo', '', 'D hazard 0|A0 fridge 2 1 0|F container 4 2 1 1 1 .7'],
+    liquidhold: ['Liquid hold', 'heavy', 'Cargo', '', 'F longtank 4 2 1 1 1'],
+    gashold: ['Gas hold', 'heavy', 'Cargo', '', 'F tank 3 3 1 1 1'],
+    orehold: ['Ore bunker', 'heavy', 'Cargo', '', 'F orebin 3 3 1 1 1'],
+    baggage: ['Baggage hold', 'plate', 'Cargo', '', 'A0 shelf 2 1 0|A1 shelf 2 1 0|F crate 1 1 0 0 1 .5'],
+    securehold: ['Secure hold', 'diamond', 'Cargo', '', 'A0 safe 2 2 1 1|F container 4 2 1 1 1 .7'],
+    pallets: ['Pallet deck', 'heavy', 'Cargo', '', 'D hazard 0|F crate 2 2 1 1 1 .85'],
+    containers: ['Container deck', 'heavy', 'Cargo', '', 'D hazard 0|F container 4 2 0 1 1 .95'],
+    loading: ['Loading dock', 'heavy', 'Cargo', '', 'D ramp 1|A0 loader 2 3 2 2|F crate 1 1 0 0 1 .25'],
+    spares: ['Spares store', 'plate', 'Cargo', '', 'A0 toolrack 2 1 0|A1 shelf 2 1 0|A2 drawers 2 1 0|F crate 1 1 0 0 1 .2'],
+    fuelstore: ['Fuel store', 'heavy', 'Cargo', '', 'D hazard 0|F fuel 1 1 1 1 1 .95'],
+    mailroom: ['Mail room', 'plate', 'Cargo', '', 'A0 shelf 2 1 0|A1 drawers 2 1 0|A2 shelf 2 1 0|C till 3 1'],
+
+    shuttlebay: ['Shuttle bay', 'heavy', 'Hangars', ''],
+    fighterbay: ['Fighter bay', 'heavy', 'Hangars', '', 'F fighter 4 4 1 1 1|A0 fuel 1 1 1 3'],
+    dronebay: ['Drone bay', 'diamond', 'Hangars', '', 'F drone 2 2 1 1 1|A0 console 2 1 0 1'],
+    mechbay: ['Mech bay', 'heavy', 'Hangars', '', 'F mech 3 4 2 1 1|A0 toolrack 2 1 0 2'],
+    vehiclebay: ['Vehicle bay', 'heavy', 'Hangars', '', 'F rover 3 5 1 1 1|A0 fuel 1 1 1 2'],
+    repairbay: ['Repair bay', 'heavy', 'Hangars', '', 'D hazard 0|B craft 2|A0 toolrack 2 1 0|A1 arm 2 2 2'],
+    dockbay: ['Docking bay', 'heavy', 'Hangars', '', 'D hazard 0|A0 suit 1 1 0|A1 crate 2 2 1|A2 fuel 1 1 1'],
+    dockport: ['Docking port', 'diamond', 'Hangars', '', 'D hazard 0|C collar 2 2|A0 suit 1 1 0 2'],
+    landing: ['Landing bay', 'heavy', 'Hangars', '', 'D pad 1|A0 fuel 1 1 1 2|A1 crate 2 2 1 2'],
+    cargolift: ['Cargo lift', 'heavy', 'Hangars', '', 'D liftpad 0'],
+
+    stairs: ['Stairwell', 'plate', 'Access', '', 'B stairs 0'],
+
+    battery: ['Battery room', 'grate', 'Engineering', '', 'A0 battery 2 1 0|A1 battery 2 1 0|A2 battery 2 1 0'],
+    powerroom: ['Power room', 'grate', 'Engineering', '', 'A0 elec 2 1 0|A1 elec 2 1 0|A2 battery 2 1 0|C capacitor 3 3'],
+    capbank: ['Capacitor bank', 'grate', 'Engineering', '', 'F capacitor 2 2 1 1 1|A0 elec 2 1 0 1'],
+    coolant: ['Coolant plant', 'grate', 'Engineering', '', 'F tank 3 3 1 1 1|A0 pipes 3 1 0'],
+    waterplant: ['Water recycling', 'tile', 'Engineering', '', 'A0 tank 2 2 0|A1 pipes 3 1 0|C pump 2 2'],
+    wasteplant: ['Waste plant', 'grate', 'Engineering', '', 'A0 tank 2 2 0|A1 pipes 3 1 0|C orebin 3 3'],
+    oxygen: ['Oxygen plant', 'grate', 'Engineering', '', 'F tank 2 2 1 1 1|A0 scrubber 2 1 0'],
+    scrubbers: ['Scrubber room', 'grate', 'Engineering', '', 'A0 scrubber 2 1 0|A1 scrubber 2 1 0|A2 fan 2 2 0'],
+    hvac: ['Air handling', 'grate', 'Engineering', '', 'A0 fan 2 2 0|A1 fan 2 2 0|A2 pipes 3 1 0'],
+    gravity: ['Gravity generator', 'grate', 'Engineering', '', 'B gravcoil 1 1|A0 console 2 1 1 2'],
+    shieldroom: ['Shield generator', 'grate', 'Engineering', '', 'B shieldgen 2 1|A0 console 2 1 1 2'],
+    computer: ['Main computer', 'plate', 'Engineering', '', 'C core 4 4|A0 servers 1 1 0|A1 servers 1 1 0|A2 console 2 1 0 2'],
+    serverroom: ['Server room', 'plate', 'Engineering', '', 'L0 servers 1 1 0|L1 servers 1 1 0|E0 console 2 1 0 1'],
+    maint: ['Maintenance bay', 'diamond', 'Engineering', '', 'A0 toolrack 2 1 0|A1 bench 3 1 0|C arm 2 2|F crate 1 1 0 0 1 .2'],
+    dcp: ['Damage control', 'diamond', 'Engineering', '', 'A0 suit 1 1 0|A1 toolrack 2 1 0|A2 console 2 1 0 1|C ctable 2 1'],
+    machine: ['Machine shop', 'diamond', 'Engineering', '', 'A0 lathe 3 1 0|A1 lathe 3 1 0|C arm 2 2'],
+    electronics: ['Electronics lab', 'plate', 'Engineering', '', 'A0 bench 3 1 0|A1 elec 2 1 0|A2 drawers 2 1 0'],
+    pumproom: ['Pump room', 'grate', 'Engineering', '', 'F pump 2 2 1 1 1|A0 pipes 3 1 0'],
+    conduit: ['Cable vault', 'grate', 'Engineering', '', 'L0 pipes 3 1 0|L1 elec 2 1 0'],
+
+    iondrive: ['Ion drive', 'grate', 'Drives', ''], plasmadrive: ['Plasma drive', 'grate', 'Drives', ''], torch: ['Torch drive', 'grate', 'Drives', ''], nacelle: ['Engine nacelle', 'grate', 'Drives', ''],
+    fission: ['Fission pile', 'grate', 'Drives', ''], fusion: ['Fusion core', 'grate', 'Drives', ''], antimatter: ['Antimatter core', 'grate', 'Drives', ''], auxreactor: ['Auxiliary reactor', 'grate', 'Drives', ''],
+    jump: ['Jump drive', 'grate', 'Drives', '', 'B jump 1 1|A0 console 2 1 1 2'],
+    fueltank: ['Fuel tank', 'heavy', 'Drives', '', 'F longtank 4 2 0 1 1'],
+    fuelpumps: ['Fuel pumps', 'grate', 'Drives', '', 'F pump 2 2 1 1 1|A0 fuel 1 1 1 3'],
+    thrusters: ['Thruster block', 'grate', 'Drives', '', 'H rcs 2 2 1|A1 pipes 3 1 0 1'],
+
+    turretroom: ['Gun turret', 'diamond', 'Weapons', '', 'B turret 0 1'],
+    gundeck: ['Gun deck', 'diamond', 'Weapons', '', 'H turret 3 3 1|A1 shells 2 1 0 3'],
+    missile: ['Missile bay', 'diamond', 'Weapons', '', 'H missile 2 3 0|A1 shells 2 1 0 2'],
+    torpedo: ['Torpedo room', 'diamond', 'Weapons', '', 'H torpedo 2 6 1|A1 rack 2 1 0 2'],
+    railgun: ['Railgun', 'diamond', 'Weapons', '', 'G railgun 4'],
+    lance: ['Beam emitter', 'diamond', 'Weapons', '', 'G lance 4'],
+    pdcroom: ['Point defence', 'diamond', 'Weapons', '', 'H pdc 2 2 0|A1 shells 2 1 0 1'],
+    magazine: ['Magazine', 'diamond', 'Weapons', '', 'A0 shells 2 1 0|A1 shells 2 1 0|A2 shells 2 1 0|D hazard 0'],
+    ecm: ['ECM suite', 'plate', 'Weapons', '', 'A0 servers 1 1 0|A1 console 2 1 0|C dish 2 2'],
+    firecontrol: ['Fire control', 'plate', 'Weapons', '', 'A0 console 2 1 0|A1 console 2 1 0|C holo 2 2'],
+    marines: ['Marine barracks', 'plate', 'Weapons', '', 'L0 bunk 1 2 0|L1 bunk 1 2 0|E0 rack 2 1 0'],
+    droproom: ['Drop pod bay', 'heavy', 'Weapons', '', 'D hazard 0|F droppod 3 3 1 1 1'],
+    boarding: ['Boarding pod', 'diamond', 'Weapons', '', 'H escpod 2 2 0|A1 rack 2 1 0 1|A2 suit 1 1 0 3'],
+    range: ['Firing range', 'rubber', 'Weapons', '', 'T0 target 1 1 2|T2 ctable 2 1 1 3'],
+    armsshop: ['Arms workshop', 'diamond', 'Weapons', '', 'A0 bench 3 1 0|A1 rack 2 1 0|A2 toolrack 2 1 0 1'],
+    minelayer: ['Mine layer', 'heavy', 'Weapons', '', 'D hazard 0|F shells 2 1 0 1 1'],
+
+    seedvault: ['Seed vault', 'tile', 'Colony', '', 'A0 drawers 2 1 0|A1 drawers 2 1 0|A2 drawers 2 1 0'],
+    embryo: ['Embryo bank', 'tile', 'Colony', '', 'A0 embryo 2 1 0|A1 embryo 2 1 0|A2 embryo 2 1 0|C console 2 1'],
+    colonist: ['Colonist berths', 'carpet', 'Colony', '', 'L0 bunk 1 2 0|L1 bunk 1 2 0|E0 locker 1 1|E1 ctable 2 1 1 2'],
+    livestock: ['Livestock pen', 'soil', 'Colony', '', 'F pen 4 4 1 1 1'],
+    aquaculture: ['Fish tanks', 'tile', 'Colony', '', 'F aquatank 4 3 1 1 1'],
+    cropdeck: ['Crop deck', 'soil', 'Colony', '', 'R crops 1 2 0'],
+    orchard: ['Orchard', 'soil', 'Colony', '', 'F tree 3 3 1 1 1'],
+    terraformer: ['Terraforming plant', 'grate', 'Colony', '', 'C terraform 5 5|A0 pipes 3 1 0|A1 console 2 1 0 1'],
+    prefab: ['Prefab store', 'heavy', 'Colony', '', 'F prefab 4 2 1 1 1'],
+    survey: ['Survey office', 'carpet', 'Colony', '', 'C maptable 4 3|A0 drawers 2 1 0|A1 rocks 2 2 1 2'],
+    colonystores: ['Colony stores', 'heavy', 'Colony', '', 'A0 toolrack 2 1 0|F crate 2 2 1 1 1 .8'],
+    fungus: ['Fungus farm', 'soil', 'Colony', '', 'R crops 1 2 0|A0 tank 2 2 0 1'],
+
+    fabricator: ['Fabricator', 'diamond', 'Industry', '', 'A0 printer 2 2 0|A1 printer 2 2 0|A2 bench 3 1 0 1'],
+    smelter: ['Smelter', 'heavy', 'Industry', '', 'C furnace 4 4|A0 orebin 3 3 1 2|A1 pipes 3 1 0 1'],
+    refinery: ['Refinery', 'heavy', 'Industry', '', 'F vat 3 3 1 1 1|A0 pipes 3 1 0'],
+    assembly: ['Assembly line', 'diamond', 'Industry', '', 'R belt 2 4 1|A0 arm 2 2 1 3'],
+    miningrig: ['Mining rig', 'heavy', 'Industry', '', 'C drill 5 5|A0 orebin 3 3 1 2|A1 console 2 1 0 1'],
+    salvage: ['Salvage bay', 'heavy', 'Industry', '', 'D hazard 0|C arm 2 2|F orebin 3 3 2 2 1 .6|A0 toolrack 2 1 0 2'],
+    tractorbay: ['Tractor beam', 'diamond', 'Industry', '', 'B tractor 1 1|A0 console 2 1 1 1'],
+    cranebay: ['Crane bay', 'heavy', 'Industry', '', 'D hazard 0|F container 4 2 1 2 1 .7|C crane 8 2'],
+    recycler: ['Recycler', 'grate', 'Industry', '', 'C orebin 3 3|A0 belt 3 2 0 2|A1 pipes 3 1 0 1'],
+    foundry: ['Foundry', 'heavy', 'Industry', '', 'C furnace 4 4|A0 rack 2 1 0|A1 orebin 3 3 1 2'],
+    oreproc: ['Ore processor', 'heavy', 'Industry', '', 'R belt 2 4 1|A0 orebin 3 3 1 3'],
+
+    armour: ['Armour', 'hull', 'Structure', '', 'B armour 0'],
+    wing: ['Wing', 'hull', 'Structure', '', 'B rib 0'],
+    fin: ['Fin', 'hull', 'Structure', '', 'B rib 0'],
+    strut: ['Strut', 'hull', 'Structure', '', 'B strut 0'],
+    radiator: ['Radiator', 'hull', 'Structure', '', 'B radiator 0'],
+    solar: ['Solar array', 'hull', 'Structure', '', 'B solarpanel 0'],
+    mast: ['Mast', 'hull', 'Structure', '', 'B antenna 0'],
+    dishmount: ['Dish', 'hull', 'Structure', '', 'B dish 0 1'],
+    rcs: ['RCS thrusters', 'hull', 'Structure', '', 'F rcs 2 2 0 0 0'],
+    gunmount: ['Hull gun', 'hull', 'Structure', '', 'B hullgun 0 1'],
+    cargopod: ['Cargo pod', 'hull', 'Structure', '', 'B cargopod 0'],
+    fuelpod: ['Fuel pod', 'hull', 'Structure', '', 'B fuelpod 0'],
+    collarx: ['Docking collar', 'hull', 'Structure', '', 'B collar 0 1'],
+    gear: ['Landing gear', 'hull', 'Structure', '', 'B gear 0 1'],
+  });
+  // hull fittings: outside the ship, so no floor, no walls and no doors; they sit on the hull like its plating
+  const STRUCT = new Set(Object.keys(RT).filter(t => RT[t][2] === 'Structure'));
+  // what makes a ship go: each of these gets engine bells where it meets open space astern
+  const ENGINES = { engine: 1, iondrive: { hue: '130,205,255', w: 0.8 }, plasmadrive: { hue: '205,130,255', w: 1 }, torch: { hue: '255,240,210', w: 1.2 }, nacelle: { hue: '255,190,130', w: 0.9 } };
+  const REACTORS = { reactor: 1, fission: { hue: '150,255,190' }, fusion: { hue: '180,225,255' }, antimatter: { hue: '255,110,230' }, auxreactor: { hue: '255,215,140' } };
+  const BAYS = new Set(['hangar', 'shuttlebay', 'fighterbay', 'dronebay', 'mechbay', 'vehiclebay', 'repairbay', 'dockbay', 'landing', 'droproom', 'loading', 'salvage', 'probes']);
+  const LOCKS = new Set(['airlock', 'dockport', 'boarding']);
+  for (const t of ['cic', 'vault', 'securehold', 'magazine', 'turretroom', 'gundeck', 'missile', 'torpedo', 'railgun', 'lance', 'pdcroom', 'droproom', 'marines', 'minelayer', 'iondrive', 'plasmadrive', 'torch', 'nacelle', 'fission', 'fusion', 'antimatter', 'auxreactor', 'jump', 'fueltank', 'shieldroom', 'coldhold', 'liquidhold', 'gashold', 'orehold', 'pallets', 'containers', 'loading', ...BAYS]) HEAVY.add(t);
+  const ROLES = { shuttle: ['flight'], scout: ['scout'], freighter: ['command', 'cargo'], frigate: ['command', 'crew', 'engineering'], colony: ['command', 'habitat', 'cryo', 'cargo'], vee: ['command', 'cargo'] };
   const ROLE_NAME = { flight: 'Main deck', scout: 'Main deck', command: 'Command deck', crew: 'Crew deck', habitat: 'Habitat deck', cryo: 'Cryo deck', cargo: 'Cargo deck', engineering: 'Engineering deck' };
   // what each kind of deck is furnished with: rooms it must have, then what small, middling and big rooms become
   // (fill: what a small, middling or big room becomes once the deck has enough of everything else)
@@ -8545,6 +8756,13 @@ const LocalMaps = (() => {
     const D = s.decks.length, key = `${s.seed}|${s.cls}|${D}`;
     if (hullCache.has(key)) return hullCache.get(key);
     const C = SHIPS[s.cls], r = srng(s.seed), ri = (a, b) => a + Math.floor(r() * (b - a + 1));
+    if (C.vee) {
+      const L = ri(C.L[0], C.L[1]), M = ri(C.B[0], C.B[1]) >> 1, pad = 6, W = 2 * (M + pad) + 1, H = L + 2 * pad, cx = M + pad, shape = pick(r, C.shapes), has = SHAPES[shape], wingM = new Uint8Array(W * H);
+      for (let y = 0; y < L; y++) for (let dx = -M; dx <= M; dx++) if (has((dx + M + 0.5) / (2 * M + 1), (y + 0.5) / L)) wingM[(pad + y) * W + cx + dx] = 1;
+      const ly = pad + Math.round(L * VEES[shape][1] * 0.5) - 1, Hh = { W, H, cx, y0: pad, L, M, wing: 0, nl: 2, sl: 2, hw: new Int8Array(L), shape, vee: true, decks: Array.from({ length: D }, () => new Uint8Array(W * H)), wingM, lifts: D > 1 ? [[cx - 1, ly], [cx + 1, ly]] : [], nozzles: [], roles: rolesFor(s.cls, D) };
+      hullCache.set(key, Hh); if (hullCache.size > 8) hullCache.delete(hullCache.keys().next().value);
+      return Hh;
+    }
     const L = ri(C.L[0], C.L[1]), M = ri(C.B[0], C.B[1]) >> 1, wing = ri(C.wing[0], C.wing[1]), pad = 6;
     const W = 2 * (M + wing + pad) + 1, H = L + 2 * pad, cx = M + wing + pad, y0 = pad, shape = pick(r, C.shapes);
     const nl = Math.max(2, Math.round(L * (0.15 + r() * 0.08))), sl = Math.max(2, Math.round(L * (0.1 + r() * 0.05))), minW = Math.min(2, M);
@@ -8609,7 +8827,27 @@ const LocalMaps = (() => {
 
   /* ---------- a deck: corridors, rooms and doors ---------- */
   // cell: -1 outside, 0 corridor, n > 0 room n. Doors sit on cell edges: v 1 is the edge left of (x, y), v 0 the edge above it.
+  // a V-wing's deck: the deck's own kinds of room fitted along the arms, nearest the nose first
+  function genVee(Hh, s, d) {
+    const { W, H, cx, y0, L, M } = Hh, D = Hh.decks.length, role = Hh.roles[d], last = d === D - 1, P = POOLS[role] || POOLS.cargo, r = srng((s.seed * 7 + d * 7919 + 3) >>> 0);
+    const size = { s: [3, 2], m: [4, 3], l: [5, 4] }, dim = t => (['cargo', 'hydro', 'cryo', 'mess'].includes(t) ? size.l : ['wash', 'storage', 'life', 'comms'].includes(t) ? size.s : size.m);
+    const rooms = last && role !== 'command' ? [['reactor', 5, 5]] : [], seen = new Set(), wide = M >= 20;
+    for (const t of P.must) { seen.add(t); rooms.push([t, ...dim(t)]); }
+    for (let k = 0; k < 18; k++) { const b = pick(r, ['s', 'm', 'm', 'l']), t = pick(r, P[b]); if (UNIQUE.has(t) && seen.has(t)) continue; seen.add(t); rooms.push([t, ...size[b]]); }
+    rooms.push(['airlock', 1, 1]);
+    const nose = d === 0 ? ['bridge', wide ? 7 : 5, wide ? 4 : 3] : [(FORE[role] || ['storage'])[0], 5, 3];
+    const { parts } = veeParts(M, L, Hh.shape, nose, rooms, last ? ['engine', wide ? 6 : 5] : ['storage', 5], Hh.lifts.map(([x, y]) => [x - cx + M, y - y0]));
+    const cell = new Int16Array(W * H).fill(-1), types = [null], ids = {};
+    for (const [a, b, i, t] of partCells(parts)) {
+      if (t === 'plating') continue;
+      let id = 0; if (t !== 'corr') { if (ids[i] == null) { types.push(t); ids[i] = types.length - 1; } id = ids[i]; }
+      cell[(y0 + b) * W + cx - M + a] = id;
+    }
+    for (const [x, y] of Hh.lifts) { types.push('lift'); cell[y * W + x] = types.length - 1; }
+    return { cell, types, doors: placeDoors(cell, types, W, H, r) };
+  }
   function genDeck(Hh, s, d) {
+    if (Hh.vee) return genVee(Hh, s, d);
     const { W, H, cx, y0, L, M, nl, sl } = Hh, m = Hh.decks[d], N = W * H, D = Hh.decks.length, role = Hh.roles[d];
     const r = srng((s.seed * 7 + d * 7919 + 3) >>> 0), ri = (a, b) => a + Math.floor(r() * (b - a + 1));
     const cell = new Int16Array(N).fill(-1); for (let i = 0; i < N; i++) if (m[i]) cell[i] = -2;
@@ -8786,13 +9024,18 @@ const LocalMaps = (() => {
   function encodeDeck(base, W, H) {
     const out = []; let prev = base.cell[0], run = 0;
     for (let i = 0; i <= W * H; i++) { const v = i < W * H ? base.cell[i] : NaN; if (v === prev) run++; else { out.push((prev + 1).toString(36) + (run > 1 ? '*' + run.toString(36) : '')); prev = v; run = 1; } }
-    return { W, H, c: out.join('.'), t: base.types.slice(), d: base.doors.map(e => [e.x, e.y, e.v, e.k]) };
+    const E = { W, H, c: out.join('.'), t: base.types.slice(), d: base.doors.map(e => [e.x, e.y, e.v, e.k]) };
+    // plating as run lengths, starting with a run of bare space
+    if (base.plate && base.plate.some(v => v)) { const runs = []; let v0 = 0, n = 0; for (const v of base.plate) { if (v === v0) n++; else { runs.push(n.toString(36)); v0 = v; n = 1; } } runs.push(n.toString(36)); E.p = runs.join('.'); }
+    return E;
   }
   function decodeDeck(E) {
     const cell = new Int16Array(E.W * E.H).fill(-1); let i = 0;
     for (const tok of String(E.c || '').split('.')) { if (!tok) continue; const [a, b] = tok.split('*'), v = parseInt(a, 36) - 1, n = b ? parseInt(b, 36) : 1; for (let k = 0; k < n && i < cell.length; k++) cell[i++] = v; }
     const types = Array.isArray(E.t) ? E.t.map(t => (t && RT[t] ? t : null)) : [null];
-    return { cell, types, doors: (E.d || []).map(([x, y, v, k]) => ({ x, y, v, k: k || 'door' })) };
+    let plate = null;
+    if (E.p) { plate = new Uint8Array(E.W * E.H); let i2 = 0, on = 0; for (const tok of E.p.split('.')) { const n = parseInt(tok, 36); if (on) plate.fill(1, i2, i2 + n); i2 += n; on = 1 - on; } }
+    return { cell, types, plate, doors: (E.d || []).map(([x, y, v, k]) => ({ x, y, v, k: k || 'door' })) };
   }
 
   /* ---------- a finished deck: room shapes, windows, furniture and the hull outline ---------- */
@@ -8823,9 +9066,9 @@ const LocalMaps = (() => {
     const block = (ix, iy, w, h) => { for (let y = Math.max(0, iy); y < Math.min(h2, iy + h); y++) for (let x = Math.max(0, ix); x < Math.min(w2, ix + w); x++) occ[y * w2 + x] = 1; };
     // keep doorways clear, and in bigger rooms a lane in from each door
     for (const [x, y, nx, ny] of doorIn) {
-      if (x < R.x || y < R.y || x >= R.x + R.w || y >= R.y + R.h) continue;
+      if (x < R.x || y < R.y || x >= R.x + R.w || y >= R.y + R.h || (BAYS.has(t) && t !== 'hangar')) continue;
       const ix = (x - R.x) * 2, iy = (y - R.y) * 2; block(ix, iy, 2, 2);
-      if (R.w * R.h >= 6 && !['engine', 'reactor', 'hangar'].includes(t)) { const n = Math.max(2, Math.round((nx ? w2 : h2) * 0.45)); for (let k = 1; k <= n; k++) block(ix + nx * k, iy + ny * k, 2, 2); }
+      if (R.w * R.h >= 6 && !['engine', 'reactor', 'hangar'].includes(t) && !BAYS.has(t) && !ENGINES[t] && !REACTORS[t]) { const n = Math.max(2, Math.round((nx ? w2 : h2) * 0.45)); for (let k = 1; k <= n; k++) block(ix + nx * k, iy + ny * k, 2, 2); }
     }
     const fits = (ix, iy, w, h) => { if (ix < 0 || iy < 0 || ix + w > w2 || iy + h > h2) return false; for (let y = iy; y < iy + h; y++) for (let x = ix; x < ix + w; x++) if (occ[y * w2 + x]) return false; return true; };
     const put = (k, ix, iy, w, h, a = 0, o) => { block(ix, iy, w, h); P.push(Object.assign({ k, x: R.x + ix / 2, y: R.y + iy / 2, w: w / 2, h: h / 2, a, v: Math.floor(r() * 4) }, o)); return true; };
@@ -8884,14 +9127,14 @@ const LocalMaps = (() => {
       case 'rec': along(S[0], 'sofa', 3, 1, 0, 2); along(S[1], 'screen', 2, 1, 0, 1); if (!centre('ctable', 2, 1)) centre('plant', 1, 1); along(S[2], 'plant', 1, 1, 2, 2); break;
       case 'observation': { const hs = hullSide >= 0 ? (hullSide + 2) % 4 : S[0]; centre('scope', 1, 1); along(hs, 'sofa', 3, 1, 1); along(S.find(x => x !== hs && x % 2 !== hs % 2), 'plant', 1, 1, 2, 2); break; }
       case 'cargo': decal('hazard', R.x + 0.15, R.y + 0.15, R.w - 0.3, R.h - 0.3); if (area >= 12) fill('container', 4, 2, 1, 1, 1, 0.65, 0, () => ({ v: Math.floor(r() * 5) })); fill('crate', 2, 2, 0, 0, 1, 0.75, 0, () => ({ v: Math.floor(r() * 5) })); fill('crate', 1, 1, 0, 0, 1, 0.3, 0, () => ({ v: Math.floor(r() * 5) })); break;
-      case 'hangar': { const s = Math.min(w2, h2); decal('pad', R.x + R.w / 2 - s / 4 + 0.1, R.y + R.h / 2 - s / 4 + 0.1, s / 2 - 0.2, s / 2 - 0.2); if (s >= 6) centre('craft', Math.min(6, w2 - 2) & ~1, Math.min(8, h2 - 2), 0, null, true); along(S[0], 'crate', 2, 2, 1, 3, () => ({ v: Math.floor(r() * 5) })); along(S[1], 'fuel', 1, 1, 1, 3); break; }
+      case 'hangar': case 'shuttlebay': { const s = Math.min(w2, h2); decal('pad', R.x + R.w / 2 - s / 4 + 0.1, R.y + R.h / 2 - s / 4 + 0.1, s / 2 - 0.2, s / 2 - 0.2); if (s >= 6) centre('craft', Math.min(6, w2 - 2) & ~1, Math.min(8, h2 - 2), 0, null, true); along(S[0], 'crate', 2, 2, 1, 3, () => ({ v: Math.floor(r() * 5) })); along(S[1], 'fuel', 1, 1, 1, 3); break; }
       case 'storage': along(S[0], 'shelf', 2, 1, 0); along(S[1], 'shelf', 2, 1, 0); along(S[2], 'shelf', 2, 1, 0); fill('crate', 1, 1, 0, 0, 1, 0.3, 0, () => ({ v: Math.floor(r() * 5) })); break;
-      case 'engine': {
+      case 'engine': case 'iondrive': case 'plasmadrive': case 'torch': case 'nacelle': {
         const n = Math.max(1, Math.floor(w2 / 4)), hh = Math.max(2, h2 - 2);
-        for (let k = 0; k < n; k++) put('engine', clamp(Math.round((k + 0.5) * w2 / n - 1.5), 0, Math.max(0, w2 - 3)), h2 - hh, Math.min(3, w2), hh, 2);
+        for (let k = 0; k < n; k++) put('engine', clamp(Math.round((k + 0.5) * w2 / n - 1.5), 0, Math.max(0, w2 - 3)), h2 - hh, Math.min(3, w2), hh, 2, ENGINES[t].hue ? { hue: ENGINES[t].hue } : null);
         along(0, 'console', 2, 1, 1, 2); break;
       }
-      case 'reactor': { const s = Math.min(w2, h2) - (Math.min(w2, h2) >= 6 ? 2 : 1); decal('ring', R.x + R.w / 2 - s / 4 - 0.25, R.y + R.h / 2 - s / 4 - 0.25, s / 2 + 0.5, s / 2 + 0.5); centre('reactor', s, s, 0, null, true); along(S[0], 'console', 2, 1, 1, 2); break; }
+      case 'reactor': case 'fission': case 'fusion': case 'antimatter': case 'auxreactor': { const s = Math.min(w2, h2) - (Math.min(w2, h2) >= 6 ? 2 : 1); decal('ring', R.x + R.w / 2 - s / 4 - 0.25, R.y + R.h / 2 - s / 4 - 0.25, s / 2 + 0.5, s / 2 + 0.5); centre('reactor', s, s, 0, REACTORS[t].hue ? { hue: REACTORS[t].hue } : null, true); along(S[0], 'console', 2, 1, 1, 2); break; }
       case 'life': along(S[0], 'tank', 2, 2, 0); along(S[1], 'fan', 2, 2, 0); along(S[2], 'scrubber', 2, 1, 0); break;
       case 'workshop': along(S[0], 'bench', 3, 1, 0); along(S[1], 'toolrack', 2, 1, 0); centre('arm', 2, 2); fill('crate', 1, 1, 0, 0, 1, 0.2, 0, () => ({ v: Math.floor(r() * 5) })); break;
       case 'armoury': along(S[0], 'rack', 2, 1, 0); along(S[1], 'rack', 2, 1, 0); along(S[2], 'locker', 1, 1); centre('ctable', 2, 1); break;
@@ -8907,10 +9150,25 @@ const LocalMaps = (() => {
       case 'airlock': decal('hazard', R.x + 0.1, R.y + 0.1, R.w - 0.2, R.h - 0.2); along(S[0], 'suit', 1, 1, 0, 2); break;
       case 'lift': decal('liftpad', R.x, R.y, R.w, R.h); break;
       case 'escape': along(hullSide >= 0 ? hullSide : S[0], 'escpod', 2, 2, 0); break;
+      default:
+        for (const st of (RT[t][4] || '').split('|')) {
+          const c0 = st.indexOf(':'); if (c0 > 0 && area < +st.slice(0, c0)) continue;
+          const [op, k, ...a] = st.slice(c0 + 1).split(' '), n = a.map(Number), o = k === 'crate' || k === 'container' ? () => ({ v: Math.floor(r() * 5) }) : undefined, kd = op && op[0];
+          if (kd === 'C') centre(k, n[0], n[1]);
+          else if (kd === 'F') fill(k, n[0], n[1], n[2] || 0, n[3] || 0, n[4] == null ? 1 : n[4], n[5] == null ? 1 : n[5], 0, o);
+          else if (kd === 'R') rows(k, n[0], n[1], 0, n[2] == null ? 1 : n[2]);
+          else if (kd === 'D') { const i = n[0] || 0; if (R.w > 2 * i && R.h > 2 * i) decal(k, R.x + i + (i ? 0 : 0.1), R.y + i + (i ? 0 : 0.1), R.w - 2 * i - (i ? 0 : 0.2), R.h - 2 * i - (i ? 0 : 0.2)); }
+          else if (kd === 'B') { const m0 = n[0] || 0; let ww = w2 - 2 * m0, hh = h2 - 2 * m0; if (n[1]) ww = hh = Math.min(ww, hh); if (ww > 0 && hh > 0) put(k, (w2 - ww) >> 1, (h2 - hh) >> 1, ww, hh, (k === 'turret' || k === 'hullgun') && hullSide >= 0 ? hullSide : 0); }
+          else if (kd === 'G') { const tall = h2 >= w2, wd = Math.min(n[0] || 4, (tall ? w2 : h2) - 1), ln2 = (tall ? h2 : w2) - 1; if (tall) put(k, (w2 - wd) >> 1, hullSide === 2 ? 0 : 1, wd, ln2, hullSide === 2 ? 2 : 0); else put(k, hullSide === 3 ? 0 : 1, (h2 - wd) >> 1, ln2, wd, hullSide === 3 ? 3 : 1); }
+          else if (kd) {
+            const side = kd === 'A' ? S[+op[1]] : kd === 'L' ? (long ? [0, 2] : [3, 1])[+op[1]] : kd === 'E' ? (long ? [3, 1] : [0, 2])[+op[1]] : kd === 'T' ? +op[1] : hullSide >= 0 ? hullSide : S[0];
+            along(side, k, n[0], n[1], n[2] || 0, n[3] ? n[3] * Math.max(1, Math.round(area / 12)) : 99, o);
+          }
+        }
     }
     return P;
   }
-  const VIEW = new Set(['bridge', 'cockpit', 'observation', 'rec', 'captain', 'mess', 'hydro', 'lab', 'cabin']);
+  const VIEW = new Set(['bridge', 'cockpit', 'observation', 'rec', 'captain', 'mess', 'hydro', 'lab', 'cabin', 'suite', 'guest', 'bar', 'cafe', 'garden', 'pool', 'spa', 'lobby', 'wardroom', 'ready', 'aux', 'astrolab', 'library', 'cropdeck', 'orchard']);
   function shipLayout(s) {
     const Hh = shipHull(s), d = s.cur, dk = s.decks[d];
     const key = `${s.seed}|${s.cls}|${s.decks.length}|${d}|${s.decks.map(x => (x.ver | 0) + (x.edit ? 'e' : '')).join(',')}|${Object.entries(dk.rooms).map(([k, v]) => (v.type ? k + v.type : '') + (v.nowin ? k + 'w' : '')).join('')}`;
@@ -8921,12 +9179,13 @@ const LocalMaps = (() => {
     const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]);
     // the hull is every deck's floor plus the wings
     const solid = Hh.wingM.slice();
-    for (let k = 0; k < s.decks.length; k++) { const b = k === d ? base : deckBase(s, Hh, k); for (let i = 0; i < N; i++) if (b.cell[i] >= 0) solid[i] = 1; }
+    for (let k = 0; k < s.decks.length; k++) { const b = k === d ? base : deckBase(s, Hh, k); for (let i = 0; i < N; i++) if (b.cell[i] >= 0 || (b.plate && b.plate[i])) solid[i] = 1; }
     const rooms = [];
     for (let i = 0; i < N; i++) { const id = cell[i]; if (id > 0) (rooms[id] || (rooms[id] = { id, cells: [] })).cells.push(i); }
-    const doors = base.doors.filter(e => { const a = e.v ? at(e.x - 1, e.y) : at(e.x, e.y - 1), b = at(e.x, e.y); return a !== b && (e.k === 'hatch' || e.k === 'bay' ? (a < 0) !== (b < 0) : a >= 0 && b >= 0); });
     const cnt = {}, seen = {};
     for (const o of rooms) if (o) { const ov = dk.rooms[o.id]; o.type = (ov && RT[ov.type] && ov.type) || base.types[o.id] || 'storage'; cnt[o.type] = (cnt[o.type] || 0) + 1; }
+    const fitting = id => id > 0 && rooms[id] && STRUCT.has(rooms[id].type);
+    const doors = base.doors.filter(e => { const a = e.v ? at(e.x - 1, e.y) : at(e.x, e.y - 1), b = at(e.x, e.y); return a !== b && !fitting(a) && !fitting(b) && (e.k === 'hatch' || e.k === 'bay' ? (a < 0) !== (b < 0) : a >= 0 && b >= 0); });
     const props = [], windows = [], furnished = new Map(), cellKey = list => list.slice().sort((a, b) => a - b).join(',');
     for (const o of rooms) {
       if (!o) continue;
@@ -8982,16 +9241,16 @@ const LocalMaps = (() => {
     for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) { if (!pipeOk(x, y) || pipeOk(x, y - 1)) continue; let e = y; while (pipeOk(x, e + 1)) e++; if (e - y >= 1) pipes.push([x, y, x, e + 1]); }
     let bx0 = W, by0 = H, bx1 = 0, by1 = 0;
     for (let i = 0; i < N; i++) if (solid[i]) { const x = i % W, y = (i / W) | 0; if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
-    G = { kind: 'ship', W, H, cell, rooms, doors, props, windows, strips, pipes, solid, Hh, deck: d, decks: s.decks.length, role: Hh.roles[d], cls: s.cls, look: s.look,
+    G = { kind: 'ship', W, H, cell, plate: base.plate || null, rooms, doors, props, windows, strips, pipes, solid, Hh, deck: d, decks: s.decks.length, role: Hh.roles[d], cls: s.cls, look: s.look,
       box: bx1 >= bx0 ? [bx0 - 1, by0 - 1, bx1 + 2, by1 + 3.2] : [Hh.cx - 11, (H >> 1) - 14, Hh.cx + 12, (H >> 1) + 14] };
     // a custom ship's engine bells go wherever its engine rooms meet open space at the stern
     G.nozzles = Hh.nozzles;
-    if (s.cls === 'custom') {
+    if (s.cls === 'custom' || Hh.vee) {
       G.nozzles = [];
       for (const o of rooms) {
-        if (!o || o.type !== 'engine') continue;
+        if (!o || !ENGINES[o.type]) continue;
         const low = o.cells.filter(i => at(i % W, ((i / W) | 0) + 1) < 0 && !solid[i + W]).sort((a, b) => a - b);
-        for (let i = 0; i < low.length;) { let j = i; while (j + 1 < low.length && low[j + 1] === low[j] + 1) j++; const n = j - i + 1, y = ((low[i] / W) | 0) + 1; G.nozzles.push({ x: low[i] % W + n / 2, y, w: Math.min(n * 0.78, 3.4) }); i = j + 1; }
+        for (let i = 0; i < low.length;) { let j = i; while (j + 1 < low.length && low[j + 1] === low[j] + 1) j++; const n = j - i + 1, y = ((low[i] / W) | 0) + 1; G.nozzles.push({ x: low[i] % W + n / 2, y, w: Math.min(n * 0.78, 3.4) * (ENGINES[o.type].w || 1), hue: ENGINES[o.type].hue }); i = j + 1; }
       }
     }
     if (!s.temp) { shipCache.set(key + winKey, G); if (shipCache.size > 8) shipCache.delete(shipCache.keys().next().value); }
@@ -9035,7 +9294,7 @@ const LocalMaps = (() => {
   const LOOKS = {
     industrial: {
       bg: ['#0b1018', '#030406'], hull: '#5d6269', hullTint: ['#686d73', '#555a61', '#60656b', '#4c5157', '#72767b'], hullEdge: 'rgba(205,212,218,.55)',
-      plate: '#4a4f55', grate: ['#0a0c0f', '#5e646b'], diamond: '#5a5f66', tile: '#a6adb1', carpet: '#38424e', heavy: '#484c51', soil: '#3a291d',
+      plate: '#4a4f55', grate: ['#0a0c0f', '#5e646b'], diamond: '#5a5f66', tile: '#a6adb1', carpet: '#38424e', heavy: '#484c51', soil: '#3a291d', wood: '#6b4a2f', rubber: '#2a2d30',
       gap: '#0c0e11', wall: '#1b1e22', wallHi: 'rgba(160,168,176,.55)', outer: '#101215', door: '#59616b', accent: '#f0b429', lock: '#ff4b3e', go: '#59ff8c',
       metal: '#7b8289', metalDk: '#3e4349', metalLt: '#b5bbc1', screen: '#5fd2ff', fabric: '#c9ced3', cloth: ['#2f5670', '#6a3b36', '#3e5a3a', '#59496b'], desk: '#3a3f46',
       crate: ['#c27a32', '#4a6886', '#68793c', '#b39b38', '#8a4b3b'], plant: ['#2d6a30', '#3f8a3c', '#5aa84b'], glass: ['#b4ecff', '#1b4b6c'],
@@ -9045,7 +9304,7 @@ const LocalMaps = (() => {
     },
     sleek: {
       bg: ['#0e1a2e', '#04070d'], hull: '#d3d8de', hullTint: ['#dde1e6', '#c9cfd6', '#d7dce1', '#e6e9ec', '#c3c9d0'], hullEdge: 'rgba(255,255,255,.8)',
-      plate: '#c4c9d0', grate: ['#4b545e', '#c3cad2'], diamond: '#b6bdc5', tile: '#eceff2', carpet: '#7a8ba0', heavy: '#aeb5be', soil: '#4a3727',
+      plate: '#c4c9d0', grate: ['#4b545e', '#c3cad2'], diamond: '#b6bdc5', tile: '#eceff2', carpet: '#7a8ba0', heavy: '#aeb5be', soil: '#4a3727', wood: '#b89a78', rubber: '#6d7784',
       gap: '#2a3038', wall: '#566170', wallHi: 'rgba(255,255,255,.85)', outer: '#3d4652', door: '#e3e7eb', accent: '#3fb4ff', lock: '#ff5b6e', go: '#4dffc3',
       metal: '#cfd5db', metalDk: '#8c96a1', metalLt: '#f4f6f8', screen: '#7fe9ff', fabric: '#f3f5f7', cloth: ['#3f7fb5', '#5b6f8c', '#7a9db8', '#9aa9bd'], desk: '#e1e5e9',
       crate: ['#e6eaee', '#9fb4c8', '#5e86ad', '#c8d3de', '#7c8fa3'], plant: ['#2f7d4f', '#43a26a', '#6cc48a'], glass: ['#dff8ff', '#2e6f9c'],
@@ -9055,7 +9314,7 @@ const LocalMaps = (() => {
     },
     military: {
       bg: ['#07090b', '#020303'], hull: '#3c4146', hullTint: ['#42474c', '#373c41', '#3f444a', '#33383d', '#474c51'], hullEdge: 'rgba(150,158,166,.45)',
-      plate: '#33383d', grate: ['#07080a', '#464c52'], diamond: '#3f454b', tile: '#697176', carpet: '#383b31', heavy: '#383c40', soil: '#2e2418',
+      plate: '#33383d', grate: ['#07080a', '#464c52'], diamond: '#3f454b', tile: '#697176', carpet: '#383b31', heavy: '#383c40', soil: '#2e2418', wood: '#4b3c2a', rubber: '#23262a',
       gap: '#08090b', wall: '#0c0e10', wallHi: 'rgba(120,128,136,.45)', outer: '#08090a', door: '#454b51', accent: '#c9a33a', lock: '#ff3b30', go: '#7dff6a',
       metal: '#5b6268', metalDk: '#2b3035', metalLt: '#8c949b', screen: '#ff8a5c', fabric: '#8e9177', cloth: ['#4c5236', '#3d4436', '#5b5a40', '#45493c'], desk: '#2c3136',
       crate: ['#5c6236', '#4b5346', '#6b5e3a', '#3f4a3c', '#706a52'], plant: ['#2b5a2c', '#386f36', '#4b8441'], glass: ['#ffb4a0', '#4a1d1a'],
@@ -9222,6 +9481,24 @@ const LocalMaps = (() => {
         scratches(60, 'rgba(255,255,255,1)', 0.1); grainy(0.07);
         break;
       }
+      case 'wood': {
+        fillR(Lk.wood, 0, 0, S, S);
+        for (let row = 0; row < 8; row++) for (let k = -1; k < 3; k++) {
+          const px = k * 256 + (row % 2) * 128, py = row * 64; fillR(r() < 0.5 ? `rgba(255,255,255,${r() * 0.07})` : `rgba(0,0,0,${r() * 0.12})`, px, py, 256, 64);
+          for (let t = 0; t < 7; t++) { x.strokeStyle = `rgba(0,0,0,${0.05 + r() * 0.09})`; x.lineWidth = 0.6 + r(); const yy = py + 4 + r() * 56; x.beginPath(); x.moveTo(px, yy); x.bezierCurveTo(px + 80, yy + (r() - 0.5) * 8, px + 170, yy + (r() - 0.5) * 8, px + 256, yy); x.stroke(); }
+        }
+        for (let row = 0; row <= 8; row++) lineH(row * 64, 2.5, 'rgba(0,0,0,.45)');
+        for (let row = 0; row < 8; row++) for (let k = -1; k < 3; k++) fillR('rgba(0,0,0,.45)', k * 256 + (row % 2) * 128 - 1.2, row * 64, 2.4, 64);
+        noise(8, 5, [0, 0, 0], 0.55, 0.16); grainy(0.06);
+        break;
+      }
+      case 'rubber': {
+        fillR(Lk.rubber, 0, 0, S, S); noise(16, 4, [255, 255, 255], 0.6, 0.05);
+        for (let j = 0; j < 20; j++) for (let i = 0; i < 20; i++) { x.fillStyle = 'rgba(0,0,0,.2)'; x.beginPath(); x.arc(i * 25.6 + 12.8, j * 25.6 + 12.8, 3.5, 0, TAU); x.fill(); x.fillStyle = 'rgba(255,255,255,.05)'; x.beginPath(); x.arc(i * 25.6 + 12, j * 25.6 + 12, 3, 0, TAU); x.fill(); }
+        for (const p of [0, 256, 512]) { lineV(p, 3, 'rgba(0,0,0,.5)'); lineH(p, 3, 'rgba(0,0,0,.5)'); }
+        grainy(0.1);
+        break;
+      }
       case 'soil': {
         fillR(Lk.soil, 0, 0, S, S); noise(8, 5, [0, 0, 0], 0.3, 0.5); noise(16, 4, [140, 110, 80], 0.55, 0.3);
         for (let k = 0; k < 500; k++) { x.fillStyle = r() < 0.5 ? 'rgba(190,160,120,.35)' : 'rgba(0,0,0,.35)'; x.beginPath(); x.arc(4 + r() * (S - 8), 4 + r() * (S - 8), 0.8 + r() * 2.4, 0, TAU); x.fill(); }
@@ -9257,10 +9534,15 @@ const LocalMaps = (() => {
   }
 
   // ship geometry as paths: the hull outline, floors by kind, each room, walls, the outer bulkhead, light strips and pipes
+  const TINT_AS = { opsuite: 'medbay', icu: 'medbay', ward: 'medbay', clinic: 'medbay', quarantine: 'medbay', scanroom: 'medbay', pharmacy: 'medbay', cloning: 'medbay', dental: 'medbay', morgue: 'cryo', coldroom: 'cryo', coldhold: 'cryo', seedvault: 'cryo', embryo: 'cryo', botany: 'hydro', fungus: 'hydro', magazine: 'armoury', armsshop: 'armoury', marines: 'armoury', security: 'armoury', interrog: 'brig' };
+  const DRAW_WHOLE = new Set(['reactor', 'engine', 'craft', 'helm', 'holo', 'pool', 'hottub', 'tree', 'gravcoil', 'jump', 'shieldgen', 'core', 'furnace', 'terraform', 'drill', 'tractor', 'mech', 'fighter', 'rover', 'railgun', 'lance', 'torpedo', 'turret', 'hullgun', 'bigscope', 'dish', 'droppod', 'solarpanel', 'radiator', 'antenna', 'strut', 'collar', 'stairs', 'scanner']);
+  const FIT = { armour: 'rgba(0,0,0,.34)', wing: 'rgba(255,255,255,.05)', fin: 'rgba(255,255,255,.05)' };
   function shipPaths(G) {
     if (G.paths) return G.paths;
-    const { W, H, cell, rooms, doors } = G, at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]);
-    const P = { hull: new Path2D(), inner: new Path2D(), floors: {}, room: [], walls: new Path2D(), outer: new Path2D(), strips: new Path2D(), pipes: new Path2D(), shadow: new Path2D(), lights: [] };
+    // hull fittings count as outside: no floor, no walls
+    const { W, H, cell, rooms, doors } = G, at = (x, y) => { const v = x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]; return v > 0 && rooms[v] && STRUCT.has(rooms[v].type) ? -1 : v; };
+    const P = { hull: new Path2D(), inner: new Path2D(), floors: {}, room: [], walls: new Path2D(), outer: new Path2D(), strips: new Path2D(), pipes: new Path2D(), shadow: new Path2D(), lights: [], fit: {} };
+    for (const o of rooms) if (o && FIT[o.type]) { const p = P.fit[o.type] || (P.fit[o.type] = new Path2D()); for (const i of o.cells) p.rect(i % W, (i / W) | 0, 1, 1); }
     for (const loop of hullOutline(G.solid, W, H)) { P.hull.moveTo(loop[0][0], loop[0][1]); for (let i = 1; i < loop.length; i++) P.hull.lineTo(loop[i][0], loop[i][1]); P.hull.lineTo(loop[0][0], loop[0][1]); }
     const fl = id => (id === 0 ? 'grate' : RT[rooms[id].type][1]);
     for (let y = 0; y < H; y++) for (let x = 0; x < W;) {
@@ -9325,13 +9607,13 @@ const LocalMaps = (() => {
     /* --- the outside: engine glow, engine bells, the hull, its lights --- */
     if (!BP && !opt.noPlume) {
       g.globalCompositeOperation = 'lighter';
-      for (const n of G.nozzles) { const yy = n.y + 1.6, rr = n.w * 1.9 + 0.6, gr = g.createRadialGradient(n.x, yy, 0, n.x, yy, rr); gr.addColorStop(0, Lk.plume[0]); gr.addColorStop(0.35, Lk.plume[1]); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(n.x, yy + rr * 0.3, rr * 0.75, rr * 1.15, 0, 0, TAU); g.fill(); }
+      for (const n of G.nozzles) { const yy = n.y + 1.6, rr = n.w * 1.9 + 0.6, gr = g.createRadialGradient(n.x, yy, 0, n.x, yy, rr); gr.addColorStop(0, n.hue ? `rgba(${n.hue},.95)` : Lk.plume[0]); gr.addColorStop(0.35, n.hue ? `rgba(${n.hue},.4)` : Lk.plume[1]); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(n.x, yy + rr * 0.3, rr * 0.75, rr * 1.15, 0, 0, TAU); g.fill(); }
       g.globalCompositeOperation = 'source-over';
     }
     for (const n of G.nozzles) {
       const y0 = n.y + 0.35, y1 = n.y + 1.45, a = n.w / 2, b = n.w * 0.62;
       g.beginPath(); g.moveTo(n.x - a, y0); g.lineTo(n.x + a, y0); g.lineTo(n.x + b, y1); g.lineTo(n.x - b, y1); g.closePath(); F(cyl(n.x - b, y0, b * 2, 1, Lk.metal || '#888', true));
-      if (!BP) { ell(n.x, y1, b, 0.16); F('#120d0b'); ell(n.x, y1, b * 0.62, 0.1); F(Lk.plume[0]); }
+      if (!BP) { ell(n.x, y1, b, 0.16); F('#120d0b'); ell(n.x, y1, b * 0.62, 0.1); F(n.hue ? `rgb(${n.hue})` : Lk.plume[0]); }
       for (let t = 0.3; t < 1; t += 0.3) { const yy = y0 + (y1 - y0) * t, ww = a + (b - a) * t; ln(n.x - ww, yy, n.x + ww, yy); ST('rgba(0,0,0,.4)', lw(1.2)); }
     }
     g.fillStyle = BP ? 'rgba(255,255,255,.05)' : tf('hull'); g.fill(P.hull, 'evenodd');
@@ -9341,12 +9623,13 @@ const LocalMaps = (() => {
       g.save(); g.clip(P.hull, 'evenodd'); g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 0.45; g.stroke(P.hull); g.strokeStyle = 'rgba(255,255,255,.1)'; g.lineWidth = 0.16; g.stroke(P.hull); g.restore();
     }
     g.strokeStyle = BP ? Lk.line : Lk.hullEdge; g.lineWidth = BP ? lw(2) : Math.max(lw(1), 0.035); g.stroke(P.hull);
+    for (const t in P.fit) { if (BP) { g.strokeStyle = Lk.faint; g.lineWidth = lw(1); g.stroke(P.fit[t]); } else { g.fillStyle = FIT[t]; g.fill(P.fit[t]); } }
     if (!opt.noLights) for (const [x, y, rgb] of P.lights) { ell(x, y, 0.09); F(`rgb(${rgb})`); glows.push([x, y, 0.9, rgb, 0.55]); }
     /* --- floors --- */
     if (!BP) {
       g.fillStyle = Lk.gap; g.fill(P.inner);
       for (const f in P.floors) { g.fillStyle = tf(f); g.fill(P.floors[f]); }
-      for (const o of G.rooms) if (o && Lk.tint[o.type] && P.room[o.id]) { g.fillStyle = Lk.tint[o.type]; g.fill(P.room[o.id]); }
+      for (const o of G.rooms) if (o && P.room[o.id]) { const tt = Lk.tint[o.type] || Lk.tint[TINT_AS[o.type]]; if (tt) { g.fillStyle = tt; g.fill(P.room[o.id]); } }
     } else { g.fillStyle = 'rgba(255,255,255,.035)'; g.fill(P.inner); }
     // floor markings
     for (const p of G.props) if (p.under && vis(p.x, p.y, p.w, p.h)) drawProp(p);
@@ -9368,10 +9651,11 @@ const LocalMaps = (() => {
       // zoomed out, furniture is a few pixels across: blocks of its main colour, one fill per colour; the big pieces still drawn whole
       const by = new Map(), add = (c, x, y, w, h) => { let p = by.get(c); if (!p) by.set(c, (p = new Path2D())); p.rect(x, y, w, h); };
       const base = { bed: Lk.fabric, bed2: Lk.fabric, bunk: Lk.fabric, medbed: Lk.metalLt, pod: Lk.metalLt, cabinet: Lk.metalLt, bench: Lk.metalLt, counter: Lk.metal, sinks: Lk.metalLt, seat: Lk.cloth[0], sofa: Lk.cloth[1], desk: Lk.desk, ctable: Lk.desk, table: Lk.desk,
-        console: Lk.metalDk, servers: '#202429', shelf: Lk.metalDk, rack: Lk.metalDk, toolrack: Lk.metalDk, plant: Lk.plant[1], planter: Lk.plant[0], tank: Lk.metal, fan: Lk.metalDk, scrubber: Lk.metal, locker: Lk.metal, tube: Lk.metal, suit: '#d8dde2', fuel: '#a2382e', escpod: '#d0782e', arm: Lk.accent, cell: Lk.metalDk };
+        console: Lk.metalDk, servers: '#202429', shelf: Lk.metalDk, rack: Lk.metalDk, toolrack: Lk.metalDk, plant: Lk.plant[1], planter: Lk.plant[0], tank: Lk.metal, fan: Lk.metalDk, scrubber: Lk.metal, locker: Lk.metal, tube: Lk.metal, suit: '#d8dde2', fuel: '#a2382e', escpod: '#d0782e', arm: Lk.accent, cell: Lk.metalDk,
+        capsule: Lk.metalLt, hammock: Lk.cloth[1], bar: Lk.wood, booth: Lk.cloth[0], rtable: Lk.wood, pew: Lk.wood, bookcase: Lk.wood, armchair: Lk.cloth[1], pooltable: '#1f6e4a', slats: Lk.wood, crib: Lk.wood, schooldesk: Lk.wood, conftable: Lk.wood, maptable: Lk.metalDk, safe: Lk.metalDk, drawers: Lk.metalLt, fridge: Lk.metalLt, washer: Lk.metalLt, vat: '#b5763a', barrel: Lk.wood, specimen: '#1d6b52', planet: '#123a5c', battery: '#20262b', elec: Lk.metal, longtank: '#a2382e', orebin: '#3b342c', belt: '#20252a', crane: Lk.accent, shells: '#c9a33a', hammer: Lk.metal, pen: '#a78a4a', aquatank: '#1a6f8f', embryo: '#7ff0c0', crops: Lk.plant[0], cargopod: Lk.crate[0], fuelpod: '#a2382e', radiator: '#b5582e', solarpanel: '#12233f' };
       for (const p of G.props) {
         if (p.under || !vis(p.x, p.y, p.w, p.h)) continue;
-        if (p.k === 'reactor' || p.k === 'engine' || p.k === 'craft' || p.k === 'helm' || p.k === 'holo') { drawProp(p); continue; }
+        if (DRAW_WHOLE.has(p.k)) { drawProp(p); continue; }
         const c = p.k === 'crate' || p.k === 'container' ? Lk.crate[p.v % Lk.crate.length] : base[p.k] || Lk.metal, m = Math.min(p.w, p.h) * 0.1;
         add(c, p.x + m, p.y + m, p.w - 2 * m, p.h - 2 * m);
       }
@@ -9578,8 +9862,8 @@ const LocalMaps = (() => {
           // a drive housing running back to the stern, which is behind (v = -V/2)
           box(-u + 0.1, -v, U - 0.2, Vd - 0.1, 0.25); F(cyl(-u + 0.1, -v, U - 0.2, Vd, M, true));
           if (mid) for (let t = -v + 0.3; t < v - 0.25; t += 0.36) { box(-u + 0.06, t, U - 0.12, 0.09, 0.03); F(shade(MD, -0.2)); }
-          box(-0.07, -v + 0.1, 0.14, Vd - 0.4, 0.05); F(BP ? null : Lk.plume[0]);
-          if (!BP) { glow(0, -v + Vd * 0.4, U * 0.9, '255,160,90', 0.25); glow(0, -v + 0.2, U * 0.7, '255,180,120', 0.3); }
+          box(-0.07, -v + 0.1, 0.14, Vd - 0.4, 0.05); F(BP ? null : p.hue ? `rgb(${p.hue})` : Lk.plume[0]);
+          if (!BP) { glow(0, -v + Vd * 0.4, U * 0.9, p.hue || '255,160,90', 0.25); glow(0, -v + 0.2, U * 0.7, p.hue || '255,180,120', 0.3); }
           box(-0.18, v - 0.28, 0.36, 0.2, 0.05); F(MD); break;
         }
         case 'ring': if (!BP) { ell(0, 0, u, v); g.strokeStyle = tf('hazard'); g.lineWidth = 0.18; g.stroke(); } else { ell(0, 0, u, v); g.setLineDash([0.15, 0.1]); ST(); g.setLineDash([]); } break;
@@ -9589,7 +9873,7 @@ const LocalMaps = (() => {
           ell(0, 0, rr * 0.86); F(mg(-rr, -rr, rr * 2, rr * 2, MD, 0.35));
           if (mid) for (let i = 0; i < 12; i++) { g.save(); g.rotate(i * TAU / 12); box(-0.035, rr * 0.55, 0.07, rr * 0.28); F(shade(MD, -0.35)); g.restore(); }
           ell(0, 0, rr * 0.55); F(mg(-rr, -rr, rr, rr, M, 0.3));
-          if (!BP) { const gr = g.createRadialGradient(0, 0, 0, 0, 0, rr * 0.45); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.4, C.core); gr.addColorStop(1, 'rgba(20,60,90,1)'); ell(0, 0, rr * 0.45); g.fillStyle = gr; g.fill(); glow(0, 0, rr * 2.2, hexRGB(C.core).join(','), 0.5); glow(0, 0, rr * 0.9, '255,255,255', 0.35); }
+          if (!BP) { const gr = g.createRadialGradient(0, 0, 0, 0, 0, rr * 0.45); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.4, p.hue ? `rgb(${p.hue})` : C.core); gr.addColorStop(1, 'rgba(20,60,90,1)'); ell(0, 0, rr * 0.45); g.fillStyle = gr; g.fill(); glow(0, 0, rr * 2.2, p.hue || hexRGB(C.core).join(','), 0.5); glow(0, 0, rr * 0.9, '255,255,255', 0.35); }
           else { ell(0, 0, rr * 0.45); ST(); ell(0, 0, rr * 0.2); ST(); }
           break;
         }
@@ -9637,6 +9921,128 @@ const LocalMaps = (() => {
           for (const s of [-1, 1]) { g.beginPath(); g.moveTo(-0.16, s * 0.08); g.lineTo(0, s * 0.24); g.lineTo(0.16, s * 0.08); ST(BP ? null : acc, 0.05); }
           glow(0, 0, 0.6, Lk.strip, 0.18); break;
         }
+        /* --- crew and leisure --- */
+        case 'capsule': box(-u + 0.03, -v + 0.02, U - 0.06, Vd - 0.04, 0.12); F(mg(-u, -v, U, Vd, ML, 0.25)); box(-u + 0.08, -v + 0.28, U - 0.16, Vd - 0.42, 0.06); F(mg(-u, -v, U, Vd, cl, 0.15)); box(-u + 0.09, -v + 0.08, U - 0.18, 0.17, 0.05); F('#f2f4f6'); ell(0, v - 0.07, 0.025); F(C.go); glow(0, v - 0.07, 0.18, '90,255,140', 0.35); break;
+        case 'hammock': ln(0, -v + 0.02, 0, v - 0.02); ST(MD, 0.02); ell(0, 0, u * 0.82, v * 0.76); F(mg(-u, -v, U, Vd, cl, 0.2)); if (hi) { ln(-u * 0.5, -v * 0.45, u * 0.5, -v * 0.45); ST('rgba(255,255,255,.3)', 0.015); } break;
+        case 'bar': {
+          box(-u, -v + 0.02, U, Vd * 0.46, 0.03); F(mg(-u, -v, U, Vd * 0.46, C.wood, 0.25));
+          if (hi && !BP) for (let t = -u + 0.1; t < u - 0.06; t += 0.13) { ell(t, -v + 0.13, 0.035); F(C.crate[Math.round(t * 23 + 40) % 5]); }
+          for (let t = -u + 0.25; t < u - 0.1; t += 0.5) { ell(t, v - 0.14, 0.1); F(mg(t - 0.1, v - 0.24, 0.2, 0.2, MD, 0.3)); }
+          glow(0, -v + 0.25, U * 0.5, '255,190,120', 0.18); break;
+        }
+        case 'booth': box(-u + 0.02, -v + 0.02, U - 0.04, 0.24, 0.06); F(mg(-u, -v, U, 0.24, cl, 0.2)); box(-u + 0.02, v - 0.26, U - 0.04, 0.24, 0.06); F(mg(-u, v - 0.26, U, 0.24, cl, 0.2)); box(-u + 0.16, -0.17, U - 0.32, 0.34, 0.05); F(mg(-u, -0.17, U, 0.34, C.desk, 0.3)); break;
+        case 'rtable': { for (let i = 0; i < 4; i++) { g.save(); g.rotate(i * TAU / 4 + 0.4); chair(0, -0.52, -1); g.restore(); } ell(0, 0, 0.34); F(mg(-0.34, -0.34, 0.68, 0.68, C.wood, 0.3)); if (hi && !BP) { ell(0, 0, 0.08); F(C.plant[1]); } break; }
+        case 'pew': box(-u + 0.02, -0.1, U - 0.04, 0.2, 0.03); F(mg(-u, -0.1, U, 0.2, C.wood, 0.25)); box(-u + 0.02, 0.1, U - 0.04, 0.05); F(shade(C.wood, -0.35)); break;
+        case 'altar': box(-u + 0.1, -v + 0.05, U - 0.2, Vd * 0.55, 0.02); F(mg(-u, -v, U, Vd, ML, 0.25)); if (!BP) { box(-0.03, -v + 0.1, 0.06, Vd * 0.42); F(acc); box(-0.12, -v + 0.2, 0.24, 0.05); F(acc); } glow(0, -v + 0.3, 1.2, '255,225,170', 0.42); break;
+        case 'bookcase': { box(-u + 0.01, -v + 0.01, U - 0.02, Vd - 0.06, 0.02); F(mg(-u, -v, U, Vd, shade(C.wood, -0.3), 0.2)); if (mid) { const nn = Math.round((U - 0.06) / 0.07); for (let i = 0; i < nn; i++) { box(-u + 0.03 + i * 0.07, -v + 0.04, 0.055, Vd - 0.16); F(C.crate[(i * 7 + p.v) % 5]); } } break; }
+        case 'armchair': box(-0.22, -0.22, 0.44, 0.44, 0.1); F(mg(-0.22, -0.22, 0.44, 0.44, shade(cl, -0.2), 0.2)); box(-0.15, -0.1, 0.3, 0.28, 0.07); F(mg(-0.15, -0.1, 0.3, 0.3, cl, 0.15)); break;
+        case 'arcade': { const hc = ['255,95,162', '95,210,255', '255,211,95', '125,255,154'][p.v % 4]; box(-u + 0.06, -v + 0.02, U - 0.12, Vd - 0.06, 0.03); F(mg(-u, -v, U, Vd, MD, 0.3)); box(-u + 0.12, -v + 0.06, U - 0.24, Vd * 0.42); F(`rgb(${hc})`); glow(0, -v + 0.2, 0.55, hc, 0.38); if (hi && !BP) { ell(-0.08, v - 0.14, 0.03); F('#d33'); ell(0.06, v - 0.14, 0.02); F(acc); } break; }
+        case 'pooltable': { box(-u + 0.04, -v + 0.04, U - 0.08, Vd - 0.08, 0.05); F(mg(-u, -v, U, Vd, C.wood, 0.25)); box(-u + 0.12, -v + 0.12, U - 0.24, Vd - 0.24, 0.02); F('#1f6e4a'); if (!BP) { for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { ell(a * (u - 0.13), b * (v - 0.13), 0.04); F('#0c0f10'); } ell(0.12, 0.02, 0.035); F('#f2f2f0'); ell(-0.22, 0.08, 0.035); F('#c23'); ell(-0.3, -0.08, 0.035); F('#e8c33a'); } break; }
+        case 'treadmill': box(-u + 0.06, -v + 0.02, U - 0.12, Vd - 0.04, 0.04); F(mg(-u, -v, U, Vd, MD, 0.3)); box(-u + 0.12, -v + 0.24, U - 0.24, Vd - 0.32, 0.02); F('#101215'); if (mid && !BP) for (let t = -v + 0.3; t < v - 0.1; t += 0.12) { ln(-u + 0.12, t, u - 0.12, t); ST('rgba(255,255,255,.12)', 0.012); } box(-u + 0.1, -v + 0.05, U - 0.2, 0.12, 0.02); F(C.screen); break;
+        case 'weights': { box(-u + 0.02, -v + 0.04, U - 0.04, Vd * 0.42, 0.02); F(mg(-u, -v, U, Vd, MD, 0.3)); for (let t = -u + 0.16; t < u - 0.1; t += 0.22) { ell(t, -v + Vd * 0.25, 0.08); F(M); ell(t, -v + Vd * 0.25, 0.03); F(MD); } box(-0.36, v - 0.22, 0.72, 0.05); F(ML); ell(-0.36, v - 0.2, 0.11); F(MD); ell(0.36, v - 0.2, 0.11); F(MD); break; }
+        case 'mat': box(-u, -v, U, Vd, 0.03); F('rgba(60,110,170,.55)'); ST('rgba(255,255,255,.3)', 0.02); break;
+        case 'pool': {
+          box(-u, -v, U, Vd, 0.1); F(mg(-u, -v, U, Vd, ML, 0.15)); box(-u + 0.14, -v + 0.14, U - 0.28, Vd - 0.28, 0.06); F('#1f8fb8');
+          if (!BP) { g.save(); box(-u + 0.14, -v + 0.14, U - 0.28, Vd - 0.28, 0.06); g.clip(); g.strokeStyle = 'rgba(255,255,255,.2)'; g.lineWidth = 0.025; for (let t = -v + 0.3; t < v; t += 0.42) { g.beginPath(); for (let s = -u; s <= u; s += 0.2) g.lineTo(s, t + Math.sin(s * 5 + t * 3) * 0.05); g.stroke(); } g.restore(); glow(0, 0, Math.max(U, Vd) * 0.55, '120,220,255', 0.22); }
+          break;
+        }
+        case 'hottub': { const rr = Math.min(u, v); ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, C.wood, 0.25)); ell(0, 0, rr * 0.8); F('#28a7c7'); if (!BP) { for (let i = 0; i < 9; i++) { ell(Math.cos(i * 2.4) * rr * 0.55, Math.sin(i * 2.4) * rr * 0.55, 0.03); F('rgba(255,255,255,.55)'); } glow(0, 0, rr * 1.4, '120,220,255', 0.25); } break; }
+        case 'slats': { box(-u, -v, U, Vd - 0.02, 0.02); F(mg(-u, -v, U, Vd, C.wood, 0.2)); if (mid) for (let t = -u + 0.1; t < u; t += 0.12) { ln(t, -v + 0.02, t, v - 0.04); ST('rgba(0,0,0,.35)', 0.02); } break; }
+        case 'stove': box(-u + 0.05, -v + 0.05, U - 0.1, Vd - 0.1, 0.03); F(mg(-u, -v, U, Vd, MD, 0.3)); ell(0, 0, Math.min(u, v) * 0.55); F('#7a4a30'); glow(0, 0, 0.8, '255,140,70', 0.45); break;
+        case 'washer': { const rr = Math.min(u, v) * 0.58; box(-u + 0.03, -v + 0.02, U - 0.06, Vd - 0.06, 0.03); F(mg(-u, -v, U, Vd, ML, 0.25)); ell(0, 0.02, rr); F(MD); ell(0, 0.02, rr * 0.72); F(C.glass[1]); if (hi && !BP) { ell(-0.05, -0.04, 0.04); F('rgba(255,255,255,.4)'); ell(u - 0.12, -v + 0.09, 0.02); F(C.go); } break; }
+        case 'crib': box(-u + 0.07, -v + 0.07, U - 0.14, Vd - 0.14, 0.04); F(mg(-u, -v, U, Vd, C.wood, 0.2)); box(-u + 0.13, -v + 0.13, U - 0.26, Vd - 0.26, 0.04); F(C.fabric); if (mid) { box(-u + 0.07, -v + 0.07, U - 0.14, Vd - 0.14, 0.04); ST(shade(C.wood, -0.35), 0.03); } break;
+        case 'toybox': box(-u + 0.06, -v + 0.06, U - 0.12, Vd - 0.12, 0.03); F(mg(-u, -v, U, Vd, cr, 0.25)); if (hi && !BP) { ell(-0.06, -0.05, 0.05); F('#d33'); box(0.02, 0, 0.09, 0.09); F('#3a7bd5'); } break;
+        case 'board': box(-u + 0.03, -v + 0.01, U - 0.06, 0.11, 0.01); F('#1d3b2c'); if (hi && !BP) { ln(-u + 0.2, -v + 0.06, u * 0.2, -v + 0.06); ST('rgba(255,255,255,.55)', 0.012); } glow(0, -v + 0.06, U * 0.4, scr, 0.1); break;
+        case 'schooldesk': box(-0.3, -0.38, 0.6, 0.26, 0.03); F(mg(-0.3, -0.38, 0.6, 0.26, C.wood, 0.25)); chair(0, 0.05, 1); break;
+        case 'salon': box(-u + 0.12, -v + 0.01, U - 0.24, 0.06); F(C.glass[0]); box(-u + 0.08, -v + 0.08, U - 0.16, 0.14, 0.02); F(mg(-u, -v, U, 0.2, ML, 0.25)); chair(0, 0.15, 1); break;
+        case 'till': box(-u, -v + 0.02, U, Vd * 0.7, 0.03); F(mg(-u, -v, U, Vd, C.desk, 0.25)); box(-0.13, -v + 0.06, 0.26, 0.12, 0.01); F(C.screen); glow(0, -v + 0.12, 0.45, scr, 0.28); chair(0, v + 0.05, 1); break;
+        case 'oven': box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.06, 0.02); F(mg(-u, -v, U, Vd, M, 0.25)); for (const t of [-0.25, 0.25]) { ell(t * U, -v + 0.17, 0.07); F('#15181b'); } box(-u + 0.1, v - 0.14, U - 0.2, 0.08, 0.01); F('#6b2f1a'); glow(0, v - 0.1, U * 0.4, '255,140,70', 0.28); break;
+        case 'fridge': box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.06, 0.02); F(mg(-u, -v, U, Vd, ML, 0.25)); ln(0, -v + 0.03, 0, v - 0.05); ST('rgba(0,0,0,.4)', 0.02); ell(-0.06, v - 0.12, 0.018); F(MD); ell(0.06, v - 0.12, 0.018); F(MD); glow(0, 0, U * 0.45, '150,215,255', 0.15); break;
+        case 'vat': { const rr = Math.min(u, v) * 0.92; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, '#b5763a', 0.35)); ell(0, 0, rr * 0.72); ST('rgba(0,0,0,.35)', 0.025); ell(0, 0, rr * 0.2); F(MD); if (hi) for (let i = 0; i < 8; i++) { ell(Math.cos(i * TAU / 8) * rr * 0.86, Math.sin(i * TAU / 8) * rr * 0.86, 0.02); F(shade('#b5763a', -0.4)); } break; }
+        case 'barrel': { const rr = Math.min(u, v) * 0.85; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, C.wood, 0.3)); ell(0, 0, rr * 0.7); ST(MD, 0.02); break; }
+        case 'tree': { const rr = Math.min(u, v) * 0.98; if (BP) { ell(0, 0, rr); ST(); ell(0, 0, rr * 0.2); ST(); break; } for (let i = 0; i < 8; i++) { g.save(); g.rotate(i * TAU / 8 + p.v); ell(rr * 0.5, 0, rr * 0.5); F(C.plant[i % 3]); g.restore(); } ell(0, 0, rr * 0.45); F(C.plant[2]); if (mid) for (let i = 0; i < 6; i++) { ell(Math.cos(i * 2.1 + p.v) * rr * 0.6, Math.sin(i * 2.1 + p.v) * rr * 0.6, rr * 0.12); F('rgba(255,255,255,.12)'); } break; }
+        case 'pedestal': box(-u + 0.2, -v + 0.2, U - 0.4, Vd - 0.4, 0.03); F(mg(-u, -v, U, Vd, ML, 0.3)); ell(0, 0, Math.min(u, v) * 0.32); F(C.crate[p.v % 5]); glow(0, 0, 0.8, '255,235,190', 0.32); break;
+        case 'holofloor': if (!BP) { box(-u, -v, U, Vd); g.fillStyle = 'rgba(40,140,190,.14)'; g.fill(); for (let t = -u; t <= u; t += 0.5) { ln(t, -v, t, v); ST(`rgba(${scr},.45)`, 0.015); } for (let t = -v; t <= v; t += 0.5) { ln(-u, t, u, t); ST(`rgba(${scr},.45)`, 0.015); } } break;
+        case 'stairs': { box(-u + 0.03, -v + 0.03, U - 0.06, Vd - 0.06, 0.02); F(mg(-u, -v, U, Vd, MD, 0.2)); const nn = Math.max(4, Math.round(Vd / 0.14)); for (let i = 1; i < nn; i++) { const t = -v + i * Vd / nn; ln(-u + 0.06, t, u - 0.06, t); ST(i % 2 ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.5)', 0.02); } g.beginPath(); g.moveTo(-0.12, 0.05); g.lineTo(0, -0.1); g.lineTo(0.12, 0.05); ST(acc, 0.04); break; }
+        /* --- medicine and science --- */
+        case 'scanner': { const rx = Math.min(u, 0.55) * 0.92; box(-u * 0.5, -v + 0.5, U * 0.5, Vd - 0.6, 0.05); F(mg(-u, -v, U, Vd, ML, 0.2)); ell(0, -v + 0.42, rx, 0.3); F(mg(-rx, -v, rx * 2, 0.8, M, 0.3)); ell(0, -v + 0.42, rx * 0.55, 0.15); F('#0d1720'); glow(0, -v + 0.42, 0.85, scr, 0.32); break; }
+        case 'isocell': box(-u + 0.06, -v + 0.06, U - 0.12, Vd - 0.12, 0.03); F('rgba(150,210,235,.14)'); ST(C.glass[0], 0.04); box(-u + 0.14, -v + 0.14, U - 0.28, 0.9, 0.04); F(mg(-u, -v, U, 1, ML, 0.2)); ell(0, v - 0.22, 0.04); F(C.lock); glow(0, 0, 0.7, '150,235,255', 0.15); break;
+        case 'drawers': { box(-u + 0.01, -v + 0.01, U - 0.02, Vd - 0.04, 0.02); F(mg(-u, -v, U, Vd, ML, 0.2)); if (mid) { const nn = Math.max(2, Math.round(U / 0.25)), wd = (U - 0.06) / nn; for (let i = 0; i < nn; i++) { box(-u + 0.03 + i * wd + 0.01, -v + 0.04, wd - 0.02, Vd - 0.12, 0.01); ST('rgba(0,0,0,.4)', 0.015); ell(-u + 0.03 + (i + 0.5) * wd, v - 0.12, 0.012); F(MD); } } break; }
+        case 'dentchair': box(-0.2, -v + 0.2, 0.4, Vd - 0.3, 0.14); F(mg(-0.2, -v, 0.4, Vd, cl, 0.2)); ell(0, -v + 0.28, 0.13); F(shade(cl, -0.3)); ell(0.34, -v + 0.32, 0.12); F('#fffbe8'); glow(0.34, -v + 0.32, 0.8, '255,250,230', 0.36); break;
+        case 'specimen': { const rr = Math.min(u, v) * 0.82; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, M, 0.3)); ell(0, 0, rr * 0.72); F(['#1d6b52', '#254f86', '#6b2f6b', '#6b5a1d'][p.v % 4]); if (!BP) { ell(0, -rr * 0.1, rr * 0.3, rr * 0.2); F('rgba(235,240,210,.8)'); ell(-rr * 0.25, rr * 0.18, rr * 0.1); F('rgba(235,240,210,.6)'); ell(rr * 0.25, rr * 0.18, rr * 0.1); F('rgba(235,240,210,.6)'); glow(0, 0, rr * 1.6, ['90,255,170', '90,170,255', '230,110,255', '255,225,100'][p.v % 4], 0.3); } break; }
+        case 'centrifuge': { const rr = Math.min(u, v) * 0.85; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, ML, 0.3)); ell(0, 0, rr * 0.68); F(MD); for (let i = 0; i < 6; i++) { g.save(); g.rotate(i * TAU / 6); ell(rr * 0.42, 0, rr * 0.13); F(C.screen); g.restore(); } break; }
+        case 'bigscope': { box(-u * 0.42, -v + 0.3, u * 0.84, Vd - 0.7, 0.1); F(cyl(-u * 0.42, 0, u * 0.84, 1, ML, true)); ell(0, -v + 0.32, u * 0.42, 0.1); F(C.glass[1]); box(-u * 0.5, v - 0.6, u, 0.24, 0.03); F(MD); ell(0, v - 0.2, u * 0.55, 0.16); F(mg(-u, v - 0.4, U, 0.4, MD, 0.3)); break; }
+        case 'planet': { const rr = Math.min(u, v) * 0.82; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, MD, 0.3)); ell(0, 0, rr * 0.7); F('#123a5c'); if (!BP) { ell(-rr * 0.2, -rr * 0.15, rr * 0.25, rr * 0.16); F('rgba(120,220,160,.8)'); ell(rr * 0.25, rr * 0.2, rr * 0.2, rr * 0.12); F('rgba(120,220,160,.65)'); ell(0, 0, rr * 0.95, rr * 0.3); ST(`rgba(${scr},.6)`, 0.02); glow(0, 0, rr * 1.8, scr, 0.34); } break; }
+        case 'rocks': { box(-u + 0.03, -v + 0.03, U - 0.06, Vd - 0.06, 0.02); F(mg(-u, -v, U, Vd, MD, 0.2)); if (mid && !BP) for (let i = 0; i < 7; i++) { const a = (i * 41 + p.v * 13) % 70 / 100 - 0.35, b = (i * 67) % 70 / 100 - 0.35; ell(a * U, b * Vd, 0.06 + (i % 3) * 0.025, 0.05 + (i % 2) * 0.02); F(['#8b8378', '#6f6459', '#a58a64', '#7a7f85'][i % 4]); } break; }
+        case 'glovebox': box(-u + 0.03, -v + 0.03, U - 0.06, Vd - 0.08, 0.03); F(mg(-u, -v, U, Vd, ML, 0.2)); box(-u + 0.09, -v + 0.08, U - 0.18, Vd - 0.26, 0.02); F(C.glass[1]); if (hi && !BP) { ell(-U * 0.2, v - 0.2, 0.05); F('#20262c'); ell(U * 0.2, v - 0.2, 0.05); F('#20262c'); } glow(0, -v + 0.2, U * 0.4, '150,235,255', 0.15); break;
+        case 'probe': { const rr = Math.min(u, v) * 0.6; box(-u + 0.08, -v + 0.08, U - 0.16, Vd - 0.16, 0.03); ST(MD, 0.03); ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, ML, 0.3)); ln(-rr * 1.5, 0, rr * 1.5, 0); ST(M, 0.04); ell(0, -rr * 0.2, rr * 0.3); F(acc); break; }
+        case 'dish': { const rr = Math.min(u, v) * 0.92; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, ML, 0.3)); if (mid) for (const q of [0.72, 0.46]) { ell(0, 0, rr * q); ST('rgba(0,0,0,.3)', 0.015); } for (let i = 0; i < 3; i++) { g.save(); g.rotate(i * TAU / 3); ln(0, 0, 0, -rr * 0.8); ST(MD, 0.03); g.restore(); } ell(0, 0, rr * 0.12); F(acc); break; }
+        case 'core': { const rr = Math.min(u, v) * 0.92; for (let i = 0; i < 8; i++) { g.save(); g.rotate(i * TAU / 8); box(-rr * 0.2, -rr, rr * 0.4, rr * 0.4, 0.02); F(mg(-rr * 0.2, -rr, rr * 0.4, rr * 0.4, '#202429', 0.3)); if (hi) { ell(0, -rr * 0.85, 0.02); F([C.go, C.screen, acc][i % 3]); } g.restore(); } ell(0, 0, rr * 0.42); F(mg(-rr, -rr, rr, rr, M, 0.3)); ell(0, 0, rr * 0.26); F(C.screen); glow(0, 0, rr * 1.5, scr, 0.42); break; }
+        case 'maptable': { for (let t = -u + 0.35; t < u - 0.2; t += 0.5) { chair(t, -v + 0.12, -1); chair(t, v - 0.12, 1); } box(-u + 0.12, -v + 0.28, U - 0.24, Vd - 0.56, 0.05); F(mg(-u, -v, U, Vd, MD, 0.3)); box(-u + 0.2, -v + 0.36, U - 0.4, Vd - 0.72, 0.02); F('#0a1420'); if (!BP) { for (let t = -u + 0.35; t < u - 0.2; t += 0.3) { ln(t, -v + 0.36, t, v - 0.36); ST(`rgba(${scr},.4)`, 0.01); } ell(U * 0.12, 0, 0.1); ST(acc, 0.02); glow(0, 0, Math.max(U, Vd) * 0.5, scr, 0.34); } break; }
+        case 'conftable': { for (let t = -u + 0.35; t < u - 0.2; t += 0.5) { chair(t, -v + 0.12, -1); chair(t, v - 0.12, 1); } box(-u + 0.12, -v + 0.28, U - 0.24, Vd - 0.56, 0.1); F(mg(-u, -v, U, Vd, C.wood, 0.3)); break; }
+        case 'safe': { box(-u + 0.04, -v + 0.03, U - 0.08, Vd - 0.08, 0.04); F(mg(-u, -v, U, Vd, MD, 0.3)); const rr = Math.min(u, v) * 0.55; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, ML, 0.3)); for (let i = 0; i < 4; i++) { g.save(); g.rotate(i * Math.PI / 2 + 0.4); ln(0, 0, rr * 0.75, 0); ST(MD, 0.04); g.restore(); } ell(0, 0, rr * 0.2); F(acc); break; }
+        /* --- machinery --- */
+        case 'battery': { box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.06, 0.02); F(mg(-u, -v, U, Vd, '#20262b', 0.3)); if (mid) { const nn = Math.max(2, Math.round(U / 0.2)); for (let i = 0; i < nn; i++) { box(-u + 0.05 + i * (U - 0.1) / nn, -v + 0.05, (U - 0.1) / nn - 0.02, Vd - 0.2, 0.01); F(mg(0, -v, 0.2, Vd, M, 0.25)); box(-u + 0.05 + i * (U - 0.1) / nn, v - 0.13, (U - 0.1) / nn - 0.02, 0.03); F(i % 5 === p.v % 5 ? acc : C.go); } } glow(0, v - 0.1, U * 0.4, '90,255,140', 0.12); break; }
+        case 'capacitor': { const rr = Math.min(u, v) * 0.82; ell(0, 0, rr); F(cyl(-rr, -rr, rr * 2, rr * 2, M, true)); if (mid) for (const q of [0.78, 0.56]) { ell(0, 0, rr * q); ST(acc, 0.03); } ell(0, 0, rr * 0.3); F(C.screen); glow(0, 0, rr * 1.2, scr, 0.25); break; }
+        case 'pipes': { for (let i = 0; i < 3; i++) { const t = -v + 0.08 + i * (Vd - 0.16) / 2.2; ln(-u, t, u, t); ST(i % 2 ? '#5a7f96' : M, 0.09); if (mid && !BP) { ln(-u, t - 0.015, u, t - 0.015); ST('rgba(255,255,255,.25)', 0.015); } } if (mid) for (let x2 = -u + 0.3; x2 < u; x2 += 0.7) { ell(x2, -v + 0.25, 0.07); F(C.lock); } break; }
+        case 'pump': { const rr = Math.min(u, v) * 0.72; ln(-u, 0, u, 0); ST(M, 0.12); ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, '#3f6d86', 0.3)); ell(0, 0, rr * 0.42); F(MD); if (mid) for (let i = 0; i < 6; i++) { g.save(); g.rotate(i * TAU / 6); ln(rr * 0.5, 0, rr * 0.85, 0); ST('rgba(0,0,0,.4)', 0.03); g.restore(); } break; }
+        case 'gravcoil': { const rr = Math.min(u, v) * 0.95; ell(0, 0, rr); ST(MD, 0.22); if (!BP) { ell(0, 0, rr); ST('#8e6bff', 0.07); } if (mid) for (let i = 0; i < 12; i++) { g.save(); g.rotate(i * TAU / 12); box(-0.07, -rr - 0.14, 0.14, 0.28, 0.02); F(mg(-0.07, -rr, 0.14, 0.28, M, 0.3)); g.restore(); } ell(0, 0, rr * 0.3); F(mg(-rr, -rr, rr, rr, MD, 0.3)); ell(0, 0, rr * 0.15); F('#c4b0ff'); glow(0, 0, rr * 1.5, '142,107,255', 0.42); break; }
+        case 'jump': { const rr = Math.min(u, v) * 0.95; for (let i = 0; i < 6; i++) { g.save(); g.rotate(i * TAU / 6); box(-rr * 0.16, -rr, rr * 0.32, rr * 0.48, 0.03); F(mg(-rr * 0.16, -rr, rr * 0.32, rr * 0.48, M, 0.35)); box(-rr * 0.06, -rr * 0.95, rr * 0.12, rr * 0.38); F('#e25bff'); g.restore(); } ell(0, 0, rr * 0.45); F('#14081c'); if (!BP) { const gr = g.createRadialGradient(0, 0, 0, 0, 0, rr * 0.45); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.35, '#e25bff'); gr.addColorStop(1, 'rgba(60,10,90,1)'); ell(0, 0, rr * 0.42); g.fillStyle = gr; g.fill(); glow(0, 0, rr * 2.2, '226,91,255', 0.5); } break; }
+        case 'shieldgen': { const rr = Math.min(u, v) * 0.92; ell(0, 0, rr); ST(M, 0.16); for (let i = 0; i < 3; i++) { g.save(); g.rotate(i * TAU / 3 + 0.5); box(-0.08, -rr - 0.05, 0.16, rr * 0.5, 0.02); F(mg(-0.08, -rr, 0.16, rr * 0.5, MD, 0.3)); g.restore(); } if (!BP) { const gr = g.createRadialGradient(-rr * 0.1, -rr * 0.15, 0, 0, 0, rr * 0.55); gr.addColorStop(0, '#ecfbff'); gr.addColorStop(0.5, '#6cc7ff'); gr.addColorStop(1, 'rgba(20,70,150,.9)'); ell(0, 0, rr * 0.52); g.fillStyle = gr; g.fill(); glow(0, 0, rr * 2, '108,199,255', 0.48); } else { ell(0, 0, rr * 0.52); ST(); } break; }
+        case 'elec': { box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.08, 0.02); F(mg(-u, -v, U, Vd, M, 0.25)); if (mid) { const nn = Math.max(2, Math.round(U / 0.34)); for (let i = 0; i < nn; i++) { const xx = -u + (i + 0.5) * U / nn; box(xx - 0.09, -v + 0.06, 0.18, Vd - 0.2, 0.01); ST('rgba(0,0,0,.45)', 0.015); ell(xx, -v + 0.12, 0.02); F(i % 2 ? acc : C.go); } } ell(u - 0.1, v - 0.12, 0.02); F(C.lock); break; }
+        case 'printer': { box(-u + 0.05, -v + 0.05, U - 0.1, Vd - 0.1, 0.04); F(mg(-u, -v, U, Vd, MD, 0.3)); box(-u + 0.15, -v + 0.15, U - 0.3, Vd - 0.3, 0.02); F('#0a1014'); if (!BP) { box(-u * 0.5, -v * 0.3, u, v * 0.8, 0.01); F('rgba(255,160,70,.75)'); ln(-u + 0.15, -v * 0.3, u - 0.15, -v * 0.3); ST(ML, 0.05); glow(0, 0, Math.min(U, Vd) * 0.55, '255,160,70', 0.28); } break; }
+        case 'lathe': { box(-u + 0.02, -v + 0.03, U - 0.04, Vd - 0.08, 0.02); F(mg(-u, -v, U, Vd, '#3f5a68', 0.3)); ln(-u + 0.1, -v + Vd * 0.42, u - 0.1, -v + Vd * 0.42); ST(ML, 0.05); box(-u + 0.06, -v + 0.06, 0.3, Vd - 0.16, 0.02); F(MD); box(u - 0.2, -v + 0.1, 0.14, Vd - 0.24, 0.01); F(M); break; }
+        case 'furnace': { const rr = Math.min(u, v) * 0.92; box(-rr, -rr, rr * 2, rr * 2, 0.08); F(mg(-rr, -rr, rr * 2, rr * 2, MD, 0.35)); ell(0, 0, rr * 0.7); F('#2a1208'); if (!BP) { const gr = g.createRadialGradient(0, 0, 0, 0, 0, rr * 0.62); gr.addColorStop(0, '#fff3c4'); gr.addColorStop(0.45, '#ff9a3c'); gr.addColorStop(1, '#a32a0a'); ell(0, 0, rr * 0.62); g.fillStyle = gr; g.fill(); glow(0, 0, rr * 2.1, '255,150,70', 0.5); } break; }
+        case 'orebin': { box(-u + 0.05, -v + 0.05, U - 0.1, Vd - 0.1, 0.03); F(mg(-u, -v, U, Vd, MD, 0.3)); box(-u + 0.13, -v + 0.13, U - 0.26, Vd - 0.26, 0.02); F('#1c1a18'); if (mid && !BP) for (let i = 0; i < 16; i++) { const a = (i * 37 + p.v * 17) % 80 / 100 - 0.4, b = (i * 59) % 80 / 100 - 0.4; ell(a * (U - 0.3), b * (Vd - 0.3), 0.05 + (i % 3) * 0.022); F(['#8c7a64', '#6f6256', '#b08a4a', '#7a7f85'][i % 4]); } break; }
+        case 'belt': { box(-u, -v + 0.05, U, Vd - 0.1, 0.02); F(mg(-u, -v, U, Vd, '#20252a', 0.2)); if (mid) for (let t = -u + 0.1; t < u; t += 0.18) { ln(t, -v + 0.06, t, v - 0.06); ST('rgba(255,255,255,.12)', 0.02); } box(-u, -v + 0.05, U, 0.04); F(acc); box(-u, v - 0.09, U, 0.04); F(acc); if (hi && !BP) for (let t = -u + 0.4; t < u - 0.2; t += 0.9) { box(t - 0.12, -0.12, 0.24, 0.24, 0.02); F(C.crate[Math.round(t * 3 + 9) % 5]); } break; }
+        case 'crane': { box(-u, -0.07, U, 0.14); F(BP ? null : acc); if (mid && !BP) for (let t = -u; t < u; t += 0.25) { ln(t, -0.07, t + 0.12, 0.07); ST('rgba(0,0,0,.55)', 0.018); } box(-0.16, -0.16, 0.32, 0.32, 0.02); F(mg(-0.16, -0.16, 0.32, 0.32, MD, 0.3)); ell(0, 0, 0.06); F(ML); break; }
+        case 'drill': { const rr = Math.min(u, v) * 0.95; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, MD, 0.35)); for (let i = 0; i < 8; i++) { g.save(); g.rotate(i * TAU / 8 + p.v * 0.3); g.beginPath(); g.moveTo(-rr * 0.12, -rr * 0.3); g.lineTo(0, -rr * 0.95); g.lineTo(rr * 0.12, -rr * 0.3); g.closePath(); F(mg(-0.1, -rr, 0.2, rr, acc, 0.25)); g.restore(); } ell(0, 0, rr * 0.3); F(M); ell(0, 0, rr * 0.12); F(MD); break; }
+        case 'tractor': { const rr = Math.min(u, v) * 0.92; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, MD, 0.3)); for (const q of [0.78, 0.56, 0.34]) { ell(0, 0, rr * q); ST(BP ? null : `rgba(120,255,225,.8)`, 0.03); } if (!BP) glow(0, 0, rr * 1.9, '120,255,225', 0.42); break; }
+        case 'longtank': { const lng = U >= Vd; box(-u + 0.03, -v + 0.03, U - 0.06, Vd - 0.06, Math.min(U, Vd) * 0.42); F(cyl(-u, -v, U, Vd, ['#a2382e', '#b39b38', '#4a6886', '#68793c'][p.v % 4], !lng)); if (mid) for (let t = -0.4; t <= 0.4; t += 0.4) { if (lng) { ln(t * U, -v + 0.05, t * U, v - 0.05); } else { ln(-u + 0.05, t * Vd, u - 0.05, t * Vd); } ST('rgba(0,0,0,.3)', 0.03); } break; }
+        /* --- weapons and craft --- */
+        case 'turret': { const rr = Math.min(u, v) * 0.72; for (const s2 of [-0.11, 0.11]) { box(s2 - 0.04, -v - 0.75, 0.08, v + 0.75, 0.01); F(cyl(s2 - 0.04, 0, 0.08, 1, MD, true)); } ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, M, 0.35)); ell(0, 0, rr * 0.55); F(MD); chair(0, 0.05, 1); break; }
+        case 'hullgun': { const rr = Math.min(u, v) * 0.75; for (const s2 of [-0.12, 0.12]) { box(s2 - 0.05, -v - 0.5, 0.1, v + 0.5, 0.01); F(cyl(s2 - 0.05, 0, 0.1, 1, MD, true)); } ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, M, 0.35)); box(-rr * 0.55, -rr * 0.3, rr * 1.1, rr * 0.8, 0.06); F(mg(-rr, -rr, rr * 2, rr * 2, MD, 0.3)); if (hi) { ell(0, 0.05, 0.04); F(C.lock); } break; }
+        case 'railgun': { for (const s2 of [-0.22, 0.22]) { box(s2 - 0.07, -v - 0.6, 0.14, Vd * 0.86 + 0.6, 0.02); F(cyl(s2 - 0.07, 0, 0.14, 1, M, true)); } if (mid) for (let t = -v; t < v * 0.6; t += 0.5) { box(-0.3, t, 0.6, 0.08); F(MD); } box(-0.13, -v, 0.26, Vd * 0.82); F('#0b0f13'); if (!BP) { box(-0.03, -v, 0.06, Vd * 0.82); F(C.screen); glow(0, -v + Vd * 0.4, 1.1, scr, 0.28); } box(-u + 0.1, v - 0.7, U - 0.2, 0.6, 0.05); F(mg(-u, v - 0.7, U, 0.6, MD, 0.3)); break; }
+        case 'lance': { box(-0.3, -v - 0.3, 0.6, Vd * 0.86 + 0.3, 0.08); F(cyl(-0.3, 0, 0.6, 1, MD, true)); if (mid) for (let t = -v; t < v * 0.6; t += 0.4) { ell(0, t, 0.26, 0.06); ST(acc, 0.03); } if (!BP) { box(-0.05, -v - 0.25, 0.1, Vd * 0.84); F('#ffe9e0'); glow(0, -v, 1.2, '255,120,90', 0.45); glow(0, 0, 1.1, '255,120,90', 0.2); } const rr = Math.min(0.55, u - 0.1); ell(0, v - rr - 0.05, rr); F(mg(-rr, v - rr * 2, rr * 2, rr * 2, M, 0.3)); ell(0, v - rr - 0.05, rr * 0.5); F('#ffd0c4'); break; }
+        case 'missile': { box(-u + 0.02, -v, U - 0.04, Vd - 0.06, 0.02); F(mg(-u, -v, U, Vd, MD, 0.3)); box(-0.12, -v - 0.05, 0.24, Vd - 0.2, 0.1); F(cyl(-0.12, 0, 0.24, 1, ML, true)); g.beginPath(); g.moveTo(-0.12, -v + 0.12); g.lineTo(0, -v - 0.18); g.lineTo(0.12, -v + 0.12); g.closePath(); F(C.lock); box(-0.17, v - 0.3, 0.34, 0.08); F(M); break; }
+        case 'torpedo': { box(-u + 0.04, -v, U - 0.08, Vd - 0.04, 0.06); F(mg(-u, -v, U, Vd, MD, 0.25)); box(-u + 0.16, -v + 0.05, U - 0.32, Vd - 0.34, 0.2); F(cyl(-u + 0.16, 0, U - 0.32, 1, ML, true)); box(-u + 0.16, -v + 0.05, U - 0.32, 0.3, 0.14); F(C.lock); box(-u + 0.16, v - 0.45, U - 0.32, 0.05); F(acc); ell(0, v - 0.16, 0.05); F(C.go); break; }
+        case 'shells': { box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.06, 0.02); F(mg(-u, -v, U, Vd, MD, 0.3)); if (mid) { const nn = Math.max(2, Math.round(U / 0.16)); for (let i = 0; i < nn; i++) { ell(-u + (i + 0.5) * U / nn, 0, 0.065); F(mg(-0.065, -0.065, 0.13, 0.13, '#c9a33a', 0.3)); ell(-u + (i + 0.5) * U / nn, 0, 0.022); F(C.lock); } } break; }
+        case 'pdc': { const rr = Math.min(u, v) * 0.6; for (const s2 of [-0.06, 0, 0.06]) { box(s2 - 0.018, -v - 0.45, 0.036, v + 0.45); F(MD); } ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, M, 0.35)); box(-rr * 0.45, -rr * 0.45, rr * 0.9, rr * 0.9, 0.03); F(MD); break; }
+        case 'droppod': { const rr = Math.min(u, v) * 0.85; for (let i = 0; i < 4; i++) { g.save(); g.rotate(i * Math.PI / 2 + Math.PI / 4); box(-0.05, -rr - 0.1, 0.1, 0.3); F(MD); g.restore(); } ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, BP ? '#fff' : '#b8682e', 0.35)); ell(0, 0, rr * 0.62); ST('rgba(0,0,0,.45)', 0.025); ell(0, 0, rr * 0.3); F(C.glass[1]); break; }
+        case 'target': box(-0.04, -v + 0.02, 0.08, Vd * 0.3); F(MD); ell(0, 0, Math.min(u, v) * 0.72); F('#efe7d6'); ell(0, 0, Math.min(u, v) * 0.48); F('#c33'); ell(0, 0, Math.min(u, v) * 0.24); F('#efe7d6'); break;
+        case 'mech': {
+          box(-u + 0.04, -v + 0.05, U - 0.08, Vd - 0.1, 0.03); ST(acc, 0.03);
+          const c0 = BP ? '#fff' : (['#6d7f6a', '#7f6d5e', '#5e6f7f', '#7a7a70'][p.v % 4]);
+          for (const s2 of [-1, 1]) { box(s2 * 0.42 - 0.13, -0.36, 0.26, 0.5, 0.05); F(mg(-0.13, -0.36, 0.26, 0.5, c0, 0.3)); box(s2 * 0.24 - 0.09, 0.2, 0.18, 0.5, 0.05); F(shade(c0, -0.2)); }
+          box(-0.3, -0.42, 0.6, 0.62, 0.1); F(mg(-0.3, -0.42, 0.6, 0.62, c0, 0.35)); ell(0, -0.2, 0.15, 0.1); F(C.glass[1]); break;
+        }
+        case 'drone': { const a = Math.min(u, v) * 0.72; for (const [x2, y2] of [[-a, -a], [a, -a], [-a, a], [a, a]]) { ln(0, 0, x2, y2); ST(M, 0.05); ell(x2, y2, a * 0.42); F('rgba(30,34,38,.85)'); ell(x2, y2, a * 0.42); ST(M, 0.018); } box(-a * 0.42, -a * 0.42, a * 0.84, a * 0.84, 0.05); F(mg(-a, -a, a * 2, a * 2, MD, 0.35)); ell(0, 0, 0.03); F(C.lock); glow(0, 0, 0.3, '255,90,70', 0.35); break; }
+        case 'fighter': {
+          g.beginPath(); g.moveTo(0, -v + 0.05); g.lineTo(u * 0.22, -v + Vd * 0.42); g.lineTo(u * 0.95, v - 0.35); g.lineTo(u * 0.95, v - 0.12); g.lineTo(u * 0.25, v - 0.28); g.lineTo(u * 0.2, v - 0.08); g.lineTo(-u * 0.2, v - 0.08); g.lineTo(-u * 0.25, v - 0.28); g.lineTo(-u * 0.95, v - 0.12); g.lineTo(-u * 0.95, v - 0.35); g.lineTo(-u * 0.22, -v + Vd * 0.42); g.closePath();
+          F(mg(-u, -v, U, Vd, BP ? '#fff' : (G.look === 'sleek' ? '#e8ecef' : '#8e959b'), 0.32)); ST('rgba(0,0,0,.55)', 0.02); ell(0, -v + Vd * 0.32, u * 0.11, Vd * 0.09); F(C.glass[1]); glow(0, v - 0.08, 0.3, '255,170,90', 0.3); break;
+        }
+        case 'rover': { for (const s2 of [-1, 1]) for (const t of [-0.28, 0, 0.28]) { box(s2 * (u - 0.14) - 0.1, t * Vd - 0.14, 0.2, 0.28, 0.05); F('#16181a'); } box(-u + 0.2, -v + 0.1, U - 0.4, Vd - 0.2, 0.08); F(mg(-u, -v, U, Vd, BP ? '#fff' : (['#a68a4a', '#6d7f6a', '#b45a35', '#7a7f85'][p.v % 4]), 0.3)); box(-u + 0.28, -v + 0.2, U - 0.56, Vd * 0.24, 0.05); F(C.glass[1]); if (hi && !BP) { ell(-0.1, 0.25, 0.05); F(MD); ell(0.15, 0.3, 0.04); F(acc); } break; }
+        case 'loader': { for (const s2 of [-1, 1]) { box(s2 * (u - 0.12) - 0.08, -v * 0.4, 0.16, 0.2, 0.03); F('#16181a'); box(s2 * (u - 0.12) - 0.08, v * 0.4, 0.16, 0.2, 0.03); F('#16181a'); box(s2 * 0.2 - 0.03, -v, 0.06, Vd * 0.42); F(ML); } box(-u + 0.18, -v + Vd * 0.3, U - 0.36, Vd * 0.6, 0.05); F(mg(-u, -v, U, Vd, acc, 0.3)); box(-u + 0.26, -v + Vd * 0.42, U - 0.52, Vd * 0.26, 0.03); F(C.glass[1]); break; }
+        case 'ramp': { box(-u, -v, U, Vd, 0.02); F('rgba(0,0,0,.2)'); if (!BP) for (let t = -v + 0.4; t < v - 0.2; t += 0.65) { g.beginPath(); g.moveTo(-u * 0.5, t + 0.2); g.lineTo(0, t - 0.1); g.lineTo(u * 0.5, t + 0.2); ST(acc, 0.08); } break; }
+        /* --- the colony --- */
+        case 'crops': if (!BP) { box(-u + 0.02, -v + 0.05, U - 0.04, Vd - 0.1, 0.02); F('rgba(30,22,14,.5)'); if (mid) for (let t = -u + 0.1; t < u - 0.04; t += 0.17) for (let i = 0; i < 3; i++) { ell(t + (i - 1) * 0.04, (i - 1) * 0.1, 0.055 + (i % 2) * 0.02); F(C.plant[(i + Math.round(t * 11) + 30) % 3]); } } else { box(-u + 0.02, -v + 0.05, U - 0.04, Vd - 0.1); ST(); } break;
+        case 'pen': { box(-u + 0.05, -v + 0.05, U - 0.1, Vd - 0.1, 0.02); F('rgba(176,146,78,.55)'); ST(C.wood, 0.05); if (mid && !BP) for (let i = 0; i < 4; i++) { const a = ((i * 37 + p.v * 19) % 60) / 100 - 0.3, b = ((i * 73 + p.v * 11) % 60) / 100 - 0.3, c0 = ['#d9c7a8', '#8b6b4a', '#efeae0', '#5b4a3a'][(i + p.v) % 4]; ell(a * U, b * Vd, 0.2, 0.12); F(c0); ell(a * U + 0.2, b * Vd - 0.03, 0.07); F(shade(c0, -0.2)); } break; }
+        case 'aquatank': { box(-u + 0.03, -v + 0.03, U - 0.06, Vd - 0.06, 0.06); F(mg(-u, -v, U, Vd, ML, 0.2)); box(-u + 0.1, -v + 0.1, U - 0.2, Vd - 0.2, 0.04); F('#1a6f8f'); if (mid && !BP) for (let i = 0; i < 7; i++) { const a = ((i * 41 + p.v * 7) % 70) / 100 - 0.35, b = ((i * 67) % 70) / 100 - 0.35; ell(a * U, b * Vd, 0.06, 0.025); F(i % 3 ? '#e8e0c8' : '#e88b4a'); } glow(0, 0, Math.max(U, Vd) * 0.5, '120,220,255', 0.2); break; }
+        case 'embryo': { box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.06, 0.02); F(mg(-u, -v, U, Vd, ML, 0.2)); if (mid) { const nn = Math.max(2, Math.round(U / 0.14)); for (let i = 0; i < nn; i++) { ell(-u + (i + 0.5) * U / nn, 0, 0.05); F(i % 4 === p.v % 4 ? acc : '#7ff0c0'); } } glow(0, 0, U * 0.45, '127,240,192', 0.2); break; }
+        case 'terraform': { const rr = Math.min(u, v) * 0.95; box(-rr, -rr, rr * 2, rr * 2, 0.1); F(mg(-rr, -rr, rr * 2, rr * 2, MD, 0.3)); for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { ell(a * rr * 0.62, b * rr * 0.62, rr * 0.28); F(cyl(-rr * 0.3, -rr * 0.3, rr * 0.6, rr * 0.6, M, true)); } ell(0, 0, rr * 0.45); F('#123326'); if (!BP) { ell(0, 0, rr * 0.34); F('#58e29a'); glow(0, 0, rr * 1.7, '88,226,154', 0.42); } break; }
+        case 'prefab': { for (let i = 3; i >= 0; i--) { box(-u + 0.05 + i * 0.03, -v + 0.05 + i * 0.03, U - 0.14, Vd - 0.14, 0.01); F(mg(-u, -v, U, Vd, i % 2 ? ML : M, 0.2)); ST('rgba(0,0,0,.35)', 0.012); } break; }
+        /* --- on the hull --- */
+        case 'solarpanel': { box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.04); F('#12233f'); if (mid) { for (let t = -u + 0.25; t < u; t += 0.5) { ln(t, -v + 0.02, t, v - 0.02); ST(BP ? null : 'rgba(150,190,240,.45)', 0.015); } for (let t = -v + 0.25; t < v; t += 0.5) { ln(-u + 0.02, t, u - 0.02, t); ST(BP ? null : 'rgba(150,190,240,.45)', 0.015); } } if (!BP) { const gr = g.createLinearGradient(-u, -v, u, v); gr.addColorStop(0, 'rgba(180,220,255,.2)'); gr.addColorStop(0.5, 'rgba(180,220,255,0)'); gr.addColorStop(1, 'rgba(180,220,255,.12)'); box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.04); g.fillStyle = gr; g.fill(); } box(-u + 0.02, -v + 0.02, U - 0.04, Vd - 0.04); ST(M, 0.04); break; }
+        case 'radiator': { box(-u + 0.03, -v + 0.03, U - 0.06, Vd - 0.06); F('#2a2d30'); if (mid) { const lng = Vd >= U; if (lng) for (let t = -v + 0.12; t < v; t += 0.16) { ln(-u + 0.05, t, u - 0.05, t); ST(BP ? null : '#b5582e', 0.06); } else for (let t = -u + 0.12; t < u; t += 0.16) { ln(t, -v + 0.05, t, v - 0.05); ST(BP ? null : '#b5582e', 0.06); } } box(-u + 0.03, -v + 0.03, U - 0.06, Vd - 0.06); ST(M, 0.04); glow(0, 0, Math.max(U, Vd) * 0.5, '255,120,60', 0.14); break; }
+        case 'antenna': { const lng = Vd >= U; if (lng) { ln(0, -v + 0.05, 0, v); ST(ML, 0.05); if (mid) for (let t = -v + 0.25; t < v - 0.1; t += 0.4) { ln(-0.14, t, 0.14, t); ST(M, 0.025); } ell(0, -v + 0.05, 0.05); F(C.lock); glow(0, -v + 0.05, 0.3, '255,70,60', 0.5); } else { ln(-u, 0, u - 0.05, 0); ST(ML, 0.05); if (mid) for (let t = -u + 0.1; t < u - 0.25; t += 0.4) { ln(t, -0.14, t, 0.14); ST(M, 0.025); } ell(u - 0.05, 0, 0.05); F(C.lock); glow(u - 0.05, 0, 0.3, '255,70,60', 0.5); } break; }
+        case 'rib': if (mid) { const lng = U >= Vd; g.save(); box(-u, -v, U, Vd); g.clip(); if (lng) for (let t = -u + 0.5; t < u; t += 1) { ln(t, -v, t + Vd * 0.3, v); ST('rgba(0,0,0,.32)', 0.05); } else for (let t = -v + 0.5; t < v; t += 1) { ln(-u, t, u, t + U * 0.3); ST('rgba(0,0,0,.32)', 0.05); } g.restore(); } break;
+        case 'strut': { const lng = Vd >= U; if (lng) { box(-u * 0.45, -v, u * 0.9, Vd); F(mg(-u, -v, U, Vd, M, 0.25)); if (mid) for (let t = -v + 0.2; t < v; t += 0.5) { ln(-u * 0.45, t, u * 0.45, t + 0.25); ST('rgba(0,0,0,.4)', 0.03); } } else { box(-u, -v * 0.45, U, v * 0.9); F(mg(-u, -v, U, Vd, M, 0.25)); if (mid) for (let t = -u + 0.2; t < u; t += 0.5) { ln(t, -v * 0.45, t + 0.25, v * 0.45); ST('rgba(0,0,0,.4)', 0.03); } } break; }
+        case 'armour': if (!BP) { if (mid) { for (let t = -u + 0.5; t < u; t += 1) { ln(t, -v, t, v); ST('rgba(0,0,0,.45)', 0.03); } for (let t = -v + 0.5; t < v; t += 1) { ln(-u, t, u, t); ST('rgba(0,0,0,.45)', 0.03); } } } else { box(-u + 0.04, -v + 0.04, U - 0.08, Vd - 0.08); ST(); } break;
+        case 'rcs': { const rr = Math.min(u, v) * 0.62; box(-u + 0.06, -v + 0.06, U - 0.12, Vd - 0.12, 0.04); F(mg(-u, -v, U, Vd, MD, 0.3)); ell(0, 0, rr); F(M); ell(0, 0, rr * 0.6); F('#14100e'); glow(0, 0, rr * 1.2, '255,170,100', 0.18); break; }
+        case 'gear': { const rr = Math.min(u, v) * 0.8; box(-rr, -rr * 0.3, rr * 2, rr * 0.6, 0.03); F(mg(-rr, -rr * 0.3, rr * 2, rr * 0.6, MD, 0.3)); box(-rr * 0.3, -rr, rr * 0.6, rr * 2, 0.03); F(mg(-rr * 0.3, -rr, rr * 0.6, rr * 2, MD, 0.3)); ell(0, 0, rr * 0.5); F(mg(-rr, -rr, rr * 2, rr * 2, M, 0.3)); ell(0, 0, rr * 0.2); F(acc); break; }
+        case 'collar': { const rr = Math.min(u, v) * 0.95; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, M, 0.35)); ell(0, 0, rr * 0.7); F(MD); if (!BP) { ell(0, 0, rr * 0.82); g.strokeStyle = tf('hazard'); g.lineWidth = rr * 0.16; g.stroke(); } ell(0, 0, rr * 0.28); F(mg(-rr, -rr, rr, rr, ML, 0.3)); for (let i = 0; i < 8; i++) { ell(Math.cos(i * TAU / 8) * rr * 0.52, Math.sin(i * TAU / 8) * rr * 0.52, 0.03); F(ML); } break; }
+        case 'cargopod': { box(-u + 0.04, -v + 0.05, U - 0.08, Vd - 0.1, 0.05); F(mg(-u, -v, U, Vd, cr, 0.3)); if (mid) { const lng = Vd >= U; if (lng) for (let t = -v + 0.4; t < v; t += 0.8) { ln(-u + 0.05, t, u - 0.05, t); ST('rgba(0,0,0,.4)', 0.03); } else for (let t = -u + 0.4; t < u; t += 0.8) { ln(t, -v + 0.05, t, v - 0.05); ST('rgba(0,0,0,.4)', 0.03); } } break; }
+        case 'fuelpod': { box(-u + 0.04, -v + 0.03, U - 0.08, Vd - 0.06, Math.min(U, Vd) * 0.46); F(cyl(-u, -v, U, Vd, BP ? '#fff' : '#a2382e', Vd >= U)); if (mid) for (const t of [-0.3, 0.3]) { if (Vd >= U) ln(-u + 0.04, t * Vd, u - 0.04, t * Vd); else ln(t * U, -v + 0.04, t * U, v - 0.04); ST('rgba(0,0,0,.35)', 0.03); } break; }
         case 'escpod': { const rr = Math.min(u, v) * 0.85; ell(0, 0, rr); F(mg(-rr, -rr, rr * 2, rr * 2, BP ? '#fff' : '#d0782e', 0.3)); ell(0, 0, rr * 0.55); F(mg(-rr, -rr, rr, rr, MD, 0.2)); ell(0, 0, rr * 0.3); F(BP ? null : C.glass[1]); if (!BP) { ell(0, 0, rr * 1.02); g.strokeStyle = tf('hazard'); g.lineWidth = 0.08; g.stroke(); } break; }
       }
       g.restore();
@@ -9700,7 +10106,7 @@ const LocalMaps = (() => {
       const Lk = LOOKS[G.look] || LOOKS.industrial, keyed = (extras.deck && extras.deck.rooms) || {}, fs = extras.fs || clamp(k * 0.3, 11, 13.5);
       if ((k > 5 || extras.fs) && !extras.noNames) {
         for (const o of G.rooms) {
-          if (!o || (o.type === 'lift' && k < 40)) continue;
+          if (!o || (o.type === 'lift' && k < 40) || (STRUCT.has(o.type) && !(keyed[o.id] && keyed[o.id].name))) continue;
           const own = keyed[o.id] && keyed[o.id].name, full = (own || o.label).toUpperCase(), short = own ? full : RT[o.type][0].toUpperCase(), room = o.R.w * k * 0.96 + (own ? 40 : 0);
           let t = null, f = fs;
           for (const [c, s] of [[full, fs], [short, fs], [short, fs * 0.88]]) {
@@ -9893,7 +10299,7 @@ const LocalMaps = (() => {
   function hic(name, size = 22) { const s = document.createElement('span'); s.className = 'hic'; s.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="${HUD_ICONS[name] || ''}"/></svg>`; return s; }
   const hudBtn = (ic, word, fn, o = {}) => h('button', { class: 'hud-btn cut' + (o.pri ? ' pri' : '') + (o.on ? ' on' : '') + (o.dgr ? ' dgr' : '') + (word ? '' : ' sq'), onclick: fn, disabled: o.off || null, title: o.title || word, 'aria-label': o.title || word }, ic ? hic(ic, o.size || 19) : null, word || null);
   const TOOLS = [['add', 'Add', 'add'], ['move', 'Select', 'select'], ['doors', 'Doors', 'door'], ['windows', 'Windows', 'window'], ['paint', 'Paint', 'paint']];
-  const CATS = [['Recent', 'Recent', 'clock'], ['Whole ships', 'Hulls', 'hull'], ['Sections', 'Sections', 'sections'], ['Corridors', 'Corridors', 'corridors'], ['Command', 'Command', 'command'], ['Living', 'Living', 'bed'], ['Working', 'Working', 'crate'], ['Engines', 'Engines', 'flame']];
+  const CATS = [['Recent', 'Recent', 'clock'], ['Whole ships', 'Hulls', 'hull'], ['Sections', 'Sections', 'sections'], ['Corridors', 'Corridors', 'corridors'], ['Command', 'Command', 'command'], ['Crew', 'Crew', 'bed'], ['Food', 'Food', 'crate'], ['Social', 'Social', 'crew'], ['Medical', 'Medical', 'plus'], ['Science', 'Science', 'gem'], ['Cargo', 'Cargo', 'crate'], ['Hangars', 'Hangars', 'hull'], ['Engineering', 'Engineering', 'wrench'], ['Drives', 'Drives', 'flame'], ['Weapons', 'Weapons', 'hostile'], ['Colony', 'Colony', 'mark'], ['Industry', 'Industry', 'wrench'], ['Structure', 'Structure', 'box']];
   const SHIP_MARK = { npc: ['crew', 'Crew', '92,207,230'], loot: ['crate', 'Cargo', '227,193,92'], trap: ['hazard', 'Hazard', '242,169,59'], monster: ['hostile', 'Hostile', '255,106,95'], treasure: ['gem', 'Valuables', '127,224,168'], secret: ['key', 'Secret', '192,155,255'], note: ['notes', 'Note', '233,239,245'] };
   const SMARKS = Object.fromEntries(Object.entries(SHIP_MARK).map(([k, v]) => [k, ['', v[1]]]));
   const ICON2D = new Map(), iconPath = n => { let p = ICON2D.get(n); if (!p) ICON2D.set(n, (p = new Path2D(HUD_ICONS[n]))); return p; };
@@ -9954,33 +10360,39 @@ const LocalMaps = (() => {
     const s = { cls: 'custom', look, seed: 424242, cur: 0, temp: true, decks: [{ rooms: {}, marks: [], edit: null, ver: seedOf(String(key)) }] }, Hh = shipHull(s), { W, H } = Hh;
     const nx = Math.min(...cells.map(q => q[0])), ny = Math.min(...cells.map(q => q[1])), mx = Math.max(...cells.map(q => q[0])) - nx, my = Math.max(...cells.map(q => q[1])) - ny;
     const ox = Hh.cx - (mx >> 1), oy = (H >> 1) - (my >> 1), cell = new Int16Array(W * H).fill(-1), types = [null], ids = {};
-    for (const [x, y, i, t] of cells) { let id = t === 'corr' ? 0 : ids[i]; if (id == null) { types.push(t); id = ids[i] = types.length - 1; } cell[(oy + y - ny) * W + ox + x - nx] = id; }
-    const D = { Hh, cell, types, doors: [], typeOf: id => types[id] };
+    let plate = null;
+    for (const [x, y, i, t] of cells) { const at = (oy + y - ny) * W + ox + x - nx; if (t === 'plating') { (plate || (plate = new Uint8Array(W * H)))[at] = 1; continue; } let id = t === 'corr' ? 0 : ids[i]; if (id == null) { types.push(t); id = ids[i] = types.length - 1; } cell[at] = id; }
+    const D = { Hh, cell, types, plate, doors: [], typeOf: id => types[id] };
     autoDoors(D, false);
     s.decks[0].edit = encodeDeck(D, W, H);
     return { s, ox, oy, mx, my };
   }
   function drawCells(c, cells, key, look) {
-    const T = cellsShip(cells, key, look), G = shipLayout(T.s), eng = cells.some(q => q[3] === 'engine'), m = 0.95, x0 = T.ox - m, y0 = T.oy - m, bw = T.mx + 1 + 2 * m, bh = T.my + 1 + 2 * m + (eng ? 1.8 : 0);
+    const T = cellsShip(cells, key, look), G = shipLayout(T.s), eng = cells.some(q => ENGINES[q[3]]), m = 0.95, x0 = T.ox - m, y0 = T.oy - m, bw = T.mx + 1 + 2 * m, bh = T.my + 1 + 2 * m + (eng ? 1.8 : 0);
     const k = Math.min(c.width / bw, c.height / bh), g = c.getContext('2d');
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
     g.setTransform(k, 0, 0, k, (c.width - bw * k) / 2 - x0 * k, (c.height - bh * k) / 2 - y0 * k);
     G.look = look; drawShip(g, G, k, 1, { noLights: true }); g.setTransform(1, 0, 0, 1, 0, 0);
   }
   const PV = new Map(), pvJobs = []; let pvTimer = 0;
+  const pvIO = window.IntersectionObserver ? new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting) { pvIO.unobserve(e.target); if (e.target.job) { pvJobs.unshift(e.target.job); e.target.job = null; if (!pvTimer) pvTimer = setTimeout(pvRun, 0); } } }, { rootMargin: '160px' }) : null;
   function pvRun() { pvTimer = 0; const job = pvJobs.shift(); if (!job) return; try { job(); } catch (err) { console.warn(err); } if (pvJobs.length) pvTimer = setTimeout(pvRun, 6); }
   // the picture on a module's card, drawn when there's a moment; a tall module lies on its side to fill the card
   function modPreview(m) {
     const look = V.s.look, key = look + '|' + m.n; let c = PV.get(key);
-    if (c) return c;
+    if (c) { if (c.job && pvIO) pvIO.observe(c); return c; }
+    if (PV.size > 320) for (const [k2, c2] of PV) { if (!c2.isConnected) PV.delete(k2); if (PV.size < 240) break; }
     c = Object.assign(document.createElement('canvas'), { width: 240, height: 136 }); PV.set(key, c);
-    pvJobs.push(() => {
+    const cv0 = c, job = () => {
+      cv0.job = null;
       const raw = modCells(m, 0);
       if (Math.max(...raw.map(q => q[1])) <= Math.max(...raw.map(q => q[0])) * 1.25) { drawCells(c, raw, m.n, look); return; }
       const off = Object.assign(document.createElement('canvas'), { width: c.height, height: c.width }), g = c.getContext('2d');
       drawCells(off, raw, m.n, look); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); g.translate(c.width, 0); g.rotate(Math.PI / 2); g.drawImage(off, 0, 0); g.setTransform(1, 0, 0, 1, 0, 0);
-    });
-    if (!pvTimer) pvTimer = setTimeout(pvRun, 0);
+    };
+    // only cards that come into view are drawn, the nearest first
+    if (pvIO) { c.job = job; pvIO.observe(c); return c; }
+    pvJobs.push(job); if (!pvTimer) pvTimer = setTimeout(pvRun, 0);
     return c;
   }
   const typeMod = t => MODS.find(m => m.p.length === 1 && m.p[0][0] === t) || { n: RT[t][0], p: [[t, 0, 0, 3, 3]] };
@@ -9995,7 +10407,7 @@ const LocalMaps = (() => {
   function ghostImage(E, gh) {
     const look = V.s.look, dpr = Math.min(3, window.devicePixelRatio || 1), want = clamp(V.k * dpr, 12, 72), cur = E.gimg;
     if (cur && cur.mod === E.mod && cur.rot === E.rot && cur.scale === E.scale && cur.look === look && want <= cur.gk * 1.7 && want >= cur.gk / 1.7) return cur;
-    const T = cellsShip(gh.c, `${E.mod.n}|${E.rot}|${E.scale}`, look), G = shipLayout(T.s), eng = gh.c.some(q => q[3] === 'engine'), m = 1.1, gk = want;
+    const T = cellsShip(gh.c, `${E.mod.n}|${E.rot}|${E.scale}`, look), G = shipLayout(T.s), eng = gh.c.some(q => ENGINES[q[3]]), m = 1.1, gk = want;
     const c = Object.assign(document.createElement('canvas'), { width: Math.ceil((T.mx + 1 + 2 * m) * gk), height: Math.ceil((T.my + 1 + 2 * m + (eng ? 2 : 0)) * gk) }), g = c.getContext('2d');
     g.setTransform(gk, 0, 0, gk, (m - T.ox) * gk, (m - T.oy) * gk); G.look = look; drawShip(g, G, gk, 1, { noPlume: true, noLights: true });
     return (E.gimg = { mod: E.mod, rot: E.rot, scale: E.scale, look, c, gk, m, bw: T.mx + 1, bh: T.my + 1, shape: outlineOf(gh.c.map(q => [q[0], q[1]])) });
@@ -10243,20 +10655,23 @@ const LocalMaps = (() => {
       const has = V.G.cell.some(c => c >= 0), rc = recent();
       if (E.cat === 'Recent' && !rc.length) E.cat = has ? 'Corridors' : 'Whole ships';
       const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+      const side = window.matchMedia && matchMedia('(min-width: 900px), (orientation: landscape) and (min-width: 640px)').matches, roomy = side && V.cv.clientHeight > 500;   // a tall side panel has search and tabs together
+      panel.classList.toggle('big', !!E.big && !side);
       head('Modules', !E.mod ? (coarse ? 'Tap one, or pull it up onto the plan' : 'Click one, or drag it onto the plan') : E.ghost ? (coarse ? 'Drag on the plan, or tap Place' : 'Click the plan, or press Place') : 'No room for this on the plan',
-        h('button', { class: 'hud-fold' + (E.searching ? ' on' : ''), 'aria-label': 'Search modules', onclick: () => { E.searching = !E.searching; E.q = ''; renderPanel(); if (E.searching) { const inp = panel.querySelector('.hud-search'); if (inp) inp.focus(); } } }, hic('search', 18)));
+        side ? null : h('button', { class: 'hud-fold' + (E.big ? ' on' : ''), 'aria-label': E.big ? 'Fewer at once' : 'See more at once', title: E.big ? 'Fewer at once' : 'See more at once', onclick: () => { E.big = !E.big; renderPanel(); keepFramed(); } }, hic('fit', 18)),
+        roomy ? null : h('button', { class: 'hud-fold' + (E.searching ? ' on' : ''), 'aria-label': 'Search modules', onclick: () => { E.searching = !E.searching; E.q = ''; renderPanel(); if (E.searching) { const inp = panel.querySelector('.hud-search'); if (inp) inp.focus(); } } }, hic('search', 18)));
       const grid = h('div', { class: 'hud-cards', 'data-sc': 'cards' });
       const fill = () => {
         grid.innerHTML = '';
-        const q = E.q.trim().toLowerCase(), list = q ? MODS.filter(m => (m.n + ' ' + m.g).toLowerCase().includes(q)) : E.cat === 'Recent' ? rc : MODS.filter(m => m.g === E.cat);
+        const q = E.q.trim().toLowerCase().split(/\s+/).filter(Boolean), list = q.length ? MODS.filter(m => q.every(w => m.k.includes(w))) : E.cat === 'Recent' ? rc : MODS.filter(m => m.g === E.cat);
         for (const m of list) {
           const cs = modCells(m, 0, E.scale), bw = Math.max(...cs.map(c => c[0])) + 1, bh = Math.max(...cs.map(c => c[1])) + 1;
-          grid.append(h('button', { class: 'hud-card cut' + (E.mod === m ? ' on' : ''), title: m.n, onpointerdown: ev => tileDrag(ev, m), onclick: () => { if (performance.now() < (E.noClick || 0)) return; if (E.mod === m) { placeModule(); return; } E.mod = m; E.rot = 0; aim(); renderChrome(); redrawOv(); } }, modPreview(m), h('span', { class: 'nm' }, m.n), h('span', { class: 'dm' }, `${bw * CELL}×${bh * CELL}`)));
+          grid.append(h('button', { class: 'hud-card cut' + (E.mod === m ? ' on' : ''), title: m.n, onpointerdown: ev => { if (!panel.classList.contains('big')) tileDrag(ev, m); }, onclick: () => { if (performance.now() < (E.noClick || 0)) return; if (E.mod === m) { placeModule(); return; } E.mod = m; E.rot = 0; if (E.big) { E.big = false; keepFramed(); } aim(); renderChrome(); redrawOv(); } }, modPreview(m), h('span', { class: 'nm' }, m.n), h('span', { class: 'dm' }, `${bw * CELL}×${bh * CELL}`)));
         }
         if (!list.length) grid.append(h('div', { class: 'hud-empty' }, 'Nothing by that name.'));
       };
-      if (E.searching) { const inp = h('input', { class: 'hud-search', type: 'search', placeholder: 'Search modules', value: E.q, autocomplete: 'off' }); inp.addEventListener('input', () => { E.q = inp.value; fill(); }); body.append(inp); }
-      else body.append(h('div', { class: 'hud-tabs', 'data-sc': 'tabs' }, CATS.filter(c => c[0] !== 'Recent' || rc.length).map(([c, l, ic]) => h('button', { class: 'hud-tab' + (E.cat === c ? ' on' : ''), onclick: () => { E.cat = c; renderPanel(); } }, hic(ic, 16), l))));
+      if (E.searching || roomy) { const inp = h('input', { class: 'hud-search', type: 'search', placeholder: `Search ${MODS.length} modules`, 'aria-label': 'Search modules', value: E.q, autocomplete: 'off' }); inp.addEventListener('input', () => { E.q = inp.value; fill(); }); body.append(inp); }
+      if (!E.searching || roomy) body.append(h('div', { class: 'hud-tabs', 'data-sc': 'tabs' }, CATS.filter(c => c[0] !== 'Recent' || rc.length).map(([c, l, ic]) => h('button', { class: 'hud-tab' + (E.cat === c && !E.q.trim() ? ' on' : ''), onclick: () => { E.cat = c; E.q = ''; renderPanel(); } }, hic(ic, 16), l))));
       body.append(grid); fill();
       if (E.mod) {
         const lib = !E.mod.cells, size = d => { E.scale = SIZES[clamp(SIZES.indexOf(E.scale) + d, 0, SIZES.length - 1)]; aim(); renderChrome(); redrawOv(); };
@@ -10267,7 +10682,9 @@ const LocalMaps = (() => {
       }
     } else if (E.mode === 'move') {
       const L = selInfo();
-      if (!L) { head('Select', 'Tap a room to select. Drag to move it.'); body.append(tools(hudBtn('centre', 'Centre on the line', centreDeck))); }
+      if (L) E.pl = null;
+      if (!L && E.pl) { head('Hull plating', 'Bare hull. Rooms can sit on top of it.'); body.append(tools(hudBtn('trash', 'Remove this piece', () => removePlate(false), { dgr: true }), hudBtn('trash', 'Remove all on this deck', () => removePlate(true), { dgr: true }))); }
+      else if (!L) { head('Select', 'Tap a room to select. Drag to move it.'); body.append(tools(hudBtn('centre', 'Centre on the line', centreDeck))); }
       else {
         const room = L.id > 0, o = room && V.G.rooms[L.id], cur = (room && deckOf().rooms[L.id]) || {}, b = boxOfCells(L.cells);
         head(room ? 'Room' : 'Corridor', room ? `${fmtInt(o.n * CELL * CELL)} m² · pull a handle to resize` : `${L.idx.length * CELL} m of corridor`, h('button', { class: 'hud-fold', 'aria-label': 'Deselect', onclick: () => { E.sel = null; renderPanel(); redrawOv(); } }, hic('close', 18)));
@@ -10302,14 +10719,22 @@ const LocalMaps = (() => {
       body.append(tools(hudBtn(null, 'Automatic', () => setWin(null), { on: st === 'auto' }), hudBtn(null, 'All round', () => { const set = {}; for (const [k2] of outerEdges(V.G)) set[k2] = 1; setWin({ none: true, set }); }), hudBtn(null, 'None', () => setWin({ none: true, set: {} }), { on: st === 'none' })));
     } else if (E.mode === 'paint') {
       const nm = RT[E.type][0].toLowerCase();
-      head('Paint', { fill: `Tap a gap to fill it with ${nm}`, fillc: 'Tap a gap to fill it with corridor', room: `Drag a box to make ${nm}`, corr: 'Drag to draw corridor', erase: 'Drag to cut squares away' }[E.brush]);
-      body.append(h('div', { class: 'hud-tools', 'data-sc': 'brush' }, [['fill', 'Fill', 'fill'], ['fillc', 'Fill corridor', 'fill'], ['room', 'Room', 'box'], ['corr', 'Corridor', 'corr'], ['erase', 'Erase', 'erase']].map(([b2, l, ic]) => hudBtn(ic, l, () => { E.brush = b2; renderPanel(); }, { on: E.brush === b2 }))));
-      if (E.brush === 'room' || E.brush === 'fill') body.append(h('div', { class: 'hud-cards', 'data-sc': 'types' }, Object.keys(RT).map(t => { const m = typeMod(t); return h('button', { class: 'hud-card cut' + (E.type === t ? ' on' : ''), title: RT[t][0], onclick: () => { E.type = t; renderPanel(); } }, modPreview(m), h('span', { class: 'nm' }, RT[t][0])); })));
+      head('Paint', { fill: `Tap a gap to fill it with ${nm}`, fillc: 'Tap a gap to fill it with corridor', room: `Drag a box to make ${nm}`, corr: 'Drag to draw corridor', plate: 'Drag a box of bare hull. Rooms can sit on top of it', erase: 'Drag to cut squares away. Hull plating goes when nothing is on it' }[E.brush]);
+      body.append(h('div', { class: 'hud-tools', 'data-sc': 'brush' }, [['fill', 'Fill', 'fill'], ['fillc', 'Fill corridor', 'fill'], ['room', 'Room', 'box'], ['corr', 'Corridor', 'corr'], ['plate', 'Hull', 'hull'], ['erase', 'Erase', 'erase']].map(([b2, l, ic]) => hudBtn(ic, l, () => { E.brush = b2; renderPanel(); }, { on: E.brush === b2 }))));
+      const pg = E.pg || RT[E.type][2];
+      if (E.brush === 'room' || E.brush === 'fill') body.append(h('div', { class: 'hud-tabs', 'data-sc': 'ptabs' }, [...new Set(Object.values(RT).map(v => v[2]))].map(g0 => h('button', { class: 'hud-tab' + (pg === g0 ? ' on' : ''), onclick: () => { E.pg = g0; renderPanel(); } }, g0))));
+      if (E.brush === 'room' || E.brush === 'fill') body.append(h('div', { class: 'hud-cards', 'data-sc': 'types' }, Object.keys(RT).filter(t => RT[t][2] === pg).map(t => { const m = typeMod(t); return h('button', { class: 'hud-card cut' + (E.type === t ? ' on' : ''), title: RT[t][0], onclick: () => { E.type = t; renderPanel(); } }, modPreview(m), h('span', { class: 'nm' }, RT[t][0])); })));
     }
     panel.append(body);
     for (const [k2, a, b] of keep) { const r = panel.querySelector(`[data-sc="${k2}"]`); if (r) { r.scrollLeft = a; r.scrollTop = b; } }
     if (E.mod && E.mode === 'add') float.style.setProperty('--b', (el.getBoundingClientRect().bottom - panel.getBoundingClientRect().top + 8) + 'px');
     if (V.panelMode !== E.mode) { V.panelMode = E.mode; if (panel.animate) panel.animate([{ opacity: 0.35, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' }); }
+  }
+  function removePlate(all) {
+    const E = V.edit, D = editable(), { W } = D.Hh, pl = D.plate; if (!pl || !E.pl) return;
+    if (all) pl.fill(0);
+    else { const mirror = i => ((i / W) | 0) * W + 2 * D.Hh.cx - i % W, wipe = st => { const q = [st]; while (q.length) { const v = q.pop(); if (!pl[v]) continue; pl[v] = 0; q.push(v - 1, v + 1, v - W, v + W); } }, at = E.pl[1] * W + E.pl[0]; wipe(at); if (E.mirror) wipe(mirror(at)); }
+    E.pl = null; pushUndo(); commitDeck(D); renderPanel();
   }
   function turnModule() { const E = V.edit; if (!E || !E.mod) return; E.rot = (E.rot + 1) % 4; aim(); redrawOv(); }
   function dropModule() { const E = V.edit; if (!E) return; if (E.carry) { undoEdit(); E.redo.pop(); } E.mod = null; E.ghost = null; E.back = null; renderChrome(); redrawOv(); }
@@ -10358,38 +10783,499 @@ const LocalMaps = (() => {
   }
 
   /* ---------- building from modules: pick one, and it snaps onto the ship with its doors made ---------- */
-  // parts: [room type or 'corr', x, y, w, h] in squares
-  const MODS = [
-    ['Whole ships', 'Starter ship', '🚀', [['bridge', 0, 0, 5, 4], ['corr', 2, 4, 1, 8], ['engine', 0, 12, 5, 4]]],
-    ['Corridors', 'Corridor', '➖', [['corr', 0, 0, 1, 4]]], ['Corridors', 'Long corridor', '➖', [['corr', 0, 0, 1, 8]]], ['Corridors', 'Crossing', '➕', [['corr', 0, 2, 5, 1], ['corr', 2, 0, 1, 5]]],
-    ['Corridors', 'T-junction', '🔱', [['corr', 0, 0, 5, 1], ['corr', 2, 1, 1, 3]]], ['Corridors', 'Corner', '↩️', [['corr', 0, 0, 3, 1], ['corr', 0, 1, 1, 2]]],
-    ['Command', 'Bridge', '🧭', [['bridge', 0, 0, 7, 4]]], ['Command', 'Cockpit', '🕹️', [['cockpit', 0, 0, 3, 2]]], ['Command', 'Comms', '📡', [['comms', 0, 0, 3, 2]]], ['Command', 'Captain', '⭐', [['captain', 0, 0, 4, 3]]],
-    ['Command', 'Observation', '🔭', [['observation', 0, 0, 5, 3]]], ['Command', 'Armoury', '🛡️', [['armoury', 0, 0, 3, 3]]], ['Command', 'Brig', '🔒', [['brig', 0, 0, 4, 3]]],
-    ['Living', 'Cabin', '🛏️', [['cabin', 0, 0, 3, 2]]], ['Living', 'Cabin pair', '🛏️', [['cabin', 0, 0, 3, 2], ['corr', 3, 0, 1, 2], ['cabin', 4, 0, 3, 2]]], ['Living', 'Bunk room', '🛌', [['quarters', 0, 0, 4, 3]]], ['Living', 'Seats', '💺', [['seats', 0, 0, 4, 4]]],
-    ['Living', 'Mess', '🍽️', [['mess', 0, 0, 5, 4]]], ['Living', 'Galley', '🍳', [['galley', 0, 0, 3, 3]]], ['Living', 'Washroom', '🚿', [['wash', 0, 0, 3, 2]]], ['Living', 'Lounge', '🛋️', [['rec', 0, 0, 4, 3]]],
-    ['Living', 'Medbay', '⚕️', [['medbay', 0, 0, 4, 3]]], ['Living', 'Lab', '🔬', [['lab', 0, 0, 4, 3]]], ['Living', 'Hydroponics', '🌱', [['hydro', 0, 0, 5, 4]]], ['Living', 'Cryo bay', '❄️', [['cryo', 0, 0, 5, 4]]],
-    ['Working', 'Small hold', '📦', [['cargo', 0, 0, 4, 4]]], ['Working', 'Big hold', '📦', [['cargo', 0, 0, 6, 6]]], ['Working', 'Hangar', '🛬', [['hangar', 0, 0, 7, 6]]], ['Working', 'Storage', '🗄️', [['storage', 0, 0, 3, 2]]],
-    ['Working', 'Workshop', '🔧', [['workshop', 0, 0, 4, 3]]], ['Working', 'Weapons', '🎯', [['weapons', 0, 0, 3, 3]]], ['Working', 'Airlock', '🚪', [['airlock', 0, 0, 1, 1]]], ['Working', 'Escape pods', '🛟', [['escape', 0, 0, 2, 2]]], ['Working', 'Lift', '🛗', [['lift', 0, 0, 1, 1]]],
-    ['Engines', 'Engine', '🔥', [['engine', 0, 0, 4, 4]]], ['Engines', 'Reactor', '⚛️', [['reactor', 0, 0, 5, 5]]], ['Engines', 'Life support', '💨', [['life', 0, 0, 3, 3]]],
-    ['Sections', 'Command nose', '🧭', [['bridge', 0, 0, 7, 4], ['comms', 0, 4, 3, 2], ['corr', 3, 4, 1, 2], ['captain', 4, 4, 3, 2]]],
-    ['Sections', 'Cabin block', '🛏️', [['corr', 3, 0, 1, 6], ['cabin', 0, 0, 3, 2], ['cabin', 0, 2, 3, 2], ['cabin', 0, 4, 3, 2], ['cabin', 4, 0, 3, 2], ['cabin', 4, 2, 3, 2], ['cabin', 4, 4, 3, 2]]],
-    ['Sections', 'Crew section', '🍽️', [['corr', 4, 0, 1, 7], ['mess', 0, 0, 4, 4], ['galley', 0, 4, 4, 3], ['medbay', 5, 0, 4, 3], ['wash', 5, 3, 4, 2], ['rec', 5, 5, 4, 2]]],
-    ['Sections', 'Cargo section', '📦', [['corr', 5, 0, 1, 6], ['cargo', 0, 0, 5, 6], ['cargo', 6, 0, 5, 6]]],
-    ['Sections', 'Cryo section', '❄️', [['corr', 5, 0, 1, 5], ['cryo', 0, 0, 5, 5], ['cryo', 6, 0, 5, 5]]],
-    ['Sections', 'Engine section', '🔥', [['corr', 5, 0, 1, 1], ['engine', 0, 0, 3, 5], ['reactor', 3, 1, 5, 4], ['engine', 8, 0, 3, 5], ['life', 3, 0, 2, 1], ['storage', 6, 0, 2, 1]]],
-    ['Whole ships', 'Shuttle', '🛸', [['cockpit', 1, 0, 3, 2], ['corr', 2, 2, 1, 5], ['seats', 3, 2, 2, 5], ['seats', 0, 2, 2, 5], ['engine', 0, 7, 5, 3]]],
-    ['Whole ships', 'Courier', '🚀', [['bridge', 1, 0, 5, 3], ['corr', 3, 3, 1, 9], ['cabin', 0, 3, 3, 2], ['cabin', 4, 3, 3, 2], ['mess', 0, 5, 3, 3], ['medbay', 4, 5, 3, 3], ['cargo', 0, 8, 3, 4], ['cargo', 4, 8, 3, 4], ['engine', 0, 12, 7, 4]]],
-    ['Whole ships', 'Freighter', '🚛', [['bridge', 2, 0, 7, 4], ['corr', 5, 4, 1, 16], ['cabin', 2, 4, 3, 2], ['cabin', 6, 4, 3, 2], ['mess', 2, 6, 3, 2], ['medbay', 6, 6, 3, 2], ['cargo', 0, 8, 5, 6], ['cargo', 6, 8, 5, 6], ['cargo', 0, 14, 5, 6], ['cargo', 6, 14, 5, 6], ['engine', 0, 20, 3, 5], ['reactor', 3, 20, 5, 5], ['engine', 8, 20, 3, 5]]],
-  ].map(([g, n, ic, p]) => ({ g, n, ic, p }));
+  // the library, one room to a card: a heading, then kind of room: Name WxH shape, Name WxH …
+  const LIB = `
+Command
+bridge: Small bridge 5x3, Bridge 7x4, Wide bridge 9x4, Deep bridge 7x6, Flag bridge 11x5, Wedge bridge 7x5 wedge, Round bridge 7x7 round, Bridge pod 5x5 oct
+cockpit: Fighter cockpit 2x2, Cockpit 3x2, Two-seat cockpit 4x2, Long cockpit 3x3, Wedge cockpit 5x3 wedge
+comms: Comms 3x2, Comms array 5x3, Signal room 4x4
+captain: Captain’s berth 3x3, Captain 4x3, Captain’s suite 6x4
+observation: Observation blister 3x3 round, Observation 5x3, Observation deck 9x4, Observation dome 7x7 round
+armoury: Arms locker 2x3, Armoury 3x3, Main armoury 6x4
+brig: Holding cell 3x3, Brig 4x3, Cell block 8x4
+cic: Small combat centre 4x4, Combat centre 6x5, Fleet combat centre 8x6
+warroom: War room 6x4, Grand war room 8x5
+chart: Nav plot 3x3, Chart room 4x3
+sensor: Sensor suite 4x3, Sensor hall 6x4
+aux: Emergency bridge 3x3, Auxiliary bridge 5x3
+officer: Junior officer’s cabin 3x2, Officer’s cabin 3x3, Senior officer’s cabin 4x3
+ready: Ops office 3x3, Ready room 4x3
+briefing: Briefing room 5x4, Lecture room 7x5
+conference: Meeting room 4x3, Conference room 6x4
+security: Guard post 2x2, Security office 4x3, Security hub 5x4
+purser: Purser’s office 3x2
+vault: Vault 3x3, Strongroom 5x4
+interrog: Interrogation room 3x3
+Crew
+cabin: Small cabin 2x2, Cabin 3x2, Large cabin 3x3, Long cabin 2x4, Corner cabin 4x3
+single: Single berth 2x2, Long single berth 2x3
+guest: Guest cabin 3x3, Large guest cabin 4x3
+suite: Compact stateroom 4x3, Stateroom 5x4, Grand stateroom 7x5
+family: Family cabin 4x3, Large family cabin 5x4
+quarters: Small bunk room 3x3, Bunk room 4x3, Eight-berth bunk room 5x4, Twelve-berth bunk room 7x4, Bunk hall 10x4
+barracks: Barracks 6x4, Long barracks 10x4, Troop deck 12x6
+capberth: Capsule berths 4x3, Capsule hotel 8x4
+hammocks: Hammock deck 5x3, Long hammock deck 8x3
+seats: Small seats 3x3, Seats 4x4, Passenger hall 6x6, Long seats 4x8, Airliner rows 5x10
+lockers: Locker room 3x3, Long locker room 5x2
+laundry: Laundry 3x3, Big laundry 5x3
+showers: Shower block 4x2, Big shower block 6x3
+wash: Small washroom 2x2, Washroom 3x2, Large washroom 4x3
+heads: Heads 2x2, Big heads 4x3
+lobby: Reception 4x3, Lobby 5x4
+Food
+mess: Small mess 4x3, Mess 5x4, Big mess 7x5, Canteen 10x6
+galley: Kitchenette 2x2, Galley 3x3, Long galley 5x3, Ship’s kitchen 6x4
+wardroom: Wardroom 5x4, Officers’ wardroom 7x4
+cafe: Café 4x4, Big café 6x4
+diner: Diner 5x3, Long diner 8x3
+pantry: Pantry 3x2, Dry store 4x4
+coldroom: Cold room 3x3, Walk-in freezer 4x4
+bakery: Bakery 4x3
+brewery: Still 3x3, Brewery 5x4
+scullery: Scullery 3x2
+synth: Food synthesiser 3x3, Food plant 5x4
+Social
+rec: Snug 3x3, Lounge 4x3, Crew lounge 5x4, Big lounge 7x4
+gym: Small gym 3x3, Gym 5x4, Sports hall 8x6
+pool: Plunge pool 4x4, Swimming pool 8x5, Long pool 12x5
+sauna: Sauna 3x2, Big sauna 4x3
+spa: Spa 4x4, Spa hall 6x5
+bar: Bar 4x3, Big bar 7x4, Round bar 7x7 round
+theatre: Screening room 4x4, Theatre 7x6, Grand theatre 10x8
+arcade: Arcade 4x3, Big arcade 6x4
+games: Games room 5x4
+library: Reading room 3x3, Library 5x4, Grand library 8x5
+school: Classroom 4x4, Long classroom 6x4
+nursery: Nursery 3x3, Crèche 5x4
+playroom: Playroom 4x4
+chapel: Shrine 3x3, Chapel 5x4, Temple 7x7 oct
+garden: Garden 5x5, Long garden 10x4, Atrium 7x7 oct, Garden dome 9x9 round
+salon: Barber 3x2, Salon 4x3
+shop: Kiosk 3x2, Shop 4x3, Big shop 6x4, Market hall 10x6
+holo: Holo booth 3x3, Holo room 5x5, Holo deck 8x6
+museum: Gallery 5x4, Museum 8x6
+ballroom: Ballroom 8x6
+casino: Card room 4x3, Casino 7x5
+Medical
+medbay: Sickbay 3x2, Medbay 4x3, Large medbay 6x4, Hospital bay 8x5
+opsuite: Operating theatre 4x3, Twin operating theatre 6x4
+icu: Intensive care 5x3, Long intensive care 8x3
+ward: Small ward 4x3, Ward 6x3, Long ward 10x3
+quarantine: Isolation cell 3x3, Quarantine 5x4, Quarantine block 8x4
+pharmacy: Pharmacy 3x3, Dispensary 4x2
+morgue: Morgue 3x3, Big morgue 5x3
+dental: Dental surgery 3x3
+counsel: Counselling 3x3
+scanroom: Scanner room 3x4, Imaging suite 5x4
+clinic: Clinic 3x3, Walk-in clinic 5x3
+cloning: Cloning vats 4x4, Cloning hall 8x4
+Science
+lab: Small lab 3x3, Lab 4x3, Long lab 6x3, Big lab 7x5
+biolab: Biology lab 4x3, Big biology lab 6x4
+chemlab: Chemistry lab 4x3, Big chemistry lab 6x4
+physlab: Physics lab 4x4, Particle lab 7x5
+xenolab: Xenobiology lab 5x4, Containment lab 7x5
+astrolab: Astrometrics 4x4, Star chamber 7x7 round
+geolab: Geology lab 4x3, Core store 5x3
+specimens: Specimen store 4x3, Specimen vault 6x4
+cleanroom: Clean room 4x3, Big clean room 6x4
+probes: Probe bay 4x4, Probe launcher 6x4
+telescope: Telescope room 3x5, Great telescope 5x8
+archive: Archive 4x3, Data vault 6x4
+botany: Botany lab 4x3
+Cargo
+cargo: Small hold 4x4, Big hold 6x6, Narrow hold 3x6, Wide hold 8x4, Long hold 5x12, Great hold 10x8, Huge hold 12x12
+storage: Cupboard 2x1, Storage 3x2, Store room 4x3, Long store 2x6
+coldhold: Cold hold 5x5, Big cold hold 8x6
+liquidhold: Liquid hold 4x4, Big liquid hold 6x6, Long liquid hold 4x10
+gashold: Gas hold 4x4, Big gas hold 7x7
+orehold: Ore bunker 4x4, Big ore bunker 7x7
+baggage: Baggage hold 4x3, Big baggage hold 6x4
+securehold: Secure hold 4x4, Big secure hold 6x5
+pallets: Pallet deck 6x5, Long pallet deck 5x10
+containers: Container deck 6x6, Long container deck 6x12, Container hall 12x8
+loading: Loading dock 6x4, Big loading dock 9x5
+spares: Spares store 3x3, Big spares store 5x4
+fuelstore: Fuel store 3x3, Big fuel store 5x4
+mailroom: Mail room 3x3
+Hangars
+hangar: Small hangar 6x5, Hangar 7x6, Big hangar 10x8, Great hangar 14x10, Long hangar 7x14
+shuttlebay: Shuttle bay 6x6, Twin shuttle bay 12x6
+fighterbay: Fighter bay 6x5, Fighter wing 10x6, Long fighter bay 6x10
+dronebay: Drone rack 3x3, Drone bay 5x4, Drone hive 8x6
+mechbay: Mech bay 5x5, Mech hall 10x5
+vehiclebay: Vehicle bay 5x6, Motor pool 10x6
+repairbay: Repair bay 7x7, Slipway 8x12
+dockbay: Docking bay 6x4, Big docking bay 9x6
+dockport: Docking port 2x2, Docking arm 2x5
+landing: Landing bay 6x6, Big landing bay 9x9
+cargolift: Cargo lift 3x3, Big cargo lift 4x4
+Engineering
+life: Small life support 2x2, Life support 3x3, Big life support 5x4
+workshop: Small workshop 3x3, Workshop 4x3, Big workshop 6x4
+battery: Battery closet 2x2, Battery room 4x3, Battery hall 6x4
+powerroom: Power room 3x3, Power hall 5x4
+capbank: Capacitor bank 4x3, Big capacitor bank 6x4
+coolant: Coolant plant 4x4, Big coolant plant 6x5
+waterplant: Water recycling 4x3, Big water plant 6x4
+wasteplant: Waste plant 3x3, Big waste plant 5x4
+oxygen: Oxygen plant 4x3, Big oxygen plant 6x4
+scrubbers: Scrubber room 3x3, Scrubber hall 5x3
+hvac: Air handling 3x3, Big air handling 5x4
+gravity: Gravity generator 4x4, Big gravity generator 6x6, Gravity ring 8x8 round
+shieldroom: Shield generator 4x4, Big shield generator 6x6, Shield core 7x7 oct
+computer: Computer core 4x4, Main computer 6x6
+serverroom: Server closet 2x2, Server room 4x3, Server hall 7x4
+maint: Maintenance bay 4x3, Big maintenance bay 6x4
+dcp: Damage control 3x3
+machine: Machine shop 5x3, Big machine shop 7x4
+electronics: Electronics lab 4x3
+pumproom: Pump room 3x3, Big pump room 5x3
+conduit: Cable vault 3x2, Long cable vault 2x6
+Drives
+engine: Small engine 3x3, Engine 4x4, Wide engine 6x4, Deep engine 4x6, Big engine 8x5, Great engine 11x6
+iondrive: Ion drive 3x4, Wide ion drive 6x4, Big ion drive 9x5
+plasmadrive: Plasma drive 4x4, Big plasma drive 7x5
+torch: Torch drive 5x6, Great torch drive 9x8
+nacelle: Small nacelle 2x6, Nacelle 3x8, Big nacelle 4x10, Long nacelle 3x12
+reactor: Small reactor 3x3, Reactor 5x5, Big reactor 7x7, Round reactor 7x7 round
+fission: Fission pile 4x4, Big fission pile 6x6
+fusion: Fusion core 5x5, Big fusion core 7x7, Round fusion core 9x9 round
+antimatter: Antimatter core 6x6, Great antimatter core 9x9 oct
+auxreactor: Auxiliary reactor 3x3, Long auxiliary reactor 3x5
+jump: Jump drive 5x5, Big jump drive 7x7, Jump spine 4x10
+fueltank: Fuel tank 3x4, Long fuel tank 3x8, Big fuel tank 6x6, Saddle tanks 4x10
+fuelpumps: Fuel pumps 3x3
+thrusters: Thruster block 3x2, Wide thruster block 6x2
+Weapons
+weapons: Weapons 3x3, Weapons bay 5x3, Big weapons bay 7x4
+turretroom: Turret 2x2, Twin turret 3x3, Heavy turret 4x4, Quad turret 5x5 oct
+gundeck: Gun deck 3x6, Long gun deck 3x10, Broadside 4x14
+missile: Missile rack 2x3, Missile bay 3x5, Big missile bay 5x7, Missile silo 6x6
+torpedo: Torpedo tube 2x5, Torpedo room 4x6, Twin torpedo room 7x6, Torpedo store 6x4
+railgun: Railgun 3x10, Spinal railgun 3x18, Heavy railgun 5x16
+lance: Beam emitter 4x6, Lance 3x14, Heavy lance 5x18
+pdcroom: Point defence 2x2, Point defence battery 4x2, Flak room 3x3
+magazine: Magazine 3x3, Big magazine 5x4, Long magazine 2x8
+ecm: ECM suite 3x3, Big ECM suite 5x3
+firecontrol: Fire control 3x3, Gunnery centre 5x4
+marines: Marine section 5x3, Marine platoon 8x4, Marine company 12x6
+droproom: Drop pod bay 4x4, Drop deck 8x4
+boarding: Boarding pod 3x3, Boarding tube 2x5
+range: Firing range 3x8, Long range 3x12
+armsshop: Arms workshop 4x3
+minelayer: Mine layer 3x5, Mine bay 5x5
+Colony
+hydro: Small hydroponics 3x3, Hydroponics 5x4, Big hydroponics 8x5, Long hydroponics 4x12
+cryo: Small cryo bay 3x3, Cryo bay 5x4, Cryo vault 8x6, Long cryo bay 4x12, Cryo hall 12x8
+seedvault: Seed vault 3x3, Big seed vault 5x4
+embryo: Embryo bank 3x3, Big embryo bank 5x4
+colonist: Colonist berths 5x4, Colonist hall 8x5, Colonist deck 12x6
+livestock: Poultry room 4x3, Livestock pen 5x5, Cattle deck 10x6
+aquaculture: Fish tanks 5x4, Aquaculture deck 8x6
+cropdeck: Crop deck 6x5, Long crop deck 5x12, Great crop deck 12x8
+orchard: Orchard 6x6, Long orchard 5x12
+terraformer: Atmosphere plant 5x5, Terraforming plant 6x6
+prefab: Prefab store 5x4, Big prefab store 8x6
+survey: Survey office 4x3, Planning room 6x4
+colonystores: Colony stores 5x4, Big colony stores 8x6
+fungus: Fungus farm 4x3, Big fungus farm 6x4
+Industry
+fabricator: Fabricator 3x3, Fabricator hall 6x4, Fab line 8x4
+smelter: Smelter 4x4, Big smelter 6x6
+refinery: Refinery 5x4, Big refinery 8x6
+assembly: Assembly line 4x8, Long assembly line 4x14
+miningrig: Drill head 4x4, Mining rig 5x5, Big mining rig 7x7
+salvage: Salvage bay 6x5, Big salvage bay 10x6
+tractorbay: Tractor beam 3x3, Heavy tractor beam 5x5
+cranebay: Crane bay 6x6, Big crane bay 10x8
+recycler: Recycler 4x3, Big recycler 6x4
+foundry: Foundry 5x5, Big foundry 8x6
+oreproc: Ore processor 5x4, Long ore processor 4x10
+Structure
+plating: Small plate 2x2, Plate 4x2, Square plate 4x4, Wide plate 8x4, Big plate 8x8, Broad plate 12x6, Long plate 2x12, Round plate 6x6 round, Big round plate 12x12 round, Nose plate 6x6 wedge, Long nose plate 8x12 wedge, Tail plate 6x6 tail, Corner plate, left 4x4 ne, Corner plate, right 4x4 nw, Rear corner, left 4x4 se, Rear corner, right 4x4 sw, Long slope, left 4x10 se, Long slope, right 4x10 sw, Forward slope, left 4x10 ne, Forward slope, right 4x10 nw, V plate 14x10 chev
+armour: Armour plate 2x2, Armour strip 4x2, Long armour strip 6x2, Armour belt 2x10, Armour block 4x4, Prow 7x5 wedge, Big prow 11x7 wedge, Armour corner, left 4x4 ne, Armour corner, right 4x4 nw
+wing: Stub wing 4x2, Straight wing 8x3, Small wing, left 4x4 se, Small wing, right 4x4 sw, Wing, left 8x8 se, Wing, right 8x8 sw, Big wing, left 12x10 se, Big wing, right 12x10 sw, Long wing, left 16x8 se, Long wing, right 16x8 sw, Delta wing, left 12x12 se, Delta wing, right 12x12 sw, Forward wing, left 8x8 ne, Forward wing, right 8x8 nw
+fin: Fin, left 2x4 se, Fin, right 2x4 sw, Big fin, left 3x6 se, Big fin, right 3x6 sw, Tail fin 2x6
+strut: Strut 1x4, Long strut 1x8, Cross strut 6x1, Long cross strut 12x1, Pylon 2x2
+radiator: Radiator 2x6, Big radiator 3x10, Side radiator 6x2, Radiator wing 10x3
+solar: Solar panel 4x4, Solar sail 8x8, Solar wing 12x4, Long solar array 4x14
+mast: Antenna 1x3, Comm mast 1x6, Sensor boom 1x10
+dishmount: Dish 3x3, Big dish 5x5
+rcs: RCS quad 2x2, RCS block 3x2
+gunmount: Hull gun 2x2, Twin hull gun 3x3, Heavy hull gun 4x4
+cargopod: Cargo pod 3x5, Long cargo pod 3x10, Cargo pod rack 6x6
+fuelpod: Drop tank 2x4, Fuel pod 2x6, Big fuel pod 3x10
+collarx: Docking collar 3x3, Big docking collar 5x5
+gear: Landing leg 2x2, Landing gear 3x3
+Corridors
+corr: Short corridor 1x2, Corridor 1x4, Three-square corridor 1x3, Six-square corridor 1x6, Long corridor 1x8, Ten-square corridor 1x10, Twelve-square corridor 1x12, Sixteen-square corridor 1x16, Twenty-square corridor 1x20, Short hall 2x4, Hall 2x8, Long hall 2x12, Concourse 3x6, Long concourse 3x12, Plaza 6x6, Diagonal, right 6x6 dr, Diagonal, left 6x6 dl, Long diagonal, right 12x12 dr, Long diagonal, left 12x12 dl, Shallow diagonal, right 12x6 dr, Shallow diagonal, left 12x6 dl
+airlock: Airlock 1x1, Double airlock 2x1, Big airlock 2x2, Crew lock 2x3
+lift: Lift 1x1, Goods lift 2x2, Big lift 3x3
+stairs: Ladder well 1x2, Stairwell 2x2, Long stairs 2x4
+escape: Escape pods 2x2, Escape pod row 6x2, Lifeboat bay 5x4
+`;
+  // several parts at once: name, then kind x y w h [shape] for each part, split by ;
+  const LIB_PARTS = `
+Corridors
+Crossing|corr 0 2 5 1;corr 2 0 1 5
+T-junction|corr 0 0 5 1;corr 2 1 1 3
+Corner|corr 0 0 3 1;corr 0 1 1 2
+Long corner|corr 0 0 6 1;corr 0 1 1 5
+S-bend|corr 0 0 1 3;corr 0 3 4 1;corr 3 4 1 3
+Z-bend|corr 0 0 4 1;corr 3 1 1 3;corr 3 4 4 1
+H-junction|corr 0 0 1 7;corr 6 0 1 7;corr 1 3 5 1
+Ladder|corr 0 0 1 9;corr 6 0 1 9;corr 1 2 5 1;corr 1 6 5 1
+Comb|corr 0 0 9 1;corr 0 1 1 3;corr 4 1 1 3;corr 8 1 1 3
+Small ring|corr 0 0 7 1;corr 0 6 7 1;corr 0 1 1 5;corr 6 1 1 5
+Big ring|corr 0 0 13 1;corr 0 12 13 1;corr 0 1 1 11;corr 12 1 1 11
+Ring with spokes|corr 0 0 13 1;corr 0 12 13 1;corr 0 1 1 11;corr 12 1 1 11;corr 6 1 1 11;corr 1 6 11 1
+Fork|corr 3 0 1 3;corr 0 3 7 1;corr 0 4 1 2;corr 6 4 1 2
+Trident|corr 4 0 1 3;corr 0 3 9 1;corr 0 4 1 3;corr 4 4 1 3;corr 8 4 1 3
+Chevron corridor|corr 6 0 1 2;corr 7 2 6 6 dr;corr 0 2 6 6 dl
+Long chevron corridor|corr 10 0 1 2;corr 11 2 10 10 dr;corr 0 2 10 10 dl
+Crew
+Cabin pair|cabin 0 0 3 2;corr 3 0 1 2;cabin 4 0 3 2
+Sections
+Command nose|bridge 0 0 7 4;comms 0 4 3 2;corr 3 4 1 2;captain 4 4 3 2
+Cabin block|corr 3 0 1 6;cabin 0 0 3 2;cabin 0 2 3 2;cabin 0 4 3 2;cabin 4 0 3 2;cabin 4 2 3 2;cabin 4 4 3 2
+Crew section|corr 4 0 1 7;mess 0 0 4 4;galley 0 4 4 3;medbay 5 0 4 3;wash 5 3 4 2;rec 5 5 4 2
+Cargo section|corr 5 0 1 6;cargo 0 0 5 6;cargo 6 0 5 6
+Cryo section|corr 5 0 1 5;cryo 0 0 5 5;cryo 6 0 5 5
+Engine section|corr 5 0 1 1;engine 0 0 3 5;reactor 3 1 5 4;engine 8 0 3 5;life 3 0 2 1;storage 6 0 2 1
+Wedge nose|bridge 2 0 7 5 wedge;corr 5 5 1 2;comms 0 5 5 2;captain 6 5 5 2
+Sensor nose|sensor 2 0 7 4 wedge;corr 5 4 1 2;comms 0 4 5 2;firecontrol 6 4 5 2
+Armoured nose|armour 0 0 11 6 wedge;bridge 3 3 5 3;corr 5 6 1 2
+Twin engines|engine 0 0 4 5;corr 4 0 1 2;engine 5 0 4 5
+Triple engines|engine 0 0 4 5;engine 4 0 4 5;engine 8 0 4 5;corr 6 5 0 0
+Ion cluster|iondrive 0 0 3 4;iondrive 3 0 3 4;iondrive 6 0 3 4;iondrive 9 0 3 4
+Torch stack|fusion 2 0 5 5;torch 1 5 7 6;corr 1 0 1 5
+Nacelle pair|nacelle 0 0 3 8;strut 3 3 5 2;nacelle 8 0 3 8
+Big nacelle pair|nacelle 0 0 4 10;strut 4 4 9 2;nacelle 13 0 4 10
+Hangar with door lock|hangar 0 0 8 6;corr 3 6 2 1;airlock 5 6 1 1
+Twin gun battery|turretroom 0 0 3 3;corr 3 1 1 1;turretroom 4 0 3 3
+Quad gun battery|turretroom 0 0 3 3;turretroom 4 0 3 3;corr 3 0 1 7;turretroom 0 4 3 3;turretroom 4 4 3 3
+`;
+  // a block along one corridor, rooms stacked down each side: name|how wide a side is|left rooms|right rooms, each kind:length
+  const LIB_BLOCKS = `
+Officer country|4|officer:3 officer:3 ready:3|officer:3 wardroom:4 wash:2
+Family block|4|family:3 family:3 nursery:3|family:3 family:3 playroom:3
+Barracks block|6|barracks:4 barracks:4|barracks:4 showers:2 lockers:2
+Bunk block|4|quarters:3 quarters:3 wash:2|quarters:3 quarters:3 lockers:2
+Capsule block|4|capberth:3 capberth:3|capberth:3 showers:3
+Guest wing|4|guest:3 guest:3 suite:4|guest:3 guest:3 lobby:4
+Stateroom wing|5|suite:4 suite:4|suite:4 suite:4
+Galley block|4|mess:4 scullery:2|galley:3 pantry:2 coldroom:2
+Dining block|5|cafe:4 bar:3|diner:3 galley:4
+Wardroom block|4|wardroom:4 pantry:2|galley:3 wash:3
+Leisure deck|5|gym:4 sauna:2 spa:4|rec:3 arcade:3 library:4
+Theatre block|7|theatre:6|lobby:3 bar:3
+Pool block|8|pool:5|gym:3 showers:2
+School block|4|school:4 school:4|nursery:3 playroom:4 wash:1
+Chapel block|5|chapel:4 library:4|museum:4 garden:4
+Promenade|5|shop:3 cafe:4 salon:3|bar:3 shop:3 casino:4
+Medical wing|4|medbay:3 opsuite:3 pharmacy:3|ward:3 morgue:3 clinic:3
+Hospital block|6|ward:3 ward:3 icu:3|opsuite:4 scanroom:3 pharmacy:2
+Quarantine wing|5|quarantine:4 quarantine:4|medbay:4 biolab:4
+Science wing|4|lab:3 biolab:3 cleanroom:3|chemlab:3 physlab:3 specimens:3
+Xeno wing|5|xenolab:4 specimens:3|cleanroom:3 biolab:4
+Survey wing|4|geolab:3 astrolab:4|survey:3 archive:4
+Probe wing|4|probes:4 telescope:4|sensor:3 lab:3 storage:2
+Cold stores|5|coldhold:5|coldhold:5
+Bulk cargo|6|cargo:6 cargo:6|cargo:6 cargo:6
+Container block|6|containers:6|containers:6
+Tank block|4|liquidhold:4 gashold:4|liquidhold:4 gashold:4
+Ore block|5|orehold:4 orehold:4|orehold:4 oreproc:4
+Loading block|6|loading:4 pallets:5|loading:4 pallets:5
+Secure stores|4|securehold:4 vault:3|securehold:4 armoury:3
+Spares block|3|spares:3 storage:2 storage:2|spares:3 workshop:4
+Hangar block|8|hangar:6|shuttlebay:6
+Fighter block|7|fighterbay:6|fighterbay:6
+Drone block|5|dronebay:4 workshop:3|dronebay:4 firecontrol:3
+Mech block|5|mechbay:5|mechbay:5
+Motor pool block|6|vehiclebay:6|vehiclebay:6
+Reactor block|5|reactor:5 life:3|battery:4 powerroom:4
+Fusion block|6|fusion:6|capbank:3 coolant:3
+Power block|4|battery:3 battery:3 capbank:3|powerroom:3 battery:3 conduit:3
+Life-support block|4|life:3 oxygen:3 scrubbers:3|waterplant:3 wasteplant:3 hvac:3
+Water block|4|waterplant:3 pumproom:3|wasteplant:3 pumproom:3
+Coolant block|4|coolant:4 pumproom:3|coolant:4 radiator:3
+Computer block|5|computer:5|serverroom:3 electronics:2
+Engineering block|4|workshop:3 machine:3 maint:3|dcp:3 electronics:3 spares:3
+Gravity block|5|gravity:5|shieldroom:5
+Jump block|6|jump:6|capbank:3 conduit:3
+Fuel block|3|fueltank:4 fueltank:4|fueltank:4 fuelpumps:4
+Gun block|3|gundeck:6|magazine:3 firecontrol:3
+Broadside block|3|gundeck:10|gundeck:10
+Missile block|4|missile:5 magazine:3|missile:5 firecontrol:3
+Torpedo block|4|torpedo:6|torpedo:6
+Point defence block|2|pdcroom:2 pdcroom:2 pdcroom:2|pdcroom:2 pdcroom:2 pdcroom:2
+Marine block|5|marines:3 armoury:3 range:3|marines:3 droproom:3 mess:3
+Drop deck block|4|droproom:4 droproom:4|marines:4 armoury:4
+Seed block|4|seedvault:3 embryo:3|seedvault:3 survey:3
+Colonist block|6|colonist:4 colonist:4|colonist:4 mess:4
+Cryo block|5|cryo:4 cryo:4|cryo:4 cryo:4
+Farm block|6|cropdeck:5 cropdeck:5|hydro:5 orchard:5
+Livestock block|5|livestock:5 aquaculture:4|livestock:5 storage:4
+Terraforming block|6|terraformer:6|prefab:3 colonystores:3
+Fab block|4|fabricator:3 fabricator:3|assembly:6
+Smelter block|5|smelter:4 foundry:4|refinery:4 orehold:4
+Mining block|5|miningrig:5 orehold:4|oreproc:4 recycler:3
+Salvage block|6|salvage:5|cranebay:5
+Tractor block|3|tractorbay:3 storage:2|tractorbay:3 storage:2
+`;
+  // a whole ship: name|nose kind WxH shape|how wide a side is|left rooms|right rooms|stern rooms, kind:WxH
+  const LIB_SHIPS = `
+Lifeboat|cockpit 3x2|2|seats:3|seats:3|engine:5x2
+Tug|cockpit 3x3|3|workshop:3 storage:2|tractorbay:3 life:2|engine:3x4 engine:3x4
+Yacht|bridge 5x4 wedge|4|suite:4 rec:3|suite:4 bar:3|fusion:3x3 iondrive:3x4 iondrive:3x4
+Runabout|cockpit 4x3 wedge|3|cabin:2 mess:3|cabin:2 storage:3|engine:7x3
+Gunboat|bridge 5x3 wedge|3|turretroom:3 armoury:3|turretroom:3 magazine:3|engine:7x4
+Interceptor|cockpit 3x3 wedge|2|pdcroom:2 storage:2|pdcroom:2 life:2|torch:5x4
+Corvette|bridge 7x4 wedge|4|cabin:2 cabin:2 turretroom:4 magazine:3|cabin:2 mess:3 turretroom:4 life:2|engine:4x5 reactor:5x5 engine:4x5
+Survey ship|bridge 7x4 wedge|4|lab:3 geolab:3 cabin:2 cabin:2|astrolab:4 probes:4 mess:2|iondrive:4x5 reactor:5x5 iondrive:4x5
+Hospital ship|bridge 7x4 wedge|5|medbay:4 ward:3 ward:3 icu:3|opsuite:4 quarantine:4 scanroom:3 mess:2|engine:4x5 reactor:5x5 engine:4x5
+Liner|bridge 9x4 wedge|5|suite:4 suite:4 cafe:4 theatre:6|suite:4 suite:4 bar:4 pool:6|engine:5x5 fusion:5x5 engine:5x5
+Bulk hauler|bridge 7x4|6|cabin:3 cargo:6 cargo:6 cargo:6|mess:3 cargo:6 cargo:6 cargo:6|engine:5x6 reactor:5x6 engine:5x6
+Container ship|bridge 7x4|6|containers:6 containers:6 containers:6|containers:6 containers:6 containers:6|engine:6x6 reactor:5x6 engine:6x6
+Tanker|bridge 5x4|5|liquidhold:6 liquidhold:6 liquidhold:6|liquidhold:6 liquidhold:6 liquidhold:6|engine:4x5 reactor:5x5 engine:4x5
+Ore carrier|bridge 7x4|6|orehold:6 orehold:6 miningrig:6|orehold:6 orehold:6 oreproc:6|engine:6x6 reactor:5x6 engine:6x6
+Mining barge|cockpit 4x3|5|miningrig:5 orehold:4 cabin:2|tractorbay:3 oreproc:4 mess:4|engine:5x5 reactor:5x5
+Salvage tug|bridge 5x3|5|salvage:6 workshop:3|cranebay:6 cabin:3|engine:5x5 reactor:5x5
+Dropship|cockpit 5x3 wedge|3|droproom:4 marines:4|droproom:4 armoury:4|engine:7x4
+Frigate hull|bridge 9x4 wedge|5|cic:5 marines:4 gundeck:6 magazine:4|cabin:3 mess:4 gundeck:6 medbay:3 firecontrol:3|engine:5x6 fusion:5x6 engine:5x6
+Carrier hull|bridge 7x4|7|fighterbay:6 fighterbay:6 mess:4|hangar:6 hangar:6 barracks:4|engine:7x6 fusion:5x6 engine:7x6
+Cruiser hull|bridge 11x5 wedge|6|cic:5 railgun:10 barracks:4 mess:4|warroom:4 lance:10 marines:4 medbay:4|engine:6x6 antimatter:6x6 engine:6x6
+Colony transport|bridge 9x4 wedge|6|cryo:6 cryo:6 seedvault:4 hydro:5|cryo:6 cryo:6 prefab:4 colonist:5|engine:6x6 fusion:6x6 engine:6x6
+Ark|bridge 9x5 wedge|8|cryo:8 cropdeck:6 livestock:6 garden:6 colonist:6|cryo:8 hydro:6 aquaculture:6 school:6 embryo:6|engine:7x7 antimatter:7x7 engine:7x7
+Research station|bridge 7x4|6|physlab:6 xenolab:5 astrolab:5 cabin:3|biolab:5 chemlab:5 telescope:6 mess:3|fusion:5x5 auxreactor:5x5
+`;
+  const VEES = { chev: [0.6, 0.46], slim: [0.72, 0.32], fat: [0.5, 0.62] };   // where the tip's leading edge starts, and how deep the arms are at the middle
+  const veeShape = ([a, t]) => (u, v) => { const x = Math.abs(u - 0.5) * 2; return v >= x * a - 0.02 && v <= t + x * (1 - t) + 0.02; };
+  const SHAPES = {
+    wedge: (u, v) => Math.abs(u - 0.5) <= 0.14 + 0.38 * v, tail: (u, v) => Math.abs(u - 0.5) <= 0.14 + 0.38 * (1 - v),
+    round: (u, v) => (u - 0.5) ** 2 + (v - 0.5) ** 2 <= 0.262, oct: (u, v) => Math.abs(u - 0.5) + Math.abs(v - 0.5) <= 0.76,
+    nw: (u, v) => u + v <= 1.02, ne: (u, v) => v <= u + 0.02, sw: (u, v) => u <= v + 0.02, se: (u, v) => u + v >= 0.98,
+    chev: veeShape(VEES.chev), slim: veeShape(VEES.slim), fat: veeShape(VEES.fat),
+  };
+  // a corridor stepping corner to corner across a box, one square wide
+  function stair(w, hh) { const out = []; let a = 0, b = 0; for (;;) { out.push([a, b]); if (a === w - 1 && b === hh - 1) break; if (b === hh - 1 || (a < w - 1 && (a + 1) / w <= (b + 1) / hh)) a++; else b++; } return out; }
+  // parts as squares: [x, y, part, kind]. The first part to claim a square keeps it
+  function partCells(parts, f = 1) {
+    const c = [], taken = new Set(), add = (a, b, i, t) => { const k = a + ',' + b; if (!taken.has(k)) { taken.add(k); c.push([a, b, i, t]); } };
+    parts.forEach(([t, x, y, w, hh, sh], i) => {
+      const line = (p, l) => (t === 'corr' && l === 1 ? [Math.round((p + 0.5) * f - 0.5), 1] : [Math.round(p * f), Math.max(1, Math.round((p + l) * f) - Math.round(p * f))]);
+      const [X, W2] = line(x, w), [Y, H2] = line(y, hh), has = SHAPES[sh];
+      if (sh === 'dr' || sh === 'dl') { for (const [a, b] of stair(W2, H2)) add(X + (sh === 'dl' ? W2 - 1 - a : a), Y + b, i, t); return; }
+      for (let b = Y; b < Y + H2; b++) for (let a = X; a < X + W2; a++) if (!has || has((a - X + 0.5) / W2, (b - Y + 0.5) / H2)) add(a, b, i, t);
+    });
+    return c;
+  }
+  // a V-shaped ship, nose up, 2M + 1 across and L long: a corridor down each arm, rooms fitted along them, engines at the tips and plating over the rest.
+  // rooms are [kind, w, h] and go on the right arm and in mirror image on the left, nearest the nose first
+  function veeParts(M, L, sh, nose, rooms = [], eng = null, reserve = []) {
+    const [a, t] = VEES[sh], inV = (dx, y) => { const x = dx / (M + 0.5), v = (y + 0.5) / L; return dx <= M && v >= x * a - 0.02 && v <= t + x * (1 - t) + 0.02; };
+    const ys = Math.round(L * t * 0.5), ye = Math.round(L * (a + 1) / 2), W2 = M - 1, H2 = ye - ys + 1, path = stair(W2, H2).map(([p, q]) => [M + 1 + p, ys + q]);
+    const taken = new Set(reserve.map(q => q[0] + ',' + q[1])), mark = (x, y, w, hh) => { for (let b = y; b < y + hh; b++) for (let c = x; c < x + w; c++) taken.add(c + ',' + b); };
+    for (const [x, y] of path) taken.add(x + ',' + y);
+    const parts = []; let top = Math.max(1, Math.round(L * 0.04));
+    if (nose) { const [n, nw, nh, ns] = nose, x = M - (nw >> 1); parts.push([n, x, top, nw, nh, ns || 'wedge']); mark(x, top, nw, nh); top += nh; }
+    const stem = Math.max(1, ys - top + 1); parts.push(['corr', M, ys + 1 - stem, 1, stem]); for (let b = ys + 1 - stem; b <= ys; b++) taken.add(M + ',' + b);
+    parts.push(['corr', M + 1, ys, W2, H2, 'dr'], ['corr', 1, ys, W2, H2, 'dl']);
+    const both = (kind, x, y, w, hh, s2) => { parts.push([kind, x, y, w, hh, s2], [kind, 2 * M - x - w + 1, y, w, hh, s2 === 'sw' ? 'se' : s2]); };
+    if (eng) { const [n, w] = eng, x = 2 * M - w + 1, y = ye + 1, hh = Math.max(3, L - ye - 1); both(n, x, y, w, hh); mark(x, y, w, hh); }
+    const free = (x, y, w, hh) => { if (x <= M) return false; for (let b = y; b < y + hh; b++) for (let c = x; c < x + w; c++) if (taken.has(c + ',' + b) || !inV(c - M, b)) return false; return true; };
+    for (const [kind, w0, h0] of rooms) {
+      // a room that won't fit the arm turns, then gives up a little size, rather than being left out
+      for (let cut = 0, done = false; cut <= 3 && !done; cut++) for (const [w, hh] of [[w0 - cut, h0 - cut], [h0 - cut, w0 - cut]]) {
+        if (w < 1 || hh < 1 || (cut && w * hh < 6 && w0 * h0 >= 6)) continue;
+        for (const [px, py] of path) {
+          const spot = [[px + 1, py - hh + 1], [px - w, py], [px - w + 1, py + 1], [px, py - hh]].find(([x, y]) => free(x, y, w, hh));
+          if (spot) { both(kind, spot[0], spot[1], w, hh); mark(spot[0], spot[1], w, hh); done = true; break; }
+        }
+        if (done) break;
+      }
+    }
+    return { parts: [...parts, ['plating', 0, 0, 2 * M + 1, L, sh]], ys, ye };
+  }
+  // a V ship: name|half span|length|shape|nose|rooms, kind:WxH|engine kind:width
+  const LIB_VEES = `
+V hull, small|12|16|chev|||
+V hull, medium|20|26|chev|||
+V hull, large|25|36|chev|||
+Slim V hull|22|24|slim|||
+Fat V hull|18|28|fat|||
+Long V hull|16|36|chev|||
+V frame|18|24|chev|bridge 5x4||engine:4
+V scout|10|16|chev|cockpit 5x3|cabin:2x2 storage:2x2 life:2x2|engine:3
+V fighter|8|12|slim|cockpit 3x3|pdcroom:2x2|torch:3
+V courier|13|18|chev|bridge 5x3|cabin:3x2 mess:3x3 cargo:3x3 medbay:3x2 life:2x2|engine:4
+V corvette|18|24|chev|bridge 7x4|cabin:3x2 cabin:3x2 mess:4x3 turretroom:3x3 magazine:3x3 medbay:3x3 life:3x2 cargo:3x3|engine:5
+V gunship|20|26|chev|cic 7x4|turretroom:4x4 turretroom:4x4 gundeck:3x6 magazine:4x3 armoury:3x3 barracks:5x3 mess:4x3 life:3x2|plasmadrive:5
+V freighter|22|30|fat|bridge 7x4|cargo:6x6 cargo:6x6 cargo:5x5 containers:6x6 cabin:3x2 mess:4x3 workshop:3x3 life:3x2|engine:6
+V carrier|25|36|chev|bridge 9x5|fighterbay:8x6 fighterbay:8x6 hangar:7x6 barracks:6x4 mess:5x4 armoury:4x3 medbay:4x3 life:3x3 magazine:4x3|torch:7
+V cruiser|25|36|fat|bridge 11x5|cic:6x5 railgun:3x10 turretroom:4x4 turretroom:4x4 missile:3x5 barracks:6x4 mess:5x4 medbay:4x3 reactor:5x5 life:3x3|plasmadrive:7
+V liner|24|32|slim|bridge 9x4|suite:5x4 suite:5x4 bar:4x3 cafe:4x4 cabin:3x2 cabin:3x2 pool:6x4 life:3x2|iondrive:6
+V colony ship|25|38|fat|bridge 9x5|reactor:5x5 life:3x3 cryo:8x6 cryo:8x6 hydro:6x5 seedvault:4x3 colonist:6x4 prefab:5x4 mess:5x4 medbay:4x3 cryo:6x5|engine:7
+V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4x3 cabin:3x2 mess:3x3 life:3x2|iondrive:5
+`;
+  const OTHER_BASES = [
+    ['Delta hull, small', [['corr', 8, 2, 1, 14], ['plating', 0, 0, 17, 18, 'wedge']]], ['Delta hull', [['corr', 14, 3, 1, 26], ['corr', 6, 20, 17, 1], ['plating', 0, 0, 29, 32, 'wedge']]],
+    ['Saucer hull, small', [['corr', 8, 2, 1, 13], ['corr', 2, 8, 13, 1], ['plating', 0, 0, 17, 17, 'round']]], ['Saucer hull', [['corr', 14, 2, 1, 25], ['corr', 2, 14, 25, 1], ['plating', 0, 0, 29, 29, 'round']]],
+    ['Long hull', [['corr', 6, 3, 1, 34], ['plating', 2, 0, 9, 8, 'wedge'], ['plating', 0, 8, 13, 32]]], ['Wide hull', [['corr', 12, 3, 1, 18], ['corr', 3, 11, 19, 1], ['plating', 5, 0, 15, 6, 'wedge'], ['plating', 0, 6, 25, 18]]],
+    ['Hammerhead hull', [['corr', 10, 2, 1, 28], ['corr', 2, 3, 17, 1], ['plating', 0, 0, 21, 7], ['plating', 6, 7, 9, 25]]], ['Twin hull', [['corr', 2, 2, 1, 26], ['corr', 18, 2, 1, 26], ['corr', 3, 12, 15, 1], ['plating', 0, 0, 5, 30], ['plating', 16, 0, 5, 30], ['plating', 5, 10, 11, 5]]],
+    ['Trident hull', [['corr', 12, 2, 1, 24], ['corr', 3, 18, 19, 1], ['corr', 3, 8, 1, 10], ['corr', 21, 8, 1, 10], ['plating', 9, 0, 7, 32], ['plating', 0, 6, 7, 20], ['plating', 18, 6, 7, 20], ['plating', 7, 15, 11, 8]]],
+    ['Arrow hull', [['corr', 12, 2, 1, 26], ['corr', 5, 20, 15, 1], ['plating', 0, 0, 25, 32, 'chev'], ['plating', 8, 0, 9, 32]]],
+  ];
+  const MODS = (() => {
+    const out = [], parseKind = q => { const [t, x, y, w, hh, sh] = q.split(' '); return [t, +x, +y, +w, +hh, sh]; };
+    const add = (g, n, p, base) => out.push({ g, n, p, base: !!base });
+    // hulls first: what a ship starts from
+    add('Whole ships', 'Starter ship', [['bridge', 0, 0, 5, 4], ['corr', 2, 4, 1, 8], ['engine', 0, 12, 5, 4]]);
+    for (const line of LIB_VEES.trim().split('\n')) {
+      const [n, M, L, sh, nose, rooms, eng] = line.split('|'), nz = nose ? nose.split(' ') : null;
+      const { parts } = veeParts(+M, +L, sh, nz ? [nz[0], ...nz[1].split('x').map(Number)] : null, rooms ? rooms.split(' ').map(q => { const [t, d] = q.split(':'); return [t, ...d.split('x').map(Number)]; }) : [], eng ? [eng.split(':')[0], +eng.split(':')[1]] : null);
+      add('Whole ships', n, parts, !nose);
+    }
+    for (const [n, p] of OTHER_BASES) add('Whole ships', n, p, true);
+    add('Whole ships', 'Shuttle', [['cockpit', 1, 0, 3, 2], ['corr', 2, 2, 1, 5], ['seats', 3, 2, 2, 5], ['seats', 0, 2, 2, 5], ['engine', 0, 7, 5, 3]]);
+    add('Whole ships', 'Courier', [['bridge', 1, 0, 5, 3], ['corr', 3, 3, 1, 9], ['cabin', 0, 3, 3, 2], ['cabin', 4, 3, 3, 2], ['mess', 0, 5, 3, 3], ['medbay', 4, 5, 3, 3], ['cargo', 0, 8, 3, 4], ['cargo', 4, 8, 3, 4], ['engine', 0, 12, 7, 4]]);
+    add('Whole ships', 'Freighter', [['bridge', 2, 0, 7, 4], ['corr', 5, 4, 1, 16], ['cabin', 2, 4, 3, 2], ['cabin', 6, 4, 3, 2], ['mess', 2, 6, 3, 2], ['medbay', 6, 6, 3, 2], ['cargo', 0, 8, 5, 6], ['cargo', 6, 8, 5, 6], ['cargo', 0, 14, 5, 6], ['cargo', 6, 14, 5, 6], ['engine', 0, 20, 3, 5], ['reactor', 3, 20, 5, 5], ['engine', 8, 20, 3, 5]]);
+    for (const line of LIB_SHIPS.trim().split('\n')) {
+      const [n, nose, side, left, right, stern] = line.split('|'), sw = +side, list = q => q.trim().split(' ').map(i => { const [t, l] = i.split(':'); return [t, +l]; });
+      const [nt, nd, ns] = nose.split(' '), [nw, nh] = nd.split('x').map(Number), width = 2 * sw + 1, parts = [], tail = stern.split(' ').map(i => { const [t, d] = i.split(':'), [w, hh] = d.split('x').map(Number); return [t, w, hh]; });
+      const tw = tail.reduce((a, q) => a + q[1], 0), span = Math.max(width, nw, tw), mid = span >> 1, x0 = mid - sw;
+      parts.push([nt, mid - (nw >> 1), 0, nw, nh, ns]);
+      let la = nh, ra = nh; for (const [t, l] of list(left)) { parts.push([t, x0, la, sw, l]); la += l; } for (const [t, l] of list(right)) { parts.push([t, mid + 1, ra, sw, l]); ra += l; }
+      const lo = Math.max(la, ra); parts.push(['corr', mid, nh, 1, lo - nh]);
+      let tx = mid - (tw >> 1); for (const [t, w, hh] of tail) { parts.push([t, tx, lo, w, hh]); tx += w; }
+      add('Whole ships', n, parts);
+    }
+    let g = '';
+    for (const line of LIB_PARTS.trim().split('\n')) { if (!line.includes('|')) { g = line; continue; } const [n, ps] = line.split('|'); add(g, n, ps.split(';').map(parseKind).filter(q => q[3] && q[4])); }
+    for (const line of LIB_BLOCKS.trim().split('\n')) {
+      const [n, side, left, right] = line.split('|'), sw = +side, parts = [], list = q => q.trim().split(' ').map(i => { const [t, l] = i.split(':'); return [t, +l]; });
+      let la = 0, ra = 0; for (const [t, l] of list(left)) { parts.push([t, 0, la, sw, l]); la += l; } for (const [t, l] of list(right)) { parts.push([t, sw + 1, ra, sw, l]); ra += l; }
+      parts.push(['corr', sw, 0, 1, Math.max(la, ra)]); add('Sections', n, parts);
+    }
+    for (const line of LIB.trim().split('\n')) {
+      if (!line.includes(':')) { g = line; continue; }
+      const t = line.slice(0, line.indexOf(':'));
+      for (const it of line.slice(line.indexOf(':') + 1).split(/,\s(?=[A-Z])/)) { const m = it.trim().match(/^(.*) (\d+)x(\d+)(?: (\w+))?$/); if (m) add(g, m[1], [[t, 0, 0, +m[2], +m[3], m[4]]]); }
+    }
+    for (const m of out) m.k = (m.n + ' ' + m.g + ' ' + [...new Set(m.p.map(q => (RT[q[0]] ? RT[q[0]][0] : q[0] === 'plating' ? 'hull plating' : 'corridor')))].join(' ')).toLowerCase();
+    return out;
+  })();
   const SIZES = [0.5, 0.75, 1, 1.5, 2, 3];
   const newEdit = mode => ({ sel: null, selDoor: null, folded: false, searching: false, back: null, gimg: null, gpos: null, scale: 1, tool: 'build', mode, cat: 'Recent', q: '', mod: null, rot: 0, mirror: true, ghost: null, target: null, brush: 'room', type: 'cabin', undo: [], redo: [] });
   function recent() { const r = (S.ui.shipRecent || []).map(n => MODS.find(m => m.n === n)).filter(Boolean); return r; }
   // every stretch of wall between floor and open space, as [key, x, y] at its middle
   function outerEdges(G) {
-    const { W, H, cell } = G, out = [], at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]);
+    const { W, H, cell } = G, out = [], at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : cell[y * W + x]), fit = (x, y) => { const v = at(x, y); return v > 0 && STRUCT.has(G.rooms[v].type); };
     for (let y = 0; y <= H; y++) for (let x = 0; x <= W; x++) {
-      if ((at(x - 1, y) < 0) !== (at(x, y) < 0) && y < H) out.push(['1:' + x + ':' + y, x, y + 0.5]);
-      if ((at(x, y - 1) < 0) !== (at(x, y) < 0) && x < W) out.push(['0:' + x + ':' + y, x + 0.5, y]);
+      if ((at(x - 1, y) < 0) !== (at(x, y) < 0) && y < H && !fit(x - 1, y) && !fit(x, y)) out.push(['1:' + x + ':' + y, x, y + 0.5]);
+      if ((at(x, y - 1) < 0) !== (at(x, y) < 0) && x < W && !fit(x, y - 1) && !fit(x, y)) out.push(['0:' + x + ':' + y, x + 0.5, y]);
     }
     return out;
   }
@@ -10476,24 +11362,24 @@ const LocalMaps = (() => {
     s.decks.forEach((d, i) => {
       const G = i === s.cur ? V.G : shipLayout({ ...s, cur: i }), { W, cell, doors } = G, at = `Deck ${i + 1}: `;
       for (const o of G.rooms) if (o) { cnt[o.type] = (cnt[o.type] || 0) + 1; }
-      for (const p of G.props) if (['bed', 'bunk', 'pod'].includes(p.k)) bunks++; else if (p.k === 'bed2') bunks += 2;
+      for (const p of G.props) if (['bed', 'bunk', 'pod', 'capsule', 'hammock'].includes(p.k)) bunks++; else if (p.k === 'bed2') bunks += 2;
       // parts that can't be walked to from each other
       const link = new Map(), lk = (a, b) => { (link.get(a) || link.set(a, []).get(a)).push(b); (link.get(b) || link.set(b, []).get(b)).push(a); };
       for (const e of doors) if (e.k !== 'hatch' && e.k !== 'bay') { const a = e.v ? e.y * W + e.x - 1 : (e.y - 1) * W + e.x, b = e.y * W + e.x; if (cell[a] >= 0 && cell[b] >= 0) lk(a, b); }
-      const seen = new Uint8Array(cell.length); let parts = 0, lone = 0;
+      const seen = new Uint8Array(cell.length), fit = id => id > 0 && (STRUCT.has(G.rooms[id].type) || G.rooms[id].type === 'nacelle'); let parts = 0, lone = 0;
       for (let i0 = 0; i0 < cell.length; i0++) {
-        if (cell[i0] < 0 || seen[i0]) continue; parts++; const q = [i0]; seen[i0] = 1;
-        while (q.length) { const v = q.pop(); floor++; for (const u of [v - 1, v + 1, v - W, v + W, ...(link.get(v) || [])]) if (cell[u] >= 0 && !seen[u] && (cell[u] === cell[v] || (link.get(v) || []).includes(u))) { seen[u] = 1; q.push(u); } }
+        if (cell[i0] < 0 || seen[i0] || fit(cell[i0])) continue; parts++; const q = [i0]; seen[i0] = 1;
+        while (q.length) { const v = q.pop(); floor++; for (const u of [v - 1, v + 1, v - W, v + W, ...(link.get(v) || [])]) if (cell[u] >= 0 && !fit(cell[u]) && !seen[u] && (cell[u] === cell[v] || (link.get(v) || []).includes(u))) { seen[u] = 1; q.push(u); } }
       }
-      for (const o of G.rooms) if (o && !doors.some(e => { const a = e.v ? cell[e.y * W + e.x - 1] : cell[(e.y - 1) * W + e.x], b = cell[e.y * W + e.x]; return a === o.id || b === o.id; })) lone++;
+      for (const o of G.rooms) if (o && !fit(o.id) && !doors.some(e => { const a = e.v ? cell[e.y * W + e.x - 1] : cell[(e.y - 1) * W + e.x], b = cell[e.y * W + e.x]; return a === o.id || b === o.id; })) lone++;
       if (lone) warn.push({ t: `${at}${plural(lone, 'room')} with no door`, fix: i === s.cur ? ['Add doors', fixDoors] : null });
       else if (parts > 1) warn.push({ t: `${at}${parts} parts you can't walk between`, fix: null });
     });
-    if (!cnt.engine) warn.push({ t: 'No engine room' });
-    if (!cnt.bridge && !cnt.cockpit) warn.push({ t: 'No bridge or cockpit' });
-    if (!cnt.airlock && !cnt.hangar) warn.push({ t: 'No airlock or hangar, so no way aboard' });
-    if (!cnt.life && floor > 150) warn.push({ t: 'No life support' });
-    if (s.decks.length > 1 && !cnt.lift) warn.push({ t: 'Several decks but no lift' });
+    if (!Object.keys(ENGINES).some(t => cnt[t])) warn.push({ t: 'No engine room' });
+    if (!cnt.bridge && !cnt.cockpit && !cnt.aux) warn.push({ t: 'No bridge or cockpit' });
+    if (![...LOCKS, ...BAYS].some(t => cnt[t])) warn.push({ t: 'No airlock or hangar, so no way aboard' });
+    if (!cnt.life && !cnt.oxygen && !cnt.scrubbers && floor > 150) warn.push({ t: 'No life support' });
+    if (s.decks.length > 1 && !cnt.lift && !cnt.stairs) warn.push({ t: 'Several decks but no lift' });
     return { warn, cnt, bunks, floor };
   }
   function startBuild() {
@@ -10505,12 +11391,7 @@ const LocalMaps = (() => {
   }
   // the module's squares, turned: [x, y, part, type], starting at 0, 0
   function modCells(m, rot, f = 1) {
-    let c = m.cells ? m.cells.map(q => q.slice()) : []; const taken = new Set();
-    if (!m.cells) m.p.forEach(([t, x, y, w, h], i) => {
-      const line = (p, l) => (t === 'corr' && l === 1 ? [Math.round((p + 0.5) * f - 0.5), 1] : [Math.round(p * f), Math.max(1, Math.round((p + l) * f) - Math.round(p * f))]);
-      const [X, W2] = line(x, w), [Y, H2] = line(y, h);
-      for (let b = Y; b < Y + H2; b++) for (let a = X; a < X + W2; a++) { const k = a + ',' + b; if (!taken.has(k)) { taken.add(k); c.push([a, b, i, t]); } }
-    });
+    let c = m.cells ? m.cells.map(q => q.slice()) : partCells(m.p, f);
     for (let k = 0; k < rot; k++) c = c.map(([x, y, i, t]) => [-y, x, i, t]);
     const mx = Math.min(...c.map(q => q[0])), my = Math.min(...c.map(q => q[1]));
     return c.map(([x, y, i, t]) => [x - mx, y - my, i, t]);
@@ -10519,12 +11400,12 @@ const LocalMaps = (() => {
   const symOn = () => { const E = V.edit; return !!(E && E.mirror && E.mod && (E.mode === 'add' || E.mod.twin)); };
   function findSnap(m, rot, tx, ty) {
     const G = V.G, { W, H, cell } = G, c = modCells(m, rot, m.cells ? 1 : (V.edit.scale || 1)), bw = Math.max(...c.map(q => q[0])) + 1, bh = Math.max(...c.map(q => q[1])) + 1;
-    const cxm = G.Hh.cx, sym = symOn();
+    const cxm = G.Hh.cx, sym = symOn(), hard = c.filter(q => q[3] !== 'plating');   // plating goes under anything
     const free = (ox, oy) => {
-      if (!c.every(([x, y]) => { const X = ox + x, Y = oy + y; return X > 0 && Y > 0 && X < W - 1 && Y < H - 1 && cell[Y * W + X] < 0; })) return false;
+      if (!c.every(([x, y]) => { const X = ox + x, Y = oy + y; return X > 0 && Y > 0 && X < W - 1 && Y < H - 1; }) || !hard.every(([x, y]) => cell[(oy + y) * W + ox + x] < 0)) return false;
       if (!sym) return true;
       if (ox <= cxm && ox + bw - 1 >= cxm) return Math.abs(2 * ox + bw - 1 - 2 * cxm) <= 1;   // across the line it must be centred on it
-      return c.every(([x, y]) => { const X = 2 * cxm - ox - x, Y = oy + y; return X > 0 && X < W - 1 && cell[Y * W + X] < 0; });
+      return hard.every(([x, y]) => { const X = 2 * cxm - ox - x, Y = oy + y; return X > 0 && X < W - 1 && cell[Y * W + X] < 0; });
     };
     if (!cell.some(v => v >= 0)) { const ox = sym ? cxm - (bw >> 1) : clamp(Math.round(tx - bw / 2), 1, W - bw - 1), oy = clamp(Math.round(ty - bh / 2), 1, H - bh - 1); return { x: ox, y: oy, c }; }
     if (V.placing) {
@@ -10532,7 +11413,7 @@ const LocalMaps = (() => {
       const fx = Math.round(tx - bw / 2), fy = Math.round(ty - bh / 2); let near = null, nd = 10;
       for (let oy = Math.max(1, fy - 3); oy <= fy + 3 && oy + bh < H; oy++) for (let ox = Math.max(1, fx - 3); ox <= fx + 3 && ox + bw < W; ox++) {
         const d = (ox - fx) ** 2 + (oy - fy) ** 2; if (d >= nd || !free(ox, oy)) continue;
-        if (c.some(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([i, j]) => cell[(oy + y + j) * W + ox + x + i] >= 0))) { nd = d; near = { x: ox, y: oy, c }; }
+        if (c.some(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([i, j]) => G.solid[(oy + y + j) * W + ox + x + i]))) { nd = d; near = { x: ox, y: oy, c }; }
       }
       if (near) return near;
       if (fx > 0 && fy > 0 && fx + bw < W && fy + bh < H && free(fx, fy)) return { x: fx, y: fy, c };
@@ -10541,7 +11422,7 @@ const LocalMaps = (() => {
     for (let oy = 1; oy + bh < H; oy++) for (let ox = 1; ox + bw < W; ox++) {
       const d = (ox + bw / 2 - tx) ** 2 + (oy + bh / 2 - ty) ** 2; if (d >= bs || !free(ox, oy)) continue;
       let any = false, corr = false, aft = false;
-      for (const [x, y] of c) for (const [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const v = cell[(oy + y + j) * W + ox + x + i]; if (v >= 0) { any = true; if (v === 0) corr = true; else if (j < 0 && G.rooms[v].type === 'engine') aft = true; } }
+      for (const [x, y] of c) for (const [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const u = (oy + y + j) * W + ox + x + i, v = cell[u]; if (v >= 0) { any = true; if (v === 0) corr = true; else if (j < 0 && ENGINES[G.rooms[v].type]) aft = true; } else if (G.solid[u]) any = true; }
       if (!any) continue;
       const sc = d + (V.placing ? (corr ? 0 : 3) : (corr ? 0 : 300) + (aft ? 1500 : 0)); if (sc < bs) { bs = sc; best = { x: ox, y: oy, c }; }
     }
@@ -10550,7 +11431,7 @@ const LocalMaps = (() => {
   // the mirror image across the ship's centre line, if there is room and it isn't the same squares
   function mirrorOf(gh) {
     const G = V.G, cx = G.Hh.cx, c = gh.c.map(([x, y, i, t]) => [2 * cx - (gh.x + x), gh.y + y, i, t]), own = new Set(gh.c.map(([x, y]) => (gh.y + y) * G.W + gh.x + x));
-    return c.every(([x, y]) => x > 0 && x < G.W - 1 && G.cell[y * G.W + x] < 0 && !own.has(y * G.W + x)) ? c : null;
+    return c.every(([x, y, , t]) => x > 0 && x < G.W - 1 && (t === 'plating' || G.cell[y * G.W + x] < 0) && !own.has(y * G.W + x)) ? c : null;
   }
   function aim(tx, ty) {
     const E = V.edit; if (!E || E.tool !== 'build') return;
@@ -10562,9 +11443,10 @@ const LocalMaps = (() => {
   function autoDoors(D, mirror = !!(V && V.edit && V.edit.mirror)) {
     const { W, H } = D.Hh, { cell, doors } = D, has = new Set(), corr = {}, room = {}, out = {}, push = (o, id, e) => (o[id] || (o[id] = [])).push(e);
     for (const e of doors) { const a = e.v ? cell[e.y * W + e.x - 1] : cell[(e.y - 1) * W + e.x], b = cell[e.y * W + e.x]; if (a >= 0 && b >= 0 && a !== b) { has.add(a); has.add(b); } else if (a !== b) { has.add('o' + Math.max(a, b)); } }
+    const fitting = id => id > 0 && STRUCT.has(D.typeOf(id));   // hull fittings take no doors, and nothing opens onto them
     for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
-      const id = cell[y * W + x]; if (id <= 0) continue;
-      for (const [i, j, e] of [[-1, 0, { x, y, v: 1 }], [1, 0, { x: x + 1, y, v: 1 }], [0, -1, { x, y, v: 0 }], [0, 1, { x, y: y + 1, v: 0 }]]) { const n = cell[(y + j) * W + x + i]; if (n === id) continue; push(n === 0 ? corr : n > 0 ? room : out, id, e); }
+      const id = cell[y * W + x]; if (id <= 0 || fitting(id)) continue;
+      for (const [i, j, e] of [[-1, 0, { x, y, v: 1 }], [1, 0, { x: x + 1, y, v: 1 }], [0, -1, { x, y, v: 0 }], [0, 1, { x, y: y + 1, v: 0 }]]) { const n = cell[(y + j) * W + x + i]; if (n === id || fitting(n)) continue; push(n === 0 ? corr : n > 0 ? room : out, id, e); }
     }
     const mid = doorSpot;
     for (const id of Object.keys(corr).concat(Object.keys(room))) {
@@ -10575,9 +11457,9 @@ const LocalMaps = (() => {
       if (mirror) { const f = flipEdge(e), a = f.v ? cell[f.y * W + f.x - 1] : cell[(f.y - 1) * W + f.x], b = cell[f.y * W + f.x]; if (a !== b && a >= 0 && b >= 0 && !(has.has(a) && has.has(b)) && !doors.some(q => q.x === f.x && q.y === f.y && q.v === f.v)) { doors.push({ ...f, k: HEAVY.has(t) ? 'heavy' : 'door' }); has.add(a); has.add(b); } }
     }
     for (const id of Object.keys(out)) {
-      const t = D.typeOf(+id); if ((t !== 'airlock' && t !== 'hangar') || has.has('o' + id)) continue;
-      const es = out[id].filter(e => e.v); if (!es.length) continue;
-      if (t === 'airlock') {
+      const t = D.typeOf(+id); if ((!LOCKS.has(t) && !BAYS.has(t)) || has.has('o' + id)) continue;
+      const sides = out[id].filter(e => e.v), bare = D.plate ? sides.filter(e => !D.plate[e.y * W + e.x - 1] && !D.plate[e.y * W + e.x]) : sides, es = bare.length ? bare : sides; if (!es.length) continue;
+      if (LOCKS.has(t)) {
         const e = mid(es); doors.push({ ...e, k: 'hatch' });
         if (mirror) { const f = flipEdge(e), a = cell[f.y * W + f.x - 1], b = cell[f.y * W + f.x]; if ((a < 0) !== (b < 0)) { doors.push({ ...f, k: 'hatch' }); has.add('o' + Math.max(a, b)); } }
       }
@@ -10588,13 +11470,13 @@ const LocalMaps = (() => {
     const E = V.edit, gh = E && E.ghost;
     if (!gh) { if (E && E.carry) { undoEdit(); E.redo.pop(); toast('No room there, so it went back'); } else if (E && E.mod) toast('No room for that here'); return; }
     const D = editable(), { W } = D.Hh, mod = E.mod, mc = symOn() ? mirrorOf(gh) : null, keep = mod.keep, twin = mod.twin;
-    const put = (list, keepId) => { const ids = {}; for (const [x, y, i, t] of list) { if (t === 'corr') ids[i] = 0; else if (ids[i] == null && keepId) ids[i] = keepId; else if (ids[i] == null) { D.types.push(t); ids[i] = D.types.length - 1; } D.cell[y * W + x] = ids[i]; } return ids; };
+    const put = (list, keepId) => { const ids = {}; for (const [x, y, i, t] of list) { if (t === 'plating') { (D.plate || (D.plate = new Uint8Array(D.cell.length)))[y * W + x] = 1; continue; } if (t === 'corr') ids[i] = 0; else if (ids[i] == null && keepId) ids[i] = keepId; else if (ids[i] == null) { D.types.push(t); ids[i] = D.types.length - 1; } D.cell[y * W + x] = ids[i]; } return ids; };
     const placed = gh.c.map(([x, y, i, t]) => [gh.x + x, gh.y + y, i, t]), ids = put(placed, keep); if (mc) put(mc, twin);
     autoDoors(D); if (E.carry) E.carry = false; else pushUndo();
-    if (!mod.cells) S.ui.shipRecent = [mod.n, ...(S.ui.shipRecent || []).filter(n => n !== mod.n)].slice(0, 12);
+    if (!mod.cells) S.ui.shipRecent = [mod.n, ...(S.ui.shipRecent || []).filter(n => n !== mod.n)].slice(0, 24);
     const bw = Math.max(...gh.c.map(q => q[0])), bh = Math.max(...gh.c.map(q => q[1]));
     E.target = [gh.x + bw / 2 + 0.5, gh.y + bh / 2 + 0.5];
-    if (mod.g === 'Whole ships') { E.mod = null; E.cat = 'Living'; }
+    if (mod.g === 'Whole ships') { E.mod = null; E.cat = mod.base ? 'Command' : 'Crew'; }
     if (mod.cells) { E.mod = null; E.sel = { id: ids[placed[0][2]], x: placed[0][0], y: placed[0][1] }; if (E.back) { E.mode = E.back; E.back = null; } }
     commitDeck(D);
     flash(placed.map(q => [q[0], q[1]])); if (mc) flash(mc.map(q => [q[0], q[1]]));
@@ -10692,7 +11574,7 @@ const LocalMaps = (() => {
     let [lx, ly] = st.last || [cx, cy];
     if (!st.first) st.first = [cx, cy];
     // rooms go in as a box from corner to corner; corridors and erasing follow the finger
-    if (st.t === 'room') {
+    if (st.t === 'room' || st.t === 'plate') {
       st.cells.clear(); const [fx, fy] = st.first;
       for (let Y = Math.max(0, Math.min(fy, cy)); Y <= Math.min(Hh.H - 1, Math.max(fy, cy)); Y++) for (let X = Math.max(0, Math.min(fx, cx)); X <= Math.min(Hh.W - 1, Math.max(fx, cx)); X++) st.cells.set(Y * Hh.W + X, [X, Y]);
       st.last = [cx, cy]; return;
@@ -10713,13 +11595,17 @@ const LocalMaps = (() => {
   // the deck as it is now, ready to change: a copy of its grid, room kinds and doors
   function editable() {
     const s = V.s, Hh = shipHull(s), base = deckBase(s, Hh, s.cur), dk = deckOf();
-    return { Hh, dk, cell: base.cell.slice(), types: base.types.slice(), doors: base.doors.map(e => ({ ...e })), typeOf: id => (dk.rooms[id] && RT[dk.rooms[id].type] && dk.rooms[id].type) || base.types[id] };
+    return { Hh, dk, cell: base.cell.slice(), types: base.types.slice(), plate: base.plate ? base.plate.slice() : null, doors: base.doors.map(e => ({ ...e })), typeOf: id => (dk.rooms[id] && RT[dk.rooms[id].type] && dk.rooms[id].type) || base.types[id] };
   }
   const commitDeck = D => {
     const { W } = D.Hh, c = D.cell; D.doors = D.doors.filter(e => { const a = e.v ? c[e.y * W + e.x - 1] : c[(e.y - 1) * W + e.x], b = c[e.y * W + e.x]; return a !== b && (e.k === 'hatch' || e.k === 'bay' ? (a < 0) !== (b < 0) : a >= 0 && b >= 0); });
     D.dk.edit = encodeDeck(D, D.Hh.W, D.Hh.H); D.dk.ver = (D.dk.ver | 0) + 1; persist(); rebuild(false); };
   function applyStroke(st) {
-    const D = editable(), { W } = D.Hh, { cell, types } = D;
+    const D = editable(), { W } = D.Hh, { cell, types } = D, flipPl = i => ((i / W) | 0) * W + 2 * D.Hh.cx - i % W;
+    if (st.t === 'plate') { const pl = D.plate || (D.plate = new Uint8Array(cell.length)); for (const i of st.cells.keys()) { pl[i] = 1; if (V.edit.mirror) pl[flipPl(i)] = 1; } pushUndo(); commitDeck(D); return; }
+    // erasing takes the room first and the plating under it on the next pass
+    let platePass = false;
+    if (st.t === 'erase' && D.plate) for (const i of st.cells.keys()) { if (cell[i] < 0 && D.plate[i]) { D.plate[i] = 0; platePass = true; if (V.edit.mirror) D.plate[flipPl(i)] = 0; } }
     let id = st.t === 'corr' ? 0 : st.t === 'erase' ? -1 : null, fresh = false;
     if (st.t === 'room') { const v = cell[st.first[1] * W + st.first[0]]; if (v > 0 && D.typeOf(v) === st.type) id = v; else { types.push(st.type); id = types.length - 1; fresh = true; } }
     let changed = false;
@@ -10822,6 +11708,7 @@ const LocalMaps = (() => {
       if (E.mode === 'doors') { if (E.selDoor) { E.selDoor = null; renderPanel(); redrawOv(); } else addDoor(wx, wy); }
       else if (E.mode === 'paint') fillAt(wx, wy);
       else if (E.mode === 'move' && E.sel) { E.sel = null; renderPanel(); redrawOv(); }
+      else if (E.mode === 'move') { const G = V.G, X = Math.floor(wx), Y = Math.floor(wy), on = X >= 0 && Y >= 0 && X < G.W && Y < G.H && G.plate && G.plate[Y * G.W + X] && G.cell[Y * G.W + X] < 0; const was = !!E.pl; E.pl = on ? [X, Y] : null; if (on || was) renderPanel(); }
       return;
     }
     if (V.mode && V.mode.t === 'put') { const q = V.mode.q; q.mx = +wx.toFixed(1); q.my = +wy.toFixed(1); persist(); setMode(null); redraw(); toast(`${q.name} is on the map`); return; }
@@ -10924,7 +11811,7 @@ const LocalMaps = (() => {
         h('div', { class: 'grp-title' }, 'Districts'),
         V.G.wards.map((w, i) => h('div', { class: 'list-row tap', onclick: () => go(w.c[0], w.c[1], 0.8) }, h('div', { class: 'main' }, h('div', { class: 'title' }, (V.m.city.names || {})[i] || w.name), (V.m.city.notes || {})[i] ? h('div', { class: 'sub' }, mdPlain(V.m.city.notes[i]).slice(0, 90)) : null), icon('chev', 16))));
     } else if (V.kind === 'ship') {
-      const dk = deckOf(), rs = V.G.rooms.filter(o => o && o.type !== 'lift');
+      const dk = deckOf(), rs = V.G.rooms.filter(o => o && o.type !== 'lift' && !STRUCT.has(o.type));
       body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Tap a room to fly to it and write its notes.'),
         rs.map(o => { const rm = dk.rooms[o.id] || {}; return h('div', { class: 'list-row tap', onclick: () => { go(o.c[0], o.c[1], 36); shipRoomSheet(o.id); } }, typeSwatch(o.type),
           h('div', { class: 'main' }, h('div', { class: 'title' }, rm.name || o.label), h('div', { class: 'sub' }, [rm.name ? RT[o.type][0] : null, rm.note ? mdPlain(rm.note).slice(0, 90) : null].filter(Boolean).join(' · ') || `${o.n * 4} m²`)), icon('chev', 16)); }),
@@ -11019,9 +11906,9 @@ const LocalMaps = (() => {
     let floor = 0, rooms = 0, berths = 0;
     s.decks.forEach((d, i) => {
       const G = shipLayout({ ...s, cur: i });
-      for (const v of G.cell) if (v >= 0) floor++;
-      for (const o of G.rooms) if (o && o.type !== 'lift') rooms++;
-      for (const p of G.props) if (p.k === 'bed' || p.k === 'bunk' || p.k === 'pod') berths++; else if (p.k === 'bed2') berths += 2;
+      for (const v of G.cell) if (v === 0 || (v > 0 && !STRUCT.has(G.rooms[v].type))) floor++;
+      for (const o of G.rooms) if (o && o.type !== 'lift' && !STRUCT.has(o.type)) rooms++;
+      for (const p of G.props) if (p.k === 'bed' || p.k === 'bunk' || p.k === 'pod' || p.k === 'capsule' || p.k === 'hammock') berths++; else if (p.k === 'bed2') berths += 2;
     });
     const sb = solidBox(shipLayout(s));
     return { len: sb ? sb.h * CELL : 0, beam: sb ? sb.w * CELL : 0, decks: s.decks.length, floor: floor * CELL * CELL, rooms, berths };
@@ -11214,7 +12101,7 @@ const LocalMaps = (() => {
     return el;
   }
   const shipLine = e => { const s = (e.ship = normShip(e.ship)), pl = placeOfShip(e), w = pl && worldOfPlace(pl); return [SHIPS[s.cls].name, `${s.decks.length} deck${s.decks.length > 1 ? 's' : ''}`, pl ? (lc(pl.name) === lc(e.title) ? (w && w !== S.world ? `on ${w.name}` : 'on the map') : w && w !== S.world ? `at ${pl.name} on ${w.name}` : `at ${pl.name}`) : null].filter(Boolean).join(' · '); };
-  return { open, card, openShip, shipCard, shipEntryCard, normShip, get isOpen() { return !!V; }, debug: { genCity, genDungeon, cityPaths, drawCity, state, layoutOf, shipLayout, shipHull, genDeck, drawShip, view: () => V && { k: V.k, ox: V.ox, oy: V.oy, G: V.G } } };
+  return { open, card, openShip, shipCard, shipEntryCard, normShip, get isOpen() { return !!V; }, debug: { genCity, genDungeon, cityPaths, drawCity, state, layoutOf, shipLayout, shipHull, genDeck, drawShip, MODS, modCells, cellsShip, drawCells, RT, STRUCT, LOOKS, view: () => V && { k: V.k, ox: V.ox, oy: V.oy, G: V.G } } };
 })();
 
 const Chars = (() => {
