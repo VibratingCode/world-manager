@@ -14321,11 +14321,11 @@ const Codex = (() => {
 })();
 
 /* ===================== settings ===================== */
-// write a world to a .json file
-async function downloadWorld(st, label) {
-  const json = JSON.stringify({ app: 'world-manager', format: 1, exported: new Date().toISOString(), name: label || st.meta.name, state: st });
+// write a world to a .json file; with saves, a bundle that carries every save too
+async function downloadWorld(st, label, saves) {
+  const json = JSON.stringify(Object.assign({ app: 'world-manager', format: 1 }, saves ? { kind: 'bundle' } : {}, { exported: new Date().toISOString(), name: label || st.meta.name, state: st }, saves ? { saves } : {}));
   const slug = (label || st.meta.name || 'world').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'world';
-  const name = `${slug}-${new Date().toISOString().slice(0, 10)}.json`;
+  const name = `${slug}${saves ? '-everything' : ''}-${new Date().toISOString().slice(0, 10)}.json`;
   const blob = new Blob([json], { type: 'application/json' });
   const a = h('a', { href: URL.createObjectURL(blob), download: name });
   document.body.append(a); a.click();
@@ -14333,6 +14333,13 @@ async function downloadWorld(st, label) {
   toast('Exported ' + name);
 }
 async function exportData() { await flush(); await downloadWorld(S, S.meta.name); }
+// everything, saves included, in one file: how a world moves to the desktop app
+async function exportAll() {
+  await flush();
+  const saves = [];
+  for (const m of await Saves.list()) { const st = await Store.get('save:' + m.id); if (st) saves.push(Object.assign({}, m, { state: st })); }
+  await downloadWorld(S, S.meta.name, saves);
+}
 function readWorldFile(f) {
   return new Promise(res => {
     const rd = new FileReader();
@@ -14340,7 +14347,7 @@ function readWorldFile(f) {
       let data; try { data = JSON.parse(rd.result); } catch (e) { toast('That file is not valid JSON'); return res(null); }
       const st = data && data.state ? data.state : data;
       if (!st || !st.meta || !st.world) { toast('That does not look like a World Manager file'); return res(null); }
-      res({ st, name: data.name || st.meta.name });
+      res({ st, name: data.name || st.meta.name, saves: data.kind === 'bundle' && Array.isArray(data.saves) ? data.saves : null });
     };
     rd.onerror = () => { toast('Could not read that file'); res(null); };
     rd.readAsText(f);
@@ -14350,8 +14357,11 @@ function readWorldFile(f) {
 async function importFile(f, after) {
   if (!f) return;
   const got = await readWorldFile(f); if (!got) return;
+  // a bundle's saves come in first, beside the ones already here
+  const n = got.saves ? await Saves.addSaves(got.saves) : 0;
   const m = await Saves.addFromState(got.st, got.name);
   after && after();
+  if (got.saves) toast(`${plural(n, 'save')} came in with it`);
   const c = m.counts;
   if (await confirmDlg(`“${m.name}” was added to your saves (${plural(c.chars, 'character')}, ${plural(c.events, 'event')}, ${plural(c.places, 'place')}). Load it now? Your current world is saved first.`, { ok: 'Load it', danger: false, title: 'World imported' })) Saves.load(m.id);
 }
@@ -14413,6 +14423,21 @@ const Saves = (() => {
   async function remove(id) { const l = await list(), i = l.findIndex(x => x.id === id); if (i >= 0) l.splice(i, 1); await setList(l); await Store.del('save:' + id); }
   async function exportSave(id) { const st = await Store.get('save:' + id), m = (await list()).find(x => x.id === id); if (st) await downloadWorld(st, m ? m.name : st.meta.name); }
   const addFromState = (st, name) => store(migrate(st), name || st.meta.name || 'Imported world', 'manual', false);
+  // a bundle's saves, in their order, after the ones already here; an id already in use gets a new one
+  async function addSaves(saves) {
+    const l = await list(), ids = new Set(l.map(x => x.id)); let n = 0;
+    for (const s of saves) {
+      if (!s || !s.state || !s.state.meta || !s.state.world) continue;
+      const m = Object.assign({}, s); delete m.state;
+      if (!m.id || ids.has(m.id)) m.id = uid();
+      ids.add(m.id);
+      m.name = m.name || s.state.meta.name || 'Imported world'; m.kind = m.kind || 'manual';
+      await Store.set('save:' + m.id, migrate(s.state));
+      l.push(m); n++;
+    }
+    await setList(l);
+    return n;
+  }
   async function newWorld(name, seed) {
     await autoSave('Before starting a new world');
     const fresh = defaultState(), keep = S.meta;
@@ -14422,7 +14447,7 @@ const Saves = (() => {
     fresh.species = JSON.parse(JSON.stringify(S.species));
     await switchTo(fresh);
   }
-  return { list, saveNow, autoSave, overwrite, load, rename, remove, exportSave, addFromState, newWorld, switchTo, defaultName, thumb };
+  return { list, saveNow, autoSave, overwrite, load, rename, remove, exportSave, addFromState, addSaves, newWorld, switchTo, defaultName, thumb };
 })();
 const plural = (n, word) => `${fmtInt(n)} ${word}${n === 1 ? '' : 's'}`;
 function ago(t) {
@@ -14682,6 +14707,7 @@ const Settings = (() => {
       h('div', { class: 'row wrap' },
         h('button', { class: 'btn primary', onclick: openSavesSheet }, icon('save', 16), 'Save & load…'),
         h('button', { class: 'btn', onclick: exportData }, icon('download', 16), 'Export to a file'),
+        h('button', { class: 'btn', onclick: exportAll, title: 'Everything, saves included, for moving to the desktop app' }, icon('download', 16), 'Export everything'),
         h('button', { class: 'btn', onclick: () => file.click() }, icon('upload', 16), 'Import file'), file),
       h('div', { class: 'small muted', style: 'margin-top:10px' }, `${plural(S.chars.length, 'character')} · ${plural(S.events.length, 'event')} · ${plural(S.codex.length, 'codex entry').replace('entrys', 'entries')} · ${plural(S.world.places.length, 'place')} · ${plural(S.world.features.length, 'stamped feature')} · ${plural(S.world.sculpt.length + S.world.paint.length, 'brush stroke')}`),
       (() => { const el = h('div', { class: 'tiny muted', style: 'margin-top:4px' }); if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e => { if (e && e.usage) el.textContent = `Using ${fmtNum(e.usage / 1048576, 1)} MB of storage on this device${e.quota ? ' (' + fmtNum(e.quota / 1073741824, 1) + ' GB available)' : ''}.`; }).catch(() => {}); return el; })(),
@@ -14749,6 +14775,7 @@ function commands() {
     ['Save a snapshot now', 'save', quickSave, 'backup'],
     ['Save & load worlds…', 'save', openSavesSheet, 'load backup import'],
     ['Export this world to a file', 'download', exportData, 'backup json'],
+    ['Export everything, saves included', 'download', exportAll, 'backup bundle desktop move'],
     ['Keyboard shortcuts', 'keyboard', shortcutsSheet, 'help keys ?'],
     ['Go to Map', 'map', () => setTab('map'), '1'],
     ['Go to Characters', 'users', () => setTab('chars'), '2'],
