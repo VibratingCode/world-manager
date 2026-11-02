@@ -4230,7 +4230,7 @@ const MapView = (() => {
     const ws = [];
     try {
       const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
-      const n = clamp((navigator.hardwareConcurrency || 4) - 1, 3, 6);
+      const n = clamp((navigator.hardwareConcurrency || 4) - 2, 3, 10);
       for (let k = 0; k < n; k++) {
         const w = new Worker(url);
         w.busy = null; w.ok = false;
@@ -15716,7 +15716,7 @@ void main() {}`;
     gl.activeTexture(gl.TEXTURE0);
     E.smFb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, E.smFb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, E.smTex, 0); gl.drawBuffers([gl.NONE]); gl.readBuffer(gl.NONE); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     // the workers, each with its own copy of this world
-    const src = URL.createObjectURL(new Blob([$('#lib-terrain').textContent + '\n' + $('#worker-src').textContent], { type: 'text/javascript' })), nW = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
+    const src = URL.createObjectURL(new Blob([$('#lib-terrain').textContent + '\n' + $('#worker-src').textContent], { type: 'text/javascript' })), nW = Math.max(2, Math.min(8, (navigator.hardwareConcurrency || 4) - 2));
     const groups = [];
     for (const f of S.world.features || []) {
       if ((f.kind !== 'road' && f.kind !== 'trail') || !f.pts || f.pts.length < 4) continue;

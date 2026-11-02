@@ -246,7 +246,7 @@ Your map is the blueprint for a world you can walk and fly through. Nothing is p
 ## Known rough edges
 
 - Auto rivers follow the generated terrain, so they can stop in an inland hollow; draw a river by hand where you want a specific course.
-- Drawing a new area takes a moment while the terrain is computed: a few seconds for a full screen at 1080p. The last 1,200 tiles you've seen stay in memory, about 25 screens' worth, so going back to them is instant.
+- Drawing a new area takes a moment while the terrain is computed: about a second for a full screen at 1080p. The last 1,200 tiles you've seen stay in memory, about 25 screens' worth, so going back to them is instant.
 - The 1-mile sheets look most convincing. In between, around 5–30 miles across, the generated relief can look a bit lumpy.
 - When the map switches from Robinson to the local projection there's a short crossfade, and coastlines shift shape slightly because the projection really changes.
 - The survey grid is a fictional system based on the UTM-style zones, with townships counted from the equator.
