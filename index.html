@@ -2920,6 +2920,8 @@ self.onmessage = function (e) {
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+// how far the wheel turned, in pixels: Firefox reports a mouse wheel in lines, three to the notch
+const wheelY = e => (e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 800 : e.deltaY);
 const uid = () => Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 8);
 const D2R = Math.PI / 180, R2D = 180 / Math.PI;
 const ICONS = {
@@ -5309,7 +5311,7 @@ const MapView = (() => {
   cv.addEventListener('pointerleave', e => { hideTip(); if (e.pointerType === 'mouse' && !ptrs.size) { hover = null; dirty = true; } });
   cv.addEventListener('wheel', e => {
     e.preventDefault();
-    const [x, y] = pos(e), dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    const [x, y] = pos(e), dy = wheelY(e);
     zoomAt(x, y, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0022)));
   }, { passive: false });
   document.addEventListener('gesturestart', e => e.preventDefault());
@@ -7330,7 +7332,7 @@ const MapView = (() => {
     let [, ow, oh] = SHARE_FORMATS[share.format];
     if (share.format === 'screen') { const z = Math.max(2, 1920 / Math.max(aw, ah)); ow = Math.round(aw * z); oh = Math.round(ah * z); }
     if (share.hi) { ow *= 2; oh *= 2; }
-    const big = Math.sqrt(ow * oh / 15e6); if (big > 1) { ow = Math.floor(ow / big); oh = Math.floor(oh / big); }   // stay inside Safari's canvas limits
+    const big = Math.sqrt(ow * oh / 15e6); if (big > 1) { ow = Math.floor(ow / big); oh = Math.floor(oh / big); }   // a size any browser will draw
     const lay = shareLayout(ow, oh), q = Math.min(aw / ow, ah / oh), pw = ow * q, ph = oh * q, px = ml + (aw - pw) / 2, py = top + (ah - ph) / 2;
     return { x: px + lay.mx * q, y: py + lay.my * q, w: lay.mw * q, h: lay.mh * q, ow, oh, lay, q, px, py, pw, ph };
   }
@@ -12058,7 +12060,7 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
       onTap(D.x0, D.y0, D.pin);
     };
     cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
-    cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = pos(e); zoomAt(x, y, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0022))); }, { passive: false });
+    cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = pos(e); zoomAt(x, y, Math.exp(-wheelY(e) * (e.ctrlKey ? 0.01 : 0.0022))); }, { passive: false });
     cv.addEventListener('dblclick', e => { if (V.edit) return; const [x, y] = pos(e); zoomAt(x, y, 2, false); });
   }
   function onTap(x, y, pin) {
@@ -12378,7 +12380,7 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
     document.body.classList.add('ship-console');
     const prev = h('canvas', { class: 'print-prev', 'aria-label': 'Preview of the drawing' }), info = h('div', { class: 'print-info' }), title = h('input', { value: e.title, autocomplete: 'off' });
     const name = () => title.value.trim() || e.title;
-    const outSize = () => { let [, w, hh] = PRINT_FMT[o.fmt]; if (o.hi) { w *= 2; hh *= 2; } const big = Math.sqrt(w * hh / 15e6); if (big > 1) { w = Math.floor(w / big); hh = Math.floor(hh / big); } return [w, hh]; };   // inside Safari's canvas limit
+    const outSize = () => { let [, w, hh] = PRINT_FMT[o.fmt]; if (o.hi) { w *= 2; hh *= 2; } const big = Math.sqrt(w * hh / 15e6); if (big > 1) { w = Math.floor(w / big); hh = Math.floor(hh / big); } return [w, hh]; };   // a size any browser will draw
     let tm = 0;
     const drawPrev = () => {
       tm = 0; if (!prev.isConnected) return;
@@ -13798,7 +13800,7 @@ const Timeline = (() => {
     if (!S.events.length && laid.every(it => it.now || it.epoch)) {
       ctx.fillStyle = muted; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       ctx.font = `200 30px ${TF}`; ctx.fillStyle = white; ctx.fillText('Click to add an event', rail + 28, H * .5);
-      ctx.font = `300 15px ${TF}`; ctx.fillStyle = muted; ctx.fillText('Drag through time. Scroll from days to aeons.', rail + 28, H * .5 + 42);
+      ctx.font = `300 15px ${TF}`; ctx.fillStyle = muted; ctx.fillText('Drag through time. Ctrl + scroll from days to aeons.', rail + 28, H * .5 + 42);
     }
   }
 
@@ -13838,7 +13840,7 @@ const Timeline = (() => {
   cv.addEventListener('pointercancel', e => end(e, true));
   cv.addEventListener('wheel', e => {
     e.preventDefault();
-    const [, y] = pos(e), dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    const [, y] = pos(e), dy = wheelY(e);
     if (e.ctrlKey || e.metaKey) zoomAt(y, Math.exp(-dy * 0.012)); else setView(center + dy / ppd, ppd);
   }, { passive: false });
   function openItem(it) { if (it.entry) Codex.open(it.entry.id); else if (it.derived) Chars.open(it.char.id); else viewEvent(it.ev); }
@@ -14683,17 +14685,25 @@ const Settings = (() => {
         h('button', { class: 'btn', onclick: () => file.click() }, icon('upload', 16), 'Import file'), file),
       h('div', { class: 'small muted', style: 'margin-top:10px' }, `${plural(S.chars.length, 'character')} · ${plural(S.events.length, 'event')} · ${plural(S.codex.length, 'codex entry').replace('entrys', 'entries')} · ${plural(S.world.places.length, 'place')} · ${plural(S.world.features.length, 'stamped feature')} · ${plural(S.world.sculpt.length + S.world.paint.length, 'brush stroke')}`),
       (() => { const el = h('div', { class: 'tiny muted', style: 'margin-top:4px' }); if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e => { if (e && e.usage) el.textContent = `Using ${fmtNum(e.usage / 1048576, 1)} MB of storage on this device${e.quota ? ' (' + fmtNum(e.quota / 1073741824, 1) + ' GB available)' : ''}.`; }).catch(() => {}); return el; })(),
+      (() => {
+        const el = h('div', { class: 'tiny muted', style: 'margin-top:4px' }), safe = () => { el.textContent = 'Protected: Firefox won\u2019t clear this by itself when the disk runs low.'; };
+        if (navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(on => {
+          if (on) return safe();
+          el.append('Firefox can clear this if the disk runs very low. ', h('button', { class: 'btn small', style: 'margin-left:6px', onclick: () => navigator.storage.persist().then(ok => { if (ok) safe(); else toast('Firefox said no, so export a file now and then to be safe.'); }) }, 'Protect it'));
+        }).catch(() => {});
+        return el;
+      })(),
       h('hr', { class: 'sep' }),
       h('button', { class: 'btn danger', onclick: resetAll }, icon('trash', 16), 'Start over…'));
   }
   function about() {
     return h('div', { class: 'card help' }, h('h3', null, 'Using World Manager', h('span', { class: 'grow' }), h('button', { class: 'btn small', onclick: shortcutsSheet }, icon('keyboard', 14), 'Shortcuts')),
-      h('p', null, h('b', null, 'Install it: '), 'in Chrome or Edge, press the install button at the right of the address bar. It then opens in its own window like an app, and works offline when the page is served over https.'),
+      h('p', null, h('b', null, 'Keep it handy: '), 'bookmark this page or pin its tab in Firefox. Once it has opened from the web, it keeps working without a connection.'),
       h('p', null, h('b', null, 'Search & dice: '), 'the magnifier at the top finds anything (characters, items, places, lore, events) and runs commands; type a roll like 2d6+3 to roll it. The die button opens the dice roller with saved rolls and history. On a keyboard press / to search and R to roll.'),
       h('p', null, h('b', null, 'Map: '), 'scroll to zoom from the whole planet (Robinson projection) down to about a mile across, where it becomes a USGS-style topographic sheet with contours, spot heights and the survey grid. Click anywhere for coordinates, elevation and the nearest place. The tools along the bottom add places (or found whole settlements and roads automatically), sculpt terrain, paint biomes, stamp rivers, lakes, landforms and roads, and measure distances and journeys; while drawing, drag with the right button to move the map. Layers holds the legend and saved views; the share button turns any area into an image.'),
       h('p', null, h('b', null, 'Characters: '), 'HP, stats and trackers, afflictions and blessings, inventory, magic, fertility, portraits, tags, relationships and a life story built from the timeline. The Party sheet damages, heals, rests, moves and rolls initiative for several at once.'),
       h('p', null, h('b', null, 'Codex: '), 'a wiki for lore, factions and places, quests with checkbox objectives, and a session journal. [[Double brackets]] link anything to anything, in any notes field.'),
-      h('p', null, h('b', null, 'Timeline: '), 'drag to move through time, scroll to zoom from days to billions of years, click empty space to add an event, click an event to read it. Eras, holidays and moons (Settings, Calendar) appear in the strip under the dates.'),
+      h('p', null, h('b', null, 'Timeline: '), 'drag or scroll to move through time, Ctrl + scroll to zoom from days to billions of years, click empty space to add an event, click an event to read it. Eras, holidays and moons (Settings, Calendar) appear in the strip under the dates.'),
       h('p', null, h('b', null, 'Saving: '), 'everything is kept automatically. The disk button at the top keeps named saves of whole worlds that you can load, export or start fresh from, and it makes an automatic save before anything that replaces your world. Deleting something shows an Undo button for a few seconds.'),
       h('p', { class: 'tiny muted' }, 'World Manager · all data stays on this device unless you export it.'));
   }
@@ -15653,7 +15663,7 @@ void main() {}`;
     cv.addEventListener('pointermove', e => { if (document.pointerLockElement === cv) { I.dYaw += e.movementX * sens * 0.8; I.dPitch -= e.movementY * sens * 0.8; return; } if (!look || e.pointerId !== look.id) return; const dx = e.clientX - look.x, dy = e.clientY - look.y; moved += Math.abs(dx) + Math.abs(dy); look.x = e.clientX; look.y = e.clientY; I.dYaw += dx * sens; I.dPitch -= dy * sens; });
     const drop = e => { if (look && e.pointerId === look.id) { if (e.pointerType === 'mouse' && moved < 4 && e.type === 'pointerup' && cv.requestPointerLock) { try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (_) {} } look = null; } };
     cv.addEventListener('pointerup', drop); cv.addEventListener('pointercancel', drop);
-    cv.addEventListener('wheel', e => { e.preventDefault(); if (E.fly) { E.flyMul = Math.max(0.15, Math.min(12, E.flyMul * Math.exp(-e.deltaY * 0.0012))); showNote(`Flying speed ×${E.flyMul.toFixed(1)}`, 900); } }, { passive: false });
+    cv.addEventListener('wheel', e => { e.preventDefault(); if (E.fly) { E.flyMul = Math.max(0.15, Math.min(12, E.flyMul * Math.exp(-wheelY(e) * 0.0012))); showNote(`Flying speed ×${E.flyMul.toFixed(1)}`, 900); } }, { passive: false });
     // the stick
     const stick = el.querySelector('.ex-stick'), nub = stick.firstChild; let sid = null, sc = null;
     stick.addEventListener('pointerdown', e => { e.preventDefault(); const b = stick.getBoundingClientRect(); sid = e.pointerId; sc = [b.left + b.width / 2, b.top + b.height / 2]; try { stick.setPointerCapture(e.pointerId); } catch (_) {} stick.classList.add('on'); });
@@ -15745,7 +15755,7 @@ void main() {}`;
     const coarseHelp = 'Left stick to move · drag to look', mouseHelp = 'WASD to move · drag to look · click to capture the mouse · Shift runs · F flies · T changes the time · Esc leaves';
     setTimeout(() => { if (E) showNote(coarse ? coarseHelp : mouseHelp, 7000); }, 900);
     const gx = gl.getExtension('WEBGL_debug_renderer_info'), gpu = gx ? gl.getParameter(gx.UNMASKED_RENDERER_WEBGL) : '';
-    if (/Intel/.test(gpu) && !/Arc/.test(gpu) && !S.ui.exploreGpuNote) { S.ui.exploreGpuNote = true; setTimeout(() => { if (E) showNote('Running on the Intel graphics chip. If this PC has a graphics card too, set this browser to High performance in Windows Settings → Display → Graphics.', 12000); }, 8200); }
+    if (/Intel/.test(gpu) && !/Arc/.test(gpu) && !S.ui.exploreGpuNote) { S.ui.exploreGpuNote = true; setTimeout(() => { if (E) showNote('Running on the Intel graphics chip. If this PC has a graphics card too, set Firefox to High performance in Windows Settings → System → Display → Graphics, then restart Firefox.', 12000); }, 8200); }
     E.raf = requestAnimationFrame(loop);
   }
   function close(toMap = true) {

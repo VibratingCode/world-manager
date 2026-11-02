@@ -11,7 +11,7 @@ The app is always dark and opens on your planet: the real terrain of the world o
 - **Home** is a menu of big words: Map, People, Time, Codex and Ships, each with how many places, people, events, entries or ships you have, and Settings, Search, Dice and Saves underneath. There is no tab bar. **Menu** at the top left of every screen comes back here (keys 0 or M).
 - **People** is one person at a time: their name, a ring, and the actions beside it, with the rest of the party along the bottom. *All* shows everyone. The ring follows the tab: health on Vitals, what they carry on Items, their pool on Magic, the cycle or pregnancy on Fertility.
 - **Places** open under their own town plan or dungeon map, with their actions as plain words and their facts as a list. Click the plan to go in.
-- **Time** is a rail running down the screen. Drag to move through time and scroll from days to aeons. The huge faint number is the year you are in, and the Earth calendar runs down the right edge.
+- **Time** is a rail running down the screen. Drag or scroll to move through time, and Ctrl + scroll from days to aeons. The huge faint number is the year you are in, and the Earth calendar runs down the right edge.
 - **Codex** entries open like a page, under the planet. **Settings** is an index of topics.
 - **Everything uses the width of the screen**: the planet sits beside the menu, People and Codex show a list beside the page, tabs split into two columns, Settings has its index down the side, and Time adds each event's description.
 - **Sheets** slide in as a side panel, and fill the window when it's narrow.
@@ -27,9 +27,9 @@ Everything lives in `index.html`. The other files make it installable and offlin
 
 ## Getting it onto your PC
 
-World Manager is built for a PC with a mouse and keyboard.
+World Manager is built for Firefox on a PC with a mouse and keyboard.
 
-**Use the live copy.** Open https://vibratingcode.github.io/world-manager/ in Chrome or Edge. To give it a window of its own, press the install button at the right of the address bar. Once it has opened, it keeps working without a connection.
+**Use the live copy.** Open https://vibratingcode.github.io/world-manager/ in Firefox, then bookmark it or pin its tab. Once it has opened, it keeps working without a connection.
 
 **Or serve it from this PC.** In a terminal, from the `Standard Creations` folder:
 ```bash
@@ -39,11 +39,11 @@ Then open `http://localhost:8771`. Each address keeps its own data, so a world m
 
 You can also double-click `index.html` to open it in a browser. That should work apart from offline caching, though so far it has only been tested served over `http://localhost`.
 
-**Graphics.** On a laptop with both an Intel chip and a graphics card, a browser can end up on the Intel chip, and the 3D world runs far slower there. It tells you the first time this happens. To change it, open Windows Settings → System → Display → Graphics, add the browser, choose **High performance** and restart the browser.
+**Graphics.** On a laptop with both an Intel chip and a graphics card, Firefox can end up on the Intel chip, and the 3D world runs far slower there. It tells you the first time this happens. To change it, open Windows Settings → System → Display → Graphics, add Firefox, choose **High performance** and restart Firefox.
 
 ## Saving, loading and backups
 
-- Every change is kept automatically on the device, in the browser's storage (IndexedDB).
+- Every change is kept automatically in Firefox's storage for this address (IndexedDB). If Firefox asks whether this page may keep data in persistent storage, choose **Allow**; **Settings → Saves and data** shows whether it's protected and has a button to ask again. Firefox's *Delete cookies and site data when Firefox is closed* setting would delete your world, so leave it off for this page, and export now and then.
 - **Worlds**: a campaign can have several worlds (planets, moons, other planes), each with its own map: terrain, sculpting, paint, places, roads and territory. Characters, the timeline, the codex, the calendar and species are shared by all of them.
   - Click the campaign's name at the top left of the home screen (or Layers → Worlds, or Settings → Worlds) to see them. **Go** puts another world on the map, **New world** starts a blank planet from a fresh seed, and ⋯ renames or deletes one (an automatic save is made first).
   - With more than one world, the home screen shows the world on the map, with the campaign underneath.
@@ -226,7 +226,7 @@ Your map is the blueprint for a world you can walk and fly through. Nothing is p
 - **Journal**: session logs with the date, who was there, and what was on the timeline that day. Logs appear on the timeline and in each character's life story.
 
 **Timeline**
-- Drag to move through time. Scroll or use − and + to zoom anywhere from a single day to trillions of years, before and after 0 CS.
+- Drag or scroll to move through time. Ctrl + scroll, or − and +, zooms anywhere from a single day to trillions of years, before and after 0 CS.
 - Click empty space to add an event at that date. Click an event to edit or delete it. Events can span a period, carry a coloured category, and link to characters and a place.
 - Births, deaths, pregnancies and session logs appear automatically. You can toggle them off in the list view, which also filters categories.
 - Click an event to read it (links work), set it as today, or edit, duplicate or delete it.
@@ -253,4 +253,4 @@ Your map is the blueprint for a world you can walk and fly through. Nothing is p
 - Auto settlements and auto roads only look at the area in view. Zoom out for a wider network, or run them again in the next region.
 - The 3D world has no building interiors, and a town's fields aren't drawn yet. A large city can take a few seconds to go up the first time you come near it, and the picture holds still while it does.
 - The 3D world needs WebGL 2 and thins out its plants by itself if frames run slow.
-- Tested in a Chromium browser at 1080p on a laptop's Intel graphics, and not yet on its graphics card. iPhone and iPad are no longer targets: touch controls are still in the code, but nobody tests them.
+- Tested in Firefox 159 at 1080p on a laptop's Intel graphics, and not yet on its graphics card. iPhone and iPad are no longer targets: touch controls are still in the code, but nobody tests them.
