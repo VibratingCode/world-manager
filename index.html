@@ -708,6 +708,7 @@ button.cut:focus-visible { --edge: var(--hud-amber); outline: none; }
   --top: calc(env(safe-area-inset-top) + 50px);
   color-scheme: dark;
 }
+.btn.small.hid-on { border-color: var(--accent); color: var(--accent); background: transparent; }
 html, body { background: #05070C; color: var(--text); font: 300 17px/1.5 Jost, -apple-system, "Segoe UI", system-ui, sans-serif; letter-spacing: .004em; }
 body { background-image: var(--stars, none); background-size: 900px 900px; }
 b, strong { font-weight: 500; }
@@ -2934,6 +2935,7 @@ const ICONS = {
   globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3.5 9h17M3.5 15h17M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z',
   layers: 'M12 3 2 8l10 5 10-5zM2 12.5l10 5 10-5M2 17l10 5 10-5',
   search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5',
+  eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   cog: 'M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1',
   hand: 'M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11.5V4a1.5 1.5 0 0 1 3 0v8M14 6.5a1.5 1.5 0 0 1 3 0V13M17 9.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1.4a7 7 0 0 1-5.5-2.7L3.4 16a1.6 1.6 0 0 1 2.4-2.1L8 16',
   pin: 'M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
@@ -9523,7 +9525,31 @@ const LocalMaps = (() => {
     return P;
   }
   const VIEW = new Set(['bridge', 'cockpit', 'observation', 'rec', 'captain', 'mess', 'hydro', 'lab', 'cabin', 'suite', 'guest', 'bar', 'cafe', 'garden', 'pool', 'spa', 'lobby', 'wardroom', 'ready', 'aux', 'astrolab', 'library', 'cropdeck', 'orchard']);
-  function shipLayout(s) {
+  // hidden rooms (secret areas): everywhere but the designer they draw as plain solid hull, their doors walled up,
+  // with nothing inside shown; the designer (full) sees the whole plan
+  function shipLayout(s, full) { const G = shipPlan(s); return full || s.temp ? G : veilShip(G, s.decks[s.cur]); }
+  const hiddenIds = dk => Object.keys((dk && dk.rooms) || {}).filter(k => dk.rooms[k] && dk.rooms[k].hidden).map(Number);
+  const shipHasHidden = s => (s.decks || []).some(d => hiddenIds(d).length);
+  function veilShip(G, dk) {
+    const ids = hiddenIds(dk).filter(id => G.rooms[id]);
+    if (!ids.length) return G;
+    const key = ids.join(',');
+    if (!(G.veil && G.veil.key === key)) {
+      const hid = new Set(ids), { W, H } = G, at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : G.cell[y * W + x]), inHid = (x, y) => hid.has(at(Math.floor(x), Math.floor(y)));
+      const cell = G.cell.slice(); for (let i = 0; i < cell.length; i++) if (hid.has(cell[i])) cell[i] = -1;
+      const V2 = { ...G, cell, full: G, hidden: hid, veil: null, paths: null,
+        rooms: G.rooms.map(o => (o && hid.has(o.id) ? undefined : o)),
+        doors: G.doors.filter(e => !hid.has(at(e.x, e.y)) && !hid.has(e.v ? at(e.x - 1, e.y) : at(e.x, e.y - 1))),
+        props: G.props.filter(p => !inHid(p.x + (p.w || 0) / 2, p.y + (p.h || 0) / 2)),
+        windows: G.windows.filter(w => !(w.v ? inHid(w.s < 0 ? w.x : w.x - 1, w.y) : inHid(w.x, w.s < 0 ? w.y : w.y - 1))),
+        nozzles: (G.nozzles || []).filter(n => !inHid(n.x, n.y - 1)) };
+      G.veil = { key, G: V2 };
+    }
+    G.veil.G.look = G.look; return G.veil.G;
+  }
+  // a mark inside a hidden room (on the full plan) is hidden with it
+  const hidAt = (G, x, y) => !!(G.hidden && G.hidden.has(G.full.cell[Math.floor(y) * G.W + Math.floor(x)]));
+  function shipPlan(s) {
     const Hh = shipHull(s), d = s.cur, dk = s.decks[d];
     const key = `${s.seed}|${s.cls}|${s.decks.length}|${d}|${s.decks.map(x => (x.ver | 0) + (x.edit ? 'e' : '')).join(',')}|${Object.entries(dk.rooms).map(([k, v]) => (v.type ? k + v.type : '') + (v.nowin ? k + 'w' : '')).join('')}`;
     const winKey = dk.win ? JSON.stringify(dk.win) : '';
@@ -10406,8 +10432,8 @@ const LocalMaps = (() => {
   /* ===================== the viewer ===================== */
   let V = null;
   const cache = new Map();
-  function layoutOf(p, m, kind, s) {
-    if (kind === 'ship') return shipLayout(s);
+  function layoutOf(p, m, kind, s, full) {
+    if (kind === 'ship') return shipLayout(s, full);
     const C = m.city, L = m.dun.levels[m.dun.cur];
     const key = kind === 'city' ? `c|${p.id}|${C.seed}|${C.size}|${C.style}|${C.walls}|${C.water}|${p.type}|${p.status}|${p.pop}|${S.meta.nameStyle}` : `d|${L.seed}|${L.size}|${L.style}`;
     if (!cache.has(key)) { cache.set(key, kind === 'city' ? genCity(p, C) : genDungeon(L)); if (cache.size > 6) cache.delete(cache.keys().next().value); }
@@ -10418,7 +10444,7 @@ const LocalMaps = (() => {
   const deckOf = () => V.s.decks[V.s.cur];
   function pinsOf() {
     if (V.kind === 'city') return (V.p.poi || []).filter(q => q.mx != null).map(q => ({ x: q.mx, y: q.my, ic: (POIK()[q.kind] || POIK().other)[0], label: q.name, ref: q }));
-    return ((V.kind === 'ship' ? deckOf().marks : V.m.dun.levels[V.m.dun.cur].marks) || []).map(q => ({ x: q.x, y: q.y, ic: (MARKS[q.kind] || MARKS.note)[0], label: q.label, ref: q }));
+    return ((V.kind === 'ship' ? deckOf().marks : V.m.dun.levels[V.m.dun.cur].marks) || []).filter(q => !(V.kind === 'ship' && hidAt(V.G, q.x, q.y))).map(q => ({ x: q.x, y: q.y, ic: (MARKS[q.kind] || MARKS.note)[0], label: q.label, ref: q }));
   }
   const toWorld = (x, y) => [(x - V.ox) / V.k, (y - V.oy) / V.k];
   const toScreen = (x, y) => [x * V.k + V.ox, y * V.k + V.oy];
@@ -10520,7 +10546,7 @@ const LocalMaps = (() => {
   const redrawOv = () => { if (!V) return; V.fast = !!V.snap; if (!V.raf) V.raf = requestAnimationFrame(draw); };
   const persist = () => { if (V.ship) V.ship.updated = Date.now(); if (V.p) V.p.lmap = V.m; save(); emit('data'); };
   function rebuild(refit) {
-    V.G = layoutOf(V.p, V.m, V.kind, V.s); V.snap = null;
+    V.G = layoutOf(V.p, V.m, V.kind, V.s, !!V.edit); V.snap = null;
     if (refit) { renderChrome(); fit(); }
     if (V.edit) aim();
     renderChrome(); redraw(); keepFramed();
@@ -10570,7 +10596,7 @@ const LocalMaps = (() => {
     el.append(h('div', { class: 'lm-top' }), cv, h('div', { class: 'lm-hint glass' }), h('div', { class: 'hud-left' }), h('div', { class: 'hud-right' }), h('div', { class: 'hud-tele' }), h('div', { class: 'hud-float' }), h('div', { class: 'hud-panel' }), h('div', { class: 'lm-bar tools glass' }));
     document.body.append(el);
     wire(cv);
-    V.G = layoutOf(V.p, V.m, V.kind, V.s);
+    V.G = layoutOf(V.p, V.m, V.kind, V.s, !!V.edit);
     renderChrome(); fit(); draw();
     if (V.kind === 'ship' && V.s.cls === 'custom' && !V.G.cell.some(c => c >= 0)) startBuild();
     if (V.kind === 'ship' && el.animate) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' });
@@ -10925,8 +10951,21 @@ const LocalMaps = (() => {
     for (const f of V.fx) { const e = 1 - (now - f.t0) / 560; g.save(); g.translate(V.ox, V.oy); g.scale(V.k, V.k); g.fillStyle = `rgba(${f.rgb},${0.42 * e * e})`; g.fill(f.fill); g.lineCap = 'square'; g.lineWidth = (1.5 + 3 * e) / V.k; g.strokeStyle = `rgba(${f.rgb},${e})`; g.shadowColor = `rgba(${f.rgb},${e})`; g.shadowBlur = 22 * e; g.stroke(f.edge); g.restore(); }
     if (V.fx.length) animateOverlay();
   }
+  // hidden rooms in the designer: dimmed under a hatch, with a small HIDDEN plate, and still editable
+  function hiddenOverlay(g) {
+    const G = V.G, ids = hiddenIds(deckOf()).filter(id => G.rooms[id]); if (!ids.length) return;
+    g.save();
+    for (const id of ids) {
+      const o = G.rooms[id]; g.beginPath();
+      for (const i of o.cells) { const [x, y] = toScreen(i % G.W, (i / G.W) | 0); g.rect(x, y, V.k + 0.5, V.k + 0.5); }
+      g.fillStyle = 'rgba(4, 6, 10, .62)'; g.fill();
+      const [cx, cy] = toScreen(o.c[0], o.c[1]); plate(g, 'HIDDEN', cx, cy + (V.k > 5 ? 16 : 0), { size: 10.5, color: '#86D6F7', edge: 'rgba(134, 214, 247, .55)', pad: 4 });
+    }
+    g.restore();
+  }
   function editOverlay(g) {
     const E = V.edit;
+    if (V.kind === 'ship') hiddenOverlay(g);
     if (E.mirror) centreLine(g);
     shipDims(g);
     if (E.mode === 'windows') windowsOverlay(g);
@@ -10945,7 +10984,7 @@ const LocalMaps = (() => {
   }
 
   /* ---------- the console itself ---------- */
-  function finishBuild() { V.edit = null; V.stroke = null; V.hoverWall = V.hoverCell = null; renderChrome(); glideFit(); }
+  function finishBuild() { V.edit = null; V.stroke = null; V.hoverWall = V.hoverCell = null; V.G = layoutOf(V.p, V.m, V.kind, V.s, false); V.snap = null; renderChrome(); glideFit(); }
   function setTool(m) { const E = V.edit; if (!E || E.mode === m) return; E.mode = m; E.mod = null; E.ghost = null; E.sel = null; E.selDoor = null; E.searching = false; V.hoverWall = V.hoverCell = null; renderChrome(); redrawOv(); keepFramed(); }
   function toggleMirror() { const E = V.edit; E.mirror = !E.mirror; aim(); renderChrome(); redrawOv(); }
   function goDeck(i) {
@@ -11101,7 +11140,7 @@ const LocalMaps = (() => {
   function removeSel() { const L = selInfo(), E = V.edit; if (!L) return; const { x, y } = E.sel; flash(L.cells.map(q => [q[0], q[1]]), '255,106,95'); E.sel = null; removeAt(x + 0.5, y + 0.5); }
   function setRoomType(L, t) {
     const E = V.edit, dk = deckOf(), base = deckBase(V.s, shipHull(V.s), V.s.cur).types, T = E.mirror ? twinOf(L) : null; pushUndo(); dk.rooms = { ...dk.rooms };
-    const one = i => { const c = { ...(dk.rooms[i] || {}) }; if (t !== base[i]) c.type = t; else delete c.type; if (c.type || c.name || c.note || c.nowin) dk.rooms[i] = c; else delete dk.rooms[i]; };
+    const one = i => { const c = { ...(dk.rooms[i] || {}) }; if (t !== base[i]) c.type = t; else delete c.type; if (c.type || c.name || c.note || c.nowin || c.hidden) dk.rooms[i] = c; else delete dk.rooms[i]; };
     one(L.id); if (T && T.id) one(T.id); persist(); rebuild(false);
   }
   function doorEdit(fn) {
@@ -11714,7 +11753,7 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
   function shipChecks() {
     const s = V.s, warn = [], cnt = {}; let bunks = 0, floor = 0;
     s.decks.forEach((d, i) => {
-      const G = i === s.cur ? V.G : shipLayout({ ...s, cur: i }), { W, cell, doors } = G, at = `Deck ${i + 1}: `;
+      const G = shipLayout({ ...s, cur: i }, true), { W, cell, doors } = G, at = `Deck ${i + 1}: `;
       for (const o of G.rooms) if (o) { cnt[o.type] = (cnt[o.type] || 0) + 1; }
       for (const p of G.props) if (['bed', 'bunk', 'pod', 'capsule', 'hammock'].includes(p.k)) bunks++; else if (p.k === 'bed2') bunks += 2;
       // parts that can't be walked to from each other
@@ -11737,7 +11776,7 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
     return { warn, cnt, bunks, floor };
   }
   function startBuild() {
-    V.mode = null; V.edit = newEdit('add'); const E = V.edit, has = V.G.cell.some(c => c >= 0);
+    V.mode = null; V.edit = newEdit('add'); V.G = layoutOf(V.p, V.m, V.kind, V.s, true); V.snap = null; const E = V.edit, has = V.G.cell.some(c => c >= 0);
     if (!has) { E.cat = 'Whole ships'; E.mod = MODS[0]; }
     renderChrome();
     const T = fitTarget(), A = clearArea(); V.kMin = T.k * 0.6; E.target = [((A.l + A.r) / 2 - T.ox) / T.k, ((A.t + A.b) / 2 - T.oy) / T.k];
@@ -12144,20 +12183,30 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
   }
   // a room on a deck: its name, what it is, and notes
   function shipRoomSheet(id) {
-    const dk = deckOf(), o = V.G.rooms[id], cur = dk.rooms[id] || {};
-    const name = h('input', { value: cur.name || '', placeholder: o.label, autocomplete: 'off' }), nowin = h('input', { type: 'checkbox', checked: !!cur.nowin });
+    const dk = deckOf(), o = (V.G.full || V.G).rooms[id], cur = dk.rooms[id] || {};
+    const name = h('input', { value: cur.name || '', placeholder: o.label, autocomplete: 'off' }), nowin = h('input', { type: 'checkbox', checked: !!cur.nowin }), hide = h('input', { type: 'checkbox', checked: !!cur.hidden });
     const groups = {}; for (const [t, v] of Object.entries(RT)) (groups[v[2]] || (groups[v[2]] = [])).push(t);
     const type = h('select', null, Object.entries(groups).map(([gname, ts]) => h('optgroup', { label: gname }, ts.map(t => h('option', { value: t }, RT[t][0]))))); type.value = o.type;
     let noteV = cur.note || '';
     const note = mdEditor(noteV, v => { noteV = v; }, { minHeight: '130px', placeholder: 'Who works here, what is stored, what is wrong with it… {2d6} rolls and [[links]] work' });
     let sh;
     sh = openSheet({ title: cur.name || o.label, body: h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:4px' }, `${RT[o.type][0]} · ${o.n} cells · about ${fmtInt(o.n * 4)} m²`),
-      field('Name', name), field('Room', type, 'Changing what a room is refits its furniture.'), h('label', { class: 'check' }, nowin, 'No windows in this room'), field('Notes', note)), foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => {
+      field('Name', name), field('Room', type, 'Changing what a room is refits its furniture.'), h('label', { class: 'check' }, nowin, 'No windows in this room'), h('label', { class: 'check' }, hide, 'Hide this room (shown as solid hull outside the designer)'), field('Notes', note)), foot: [h('div', { class: 'spacer' }), h('button', { class: 'btn primary', onclick: () => {
         dk.rooms = { ...dk.rooms }; const nm = name.value.trim(), nt = noteV.trim(), base = deckBase(V.s, shipHull(V.s), V.s.cur).types[id], ty = type.value !== base ? type.value : '';
-        if (nm || nt || ty || nowin.checked) dk.rooms[id] = Object.assign({ name: nm, note: nt }, ty ? { type: ty } : {}, nowin.checked ? { nowin: true } : {}); else delete dk.rooms[id];
+        if (nm || nt || ty || nowin.checked || hide.checked) dk.rooms[id] = Object.assign({ name: nm, note: nt }, ty ? { type: ty } : {}, nowin.checked ? { nowin: true } : {}, hide.checked ? { hidden: true } : {}); else delete dk.rooms[id];
         persist(); sh.close(); rebuild(false);
       } }, 'Save')] });
   }
+  // hide or show a room on this deck; it keeps its name, notes and type either way
+  function setHidden(id, on) {
+    const dk = deckOf(), c = { ...(dk.rooms[id] || {}) }; if (on) c.hidden = true; else delete c.hidden;
+    dk.rooms = { ...dk.rooms }; if (c.type || c.name || c.note || c.nowin || c.hidden) dk.rooms[id] = c; else delete dk.rooms[id];
+    persist(); rebuild(false);
+  }
+  const hideBtn = id => {
+    const isOn = () => !!(deckOf().rooms[id] || {}).hidden, b = h('button', { class: 'btn small', title: 'Hidden rooms show as solid hull outside the designer', onclick: ev => { ev.stopPropagation(); setHidden(id, !isOn()); paint2(); } });
+    const paint2 = () => { b.textContent = isOn() ? 'Hidden' : 'Hide'; b.classList.toggle('hid-on', isOn()); }; paint2(); return b;
+  };
   function listSheet() {
     let sh;
     const go = (x, y, k) => { sh.close(); const A = clearArea(); V.k = Math.max(V.k, k); V.ox = (A.l + A.r) / 2 - x * V.k; V.oy = (A.t + A.b) / 2 - y * V.k; redraw(); };
@@ -12173,10 +12222,10 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
         h('div', { class: 'grp-title' }, 'Districts'),
         V.G.wards.map((w, i) => h('div', { class: 'list-row tap', onclick: () => go(w.c[0], w.c[1], 0.8) }, h('div', { class: 'main' }, h('div', { class: 'title' }, (V.m.city.names || {})[i] || w.name), (V.m.city.notes || {})[i] ? h('div', { class: 'sub' }, mdPlain(V.m.city.notes[i]).slice(0, 90)) : null), icon('chev', 16))));
     } else if (V.kind === 'ship') {
-      const dk = deckOf(), rs = V.G.rooms.filter(o => o && o.type !== 'lift' && !STRUCT.has(o.type));
+      const dk = deckOf(), rs = (V.G.full || V.G).rooms.filter(o => o && o.type !== 'lift' && !STRUCT.has(o.type));
       body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Click a room to fly to it and write its notes.'),
         rs.map(o => { const rm = dk.rooms[o.id] || {}; return h('div', { class: 'list-row tap', onclick: () => { go(o.c[0], o.c[1], 36); shipRoomSheet(o.id); } }, typeSwatch(o.type),
-          h('div', { class: 'main' }, h('div', { class: 'title' }, rm.name || o.label), h('div', { class: 'sub' }, [rm.name ? RT[o.type][0] : null, rm.note ? mdPlain(rm.note).slice(0, 90) : null].filter(Boolean).join(' · ') || `${o.n * 4} m²`)), icon('chev', 16)); }),
+          h('div', { class: 'main' }, h('div', { class: 'title' }, rm.name || o.label), h('div', { class: 'sub' }, [rm.name ? RT[o.type][0] : null, rm.note ? mdPlain(rm.note).slice(0, 90) : null].filter(Boolean).join(' · ') || `${o.n * 4} m²`)), hideBtn(o.id), icon('chev', 16)); }),
         (dk.marks || []).length ? [h('div', { class: 'grp-title' }, 'Marks'), dk.marks.map(q => { const M = SHIP_MARK[q.kind] || SHIP_MARK.note; return h('div', { class: 'list-row tap', onclick: () => go(q.x, q.y, 36) }, h('span', { class: 'poi-ic', style: `color:rgb(${M[2]})` }, hic(M[0], 22)), h('div', { class: 'main' }, h('div', { class: 'title' }, q.label || M[1]), h('div', { class: 'sub' }, M[1])), icon('chev', 16)); })] : null);
     } else {
       const L = V.m.dun.levels[V.m.dun.cur];
@@ -12199,6 +12248,8 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
     persist(); rebuild(true);
     u(V.kind === 'city' ? 'New layout. District names and notes start fresh; your pins stay.' : 'New layout for this level', reopen);
   }
+  // every hidden room on every deck shown again
+  function revealAll(s) { for (const d of s.decks) { const r = { ...d.rooms }; for (const k of Object.keys(r)) if (r[k] && r[k].hidden) { const c = { ...r[k] }; delete c.hidden; if (c.type || c.name || c.note || c.nowin) r[k] = c; else delete r[k]; } d.rooms = r; } }
   function optionsSheet() {
     let sh, body;
     if (V.kind === 'ship') {
@@ -12223,6 +12274,7 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
             const u = undoable(['codex']), dk = deckOf(); dk.edit = encodeDeck({ cell: new Int16Array(Hh.W * Hh.H).fill(-1), types: [null], doors: [] }, Hh.W, Hh.H); dk.rooms = {}; dk.marks = []; dk.ver = (dk.ver | 0) + 1;
             persist(); sh.close(); V.edit = newEdit('add'); V.edit.cat = 'Whole ships'; rebuild(false); u(`Deck ${s.cur + 1} cleared. Paint rooms and corridors onto it`, reopen);
           } }, icon('brush', 16), 'Clear this deck'),
+          shipHasHidden(s) ? h('button', { class: 'btn', onclick: () => { const u = undoable(['codex']); revealAll(s); persist(); sh.close(); rebuild(false); u('Every hidden room is shown again', reopen); } }, icon('eye', 16), 'Reveal all') : null,
           s.cls === 'custom' ? null : h('button', { class: 'btn', onclick: () => { sh.close(); remake(); } }, icon('dice', 16), 'Generate a new ship')));
     } else if (V.kind === 'city') {
       const C = V.m.city, set = (k, v) => { C[k] = v; persist(); rebuild(true); };
@@ -12319,7 +12371,7 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
         g.strokeStyle = hair; g.lineWidth = Math.max(1, 0.9 * u); g.stroke(p);
       }
       g.setTransform(k, 0, 0, k, ox, oy); drawShip(g, q.G, k, 1, { noPlume: !clean }); g.setTransform(1, 0, 0, 1, 0, 0);
-      overlay(g, q.G, k, ox, oy, { deck: q.dk, pins: o.pins ? (q.dk.marks || []).map(m => ({ x: m.x, y: m.y, label: m.label, ref: m })) : [], fs, scale: u, noNames: !o.names });
+      overlay(g, q.G, k, ox, oy, { deck: q.dk, pins: o.pins ? (q.dk.marks || []).filter(m => !hidAt(q.G, m.x, m.y)).map(m => ({ x: m.x, y: m.y, label: m.label, ref: m })) : [], fs, scale: u, noNames: !o.names });
       // overall length and beam, drawn as a drafter would
       if (!clean && sb) {
         const ax = sb.x0 * k + ox, ay = sb.y0 * k + oy, bx = sb.x1 * k + ox, by = sb.y1 * k + oy, off = 1.1 * k + 16 * u, t = 6 * u, dl = (x0, y0, x1, y1, tx) => {
