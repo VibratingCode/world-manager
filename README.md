@@ -188,6 +188,17 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
   3. Give it a title, then drag and zoom to frame the area. The frame shows the whole page as it will come out, and can take in the whole planet.
   4. Tap **Create image**. It renders at full resolution (about 1080 px, or *Double size* for printing). On iPhone, Share sends it to Photos, Messages, social apps or AirPrint. In a browser there's a Print button too.
 
+**The 3D world**
+
+Your map is the blueprint for a world you can walk and fly through. Nothing is painted twice: the same heights, biomes, rivers, roads, places and town plans drive both views, so sculpting a mountain or painting a forest on the map changes the 3D world too.
+
+- **Getting in**: the walking figure on the map (or `E`) starts you at the middle of the view, on foot when you're zoomed in and high in the air when you're zoomed out. Tap a spot and choose *Walk here* to start from that spot. *Walk here* on a place's page stands you on the main street of its town, looking along it.
+- **Moving on a computer**: `WASD` or the arrow keys to move, drag to look, click to capture the mouse, `Shift` to run (`Q` keeps running on), `Space` to jump, `F` to fly, `T` to change the time of day, `M` or `Esc` for the map. While flying, `Space` and `C` go up and down, and the wheel sets your speed.
+- **Moving on a phone**: the left stick moves and dragging anywhere else looks. **Run**, **Fly** and the time of day are at the bottom right, with **Up** and **Down** while flying.
+- **What's there**: each biome grows its own plants and rocks, in clumps with clearings between them. Your rivers and lakes are water you can swim in, and so is anything painted *Lake / river*: it gets a level surface and a dug-out bed, with the shore following your brush. Your roads are drawn on the ground. Towns are built from their town plans, with streets, walls, towers, trees and windows that light up at night, and you can't walk through their walls. Names float over places in the distance.
+- **Time of day**: morning, noon, evening or night. It's remembered for next time.
+- Leaving puts you back on the map at the spot you've reached.
+
 **Characters**
 - The list filters by PC, NPC, stash, status and tag, and sorts by name, lowest HP, age or role. Search also finds tags and carried items.
 - **Vitals**:
@@ -244,4 +255,6 @@ On a computer you can also double-click `index.html` to open it in a browser. Th
 - When the map switches from Robinson to the local projection there's a short crossfade, and coastlines shift shape slightly because the projection really changes.
 - The survey grid is a fictional system based on the UTM-style zones, with townships counted from the equator.
 - Auto settlements and auto roads only look at the area in view. Zoom out for a wider network, or run them again in the next region.
+- The 3D world has no building interiors, and a town's fields aren't drawn yet. A large city can take a few seconds to go up the first time you come near it, and the picture holds still while it does.
+- The 3D world needs WebGL 2 and thins out its plants by itself if frames run slow.
 - Tested in a Chromium browser at desktop and iPhone sizes, not yet on a physical iPhone.
