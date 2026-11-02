@@ -3180,7 +3180,7 @@ function openThing(r) {
 }
 function wikiLink(target, label) {
   const r = findByName(target);
-  return h('a', { class: 'wl' + (r ? '' : ' missing'), role: 'button', title: r ? `${r.label}: ${target}` : `Nothing called “${target}” yet: tap to create a codex entry`,
+  return h('a', { class: 'wl' + (r ? '' : ' missing'), role: 'button', title: r ? `${r.label}: ${target}` : `Nothing called “${target}” yet: click to create a codex entry`,
     onclick: async e => {
       e.stopPropagation();
       const r2 = findByName(target);
@@ -3232,7 +3232,7 @@ function pickLink(onPick) {
     const s = lc(q.value), all = linkTargets().filter(t => !s || lc(t[0]).includes(s)).slice(0, 60);
     list.innerHTML = '';
     if (s && !all.some(t => lc(t[0]) === s)) list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); onPick(q.value.trim()); } }, icon('plus', 18),
-      h('div', { class: 'main' }, h('div', { class: 'title' }, `Link to “${q.value.trim()}”`), h('div', { class: 'sub' }, 'Tap the link later to create a codex entry for it'))));
+      h('div', { class: 'main' }, h('div', { class: 'title' }, `Link to “${q.value.trim()}”`), h('div', { class: 'sub' }, 'Click the link later to create a codex entry for it'))));
     for (const [name, sub, ic] of all) list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); onPick(name); } }, icon(ic, 18), h('div', { class: 'main' }, h('div', { class: 'title' }, name), h('div', { class: 'sub' }, sub))));
     if (!all.length && !s) list.append(h('div', { class: 'empty' }, 'Nothing to link to yet. Type a name to link to a page you will write later.'));
   };
@@ -3528,7 +3528,7 @@ const Dice = (() => {
     const exprIn = h('input', { value: preset || L.last || '1d20', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'go', 'aria-label': 'Dice expression', style: 'font-size:18px;font-weight:650' });
     const whoSel = h('select', { 'aria-label': 'Who is rolling', style: 'width:auto;max-width:46%' }, h('option', { value: '' }, 'Anyone'), S.chars.filter(c => c.role !== 'Container' && c.status !== 'dead').map(c => h('option', { value: c.id }, c.name)));
     whoSel.value = whoId || (charById(L.who) ? L.who : '');
-    const totalEl = h('div', { class: 'dice-total' }, '–'), detail = h('div', { class: 'dice-detail' }, 'Type a roll or tap a die below');
+    const totalEl = h('div', { class: 'dice-total' }, '–'), detail = h('div', { class: 'dice-detail' }, 'Type a roll or click a die below');
     let count = 1;
     const countOut = h('span', { class: 'val' }, '1×');
     const modIn = h('input', { type: 'number', inputmode: 'numeric', value: 0, 'aria-label': 'Modifier', style: 'width:70px;text-align:center;padding:6px 4px' });
@@ -3588,7 +3588,7 @@ const Dice = (() => {
       h('div', { class: 'row', style: 'margin-top:10px' }, h('span', { class: 'lbl grow' }, 'ROLLING AS'), whoSel),
       h('div', { class: 'lbl', style: 'margin:12px 0 2px' }, 'SAVED ROLLS'), favRow,
       h('div', { class: 'lbl', style: 'margin:12px 0 2px' }, 'HISTORY'), logEl,
-      h('p', { class: 'tiny muted' }, 'kh3 keeps the highest three, kl1 the lowest, dl1 drops the lowest, ! explodes on the top face, r1 rerolls ones once. Write {1d8+3} in any notes to make a roll you can tap.')),
+      h('p', { class: 'tiny muted' }, 'kh3 keeps the highest three, kl1 the lowest, dl1 drops the lowest, ! explodes on the top face, r1 rerolls ones once. Write {1d8+3} in any notes to make a roll you can click.')),
     foot: [h('button', { class: 'btn ghost', onclick: () => { L.log = []; save(); drawLog(); } }, 'Clear history'), h('div', { class: 'spacer' }), h('button', { class: 'btn', onclick: () => sh.close() }, 'Done')] });
     if (preset) go(preset);
   }
@@ -4158,7 +4158,7 @@ const MapView = (() => {
   let ctx = cv.getContext('2d');   // swapped for an offscreen canvas while exporting an image
   const readout = $('#map-readout'), chip = $('#map-chip'), panel = $('#map-panel'), busyEl = $('#map-busy');
   const TILE = 256, S0 = 2, ROB_W = T.RK_X * Math.PI, ROB_H = T.RK_Y;
-  const MAXT = Math.min(screen.width, screen.height) < 600 ? 120 : 200;   // tile bitmaps kept in memory (~266 KB each)
+  const MAXT = 1200;   // tile bitmaps kept in memory (~266 KB each)
   const LOCAL_IN = 0.30, LOCAL_OUT = 0.38;   // switch projections at these view widths (radians of arc)
   let W = 1, H = 1, dpr = 1, RS = 1, visible = false;
   const cam = { mode: 'world', x: 0, y: 0, s: 100, zone: 31, rot: 0 };
@@ -4215,7 +4215,7 @@ const MapView = (() => {
         const pf = S.world.terr.length || best.fac ? placeFaction(best) : { f: null };
         txt = [best.name, [PSTAT[best.status] ? PSTAT[best.status][0] : null, sy ? sy.name : null, (PTYPES[best.type] || PTYPES.other).name, best.pop ? 'pop. ' + fmtInt(best.pop) : null, pf.f ? pf.f.name : null, y0 && far > 50 ? `${fmtDist(far)} from you` : null].filter(Boolean).join(' · ')];
         if (tool === 'place') cur = 'grab';
-      } else if (tool !== 'measure' && hereHit && Math.hypot(hereHit[0] - x, hereHit[1] - y) < 20) txt = ['You are here', `Heading ${S.world.here.hdg}° ${hdgName(S.world.here.hdg)} · tap to change`];
+      } else if (tool !== 'measure' && hereHit && Math.hypot(hereHit[0] - x, hereHit[1] - y) < 20) txt = ['You are here', `Heading ${S.world.here.hdg}° ${hdgName(S.world.here.hdg)} · click to change`];
       else if (tool !== 'measure') { const f = featureAt(x, y, 8); if (f) txt = [f.name || (STAMPS[f.kind] || { name: f.kind }).name, featureSummary(f)]; }
     }
     if (!txt) { hideTip(); return; }
@@ -5233,8 +5233,8 @@ const MapView = (() => {
   const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   const editing = () => tool === 'sculpt' || tool === 'paint' || (tool === 'stamp' && STAMPS[stamp.kind].line) || (tool === 'war' && ['terr', 'cont', 'arrow', 'front'].includes(war.mode));
   cv.addEventListener('pointerdown', e => {
-    // middle button: always moves the map, whatever tool is active
-    if (e.pointerType === 'mouse' && e.button === 1) {
+    // middle or right button: always moves the map, whatever tool is active
+    if (e.pointerType === 'mouse' && (e.button === 1 || e.button === 2)) {
       e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (_) {}
       hideTip(); const [x, y] = pos(e); ptrs.set(e.pointerId, { x, y });
       gest = { type: 'pan', x0: x, y0: y, lx: x, ly: y, t0: 0, moved: false }; cv.style.cursor = 'grabbing'; return;
@@ -5304,6 +5304,7 @@ const MapView = (() => {
   // stop the browser's middle-click autoscroll over the map
   cv.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });
   cv.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
+  cv.addEventListener('contextmenu', e => e.preventDefault());
   cv.addEventListener('pointercancel', e => endPtr(e, true));
   cv.addEventListener('pointerleave', e => { hideTip(); if (e.pointerType === 'mouse' && !ptrs.size) { hover = null; dirty = true; } });
   cv.addEventListener('wheel', e => {
@@ -5449,7 +5450,7 @@ const MapView = (() => {
   }
   function goHere() {
     const y = S.world.here;
-    if (!y) { toast("Tap a spot on the map and choose \u201cI'm here\u201d first"); return; }
+    if (!y) { toast("Click a spot on the map and choose \u201cI'm here\u201d first"); return; }
     flyTo(y.lat, y.lon, Math.min(W * mpp() / T.MI, 60));
   }
   function hereSheet() {
@@ -5483,8 +5484,8 @@ const MapView = (() => {
       h('div', { class: 'tiny muted', style: 'text-align:center' }, 'Drag the dial to set the heading'),
       rng, btns,
       h('div', { class: 'row', style: 'margin-top:4px' },
-        h('button', { class: 'btn small', style: 'flex:1', onclick: () => { aim = 'heading'; sh.close(); setTab('map'); toast('Tap where you are heading'); } }, icon('target', 16), 'Point at a spot'),
-        h('button', { class: 'btn small', style: 'flex:1', onclick: () => { aim = 'move'; sh.close(); setTab('map'); toast('Tap the map where you are'); } }, icon('pin', 16), 'Move'))),
+        h('button', { class: 'btn small', style: 'flex:1', onclick: () => { aim = 'heading'; sh.close(); setTab('map'); toast('Click where you are heading'); } }, icon('target', 16), 'Point at a spot'),
+        h('button', { class: 'btn small', style: 'flex:1', onclick: () => { aim = 'move'; sh.close(); setTab('map'); toast('Click the map where you are'); } }, icon('pin', 16), 'Move'))),
     foot: [
       h('button', { class: 'btn danger', onclick: () => { const u = undoable(['world.here']); S.world.here = null; save(); dirty = true; sh.close(); u('Removed the you-are-here marker'); } }, icon('trash', 16), 'Remove'),
       h('div', { class: 'spacer' }),
@@ -5567,7 +5568,7 @@ const MapView = (() => {
         word('Copy link', copyLink),
         twin ? word('Codex', () => { close(); Codex.open(twin.id); }) : null),
       h('div', { class: 'pl-lines' },
-        line('Population', p.pop ? fmtInt(p.pop) : 'Unknown', p.pop ? popWord(p.pop) : 'Tap to set', () => { close(); editPlace(p); }),
+        line('Population', p.pop ? fmtInt(p.pop) : 'Unknown', p.pop ? popWord(p.pop) : 'Click to set', () => { close(); editPlace(p); }),
         line('Faction', pf.f ? [dot(safeColor(pf.f.color)), ' ', pf.f.name] : (pf.contested ? 'Contested' : 'Unclaimed'),
           pf.contested ? `${pf.contested[0].name} vs ${pf.contested[1].name}` : pf.how === 'chosen' ? 'Set on this place' : pf.how === 'territory' ? 'From painted territory' : 'Paint land with the flag tool',
           () => { close(); factionsSheet(); }),
@@ -5734,7 +5735,7 @@ const MapView = (() => {
       items.sort(sort === 'near' ? (a, b) => dist(a) - dist(b) : sort === 'pop' ? (a, b) => (b.pop || 0) - (a.pop || 0) || a.name.localeCompare(b.name)
         : sort === 'type' ? (a, b) => (sn(a) || tn(a)).localeCompare(sn(b) || tn(b)) || a.name.localeCompare(b.name) : (a, b) => a.name.localeCompare(b.name));
       shown = items;
-      if (!items.length) list.append(h('div', { class: 'empty' }, S.world.places.length ? 'No matches' : 'No places yet. Use the pin tool, tap the map and choose "Add place here", or try Auto settlements in the pin tool.'));
+      if (!items.length) list.append(h('div', { class: 'empty' }, S.world.places.length ? 'No matches' : 'No places yet. Use the pin tool, click the map and choose "Add place here", or try Auto settlements in the pin tool.'));
       for (const p of items.slice(0, 400)) list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); flyTo(p.lat, p.lon, placeWidth(p)); } },
         placeIcon(p, 26),
         h('div', { class: 'main' }, h('div', { class: 'title' }, p.name), h('div', { class: 'sub' }, [sn(p) || null, tn(p), p.pop ? 'pop. ' + fmtInt(p.pop) : null, `${fmtDist(dist(p))} ${bearingName(ref, [p.lat, p.lon])} of ${here ? 'you' : 'the map centre'}`].filter(Boolean).join(' · '))),
@@ -6209,7 +6210,7 @@ const MapView = (() => {
     const u = undoable(['world.places']);
     const p = { id: uid(), name, type: s.type, sym: s.key, lat: +ll[0].toFixed(6), lon: +ll[1].toFixed(6), notes: '', always: false, pop: null };
     S.world.places.push(p); save(); dirty = true; emit('data');
-    u(`Added ${name} · tap it to edit`);
+    u(`Added ${name} · click it to edit`);
   }
   function placeStamp(ll) {
     const r = groundR(stamp.size), rM = r * T.RM;
@@ -6997,7 +6998,7 @@ const MapView = (() => {
       }
       const ech = h('select', null, ECH.map(([k, v, t]) => h('option', { value: k }, `${v} (${t})`))); ech.value = war.ech; ech.addEventListener('change', () => { war.ech = ech.value; });
       panel.append(facChips(war.fac, pick), grid, h('div', { class: 'row', style: 'gap:8px' }, h('span', { class: 'small muted' }, 'Size'), ech),
-        h('div', { class: 'tiny muted', style: 'margin-top:4px' }, 'Tap the map to deploy. Drag a unit to move it, tap it to edit.'));
+        h('div', { class: 'tiny muted', style: 'margin-top:4px' }, 'Click the map to deploy. Drag a unit to move it, click it to edit.'));
       requestAnimationFrame(() => { const on = grid.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' }); });
     } else if (war.mode === 'arrow') {
       panel.append(facChips(war.fac, pick), seg([['advance', 'Advance'], ['attack', 'Attack'], ['retreat', 'Retreat'], ['supply', 'Supply']], war.arrow, v => { war.arrow = v; }), h('div', { style: 'height:6px' }),
@@ -7005,7 +7006,7 @@ const MapView = (() => {
     } else if (war.mode === 'front') {
       panel.append(facChips(war.fac, pick), undoRow('Drag to draw a front line. Teeth face the enemy; flip them from its sheet.'));
     } else {
-      panel.append(h('div', { class: 'small', style: 'margin:8px 0' }, 'Tap where a battle was fought. It is dated today and named after the nearest place.'),
+      panel.append(h('div', { class: 'small', style: 'margin:8px 0' }, 'Click where a battle was fought. It is dated today and named after the nearest place.'),
         h('div', { class: 'tiny muted' }, `${plural(S.world.mil.filter(m => m.t === 'battle').length, 'battle')} on the map`));
     }
     panel.append(h('div', { class: 'row', style: 'margin-top:6px;gap:6px' },
@@ -7157,7 +7158,7 @@ const MapView = (() => {
     let sh;
     const order = Object.keys(STAMPS);
     const items = [...S.world.features].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || (a.name || '').localeCompare(b.name || ''));
-    if (!items.length) list.append(h('div', { class: 'empty' }, 'Nothing stamped yet. Pick a stamp, then tap the map (landforms and lakes) or drag across it (rivers, canyons, roads, trails, borders).'));
+    if (!items.length) list.append(h('div', { class: 'empty' }, 'Nothing stamped yet. Pick a stamp, then click the map (landforms and lakes) or drag across it (rivers, canyons, roads, trails, borders).'));
     for (const f of items) {
       const st = STAMPS[f.kind] || { name: f.kind, icon: 'stamp' };
       list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); zoomToFeature(f); } },
@@ -7210,7 +7211,7 @@ const MapView = (() => {
         h('div', { style: 'height:8px' }),
         slider('Size', 10, 140, brush.size, v => { brush.size = v; dirty = true; }, v => fmtDist(v * mpp())),
         slider(['raise', 'lower'].includes(brush.op) ? 'Height' : 'Strength', 1, 100, brush.strength, v => { brush.strength = v; }, heightTxt),
-        undoRow('Drag to sculpt · two fingers to move'));
+        undoRow('Drag to sculpt · right-drag to move the map'));
     } else if (tool === 'paint') {
       const grid = h('div', { class: 'biome-grid' });
       const grp = BGROUPS[brush.bgroup] ? brush.bgroup : 'all';
@@ -7230,7 +7231,7 @@ const MapView = (() => {
         slider('Smoothing', 0, 100, o.smooth, v => { o.smooth = v; }, v => (v ? v + '%' : 'Off')),
         h('div', { class: 'tiny muted', style: 'margin:2px 0 8px' }, soft
           ? 'Low strength builds up pass by pass. Mixing goes from clumps to smooth blends. Smoothing steadies wobbly lines.'
-          : 'Smoothing makes the brush trail your finger, steadying wobbly lines.'));
+          : 'Smoothing makes the brush trail your cursor, steadying wobbly lines.'));
       feel.open = !!o.open; feel.addEventListener('toggle', () => { o.open = feel.open; });
       panel.append(grid, h('div', { style: 'height:4px' }), seg([['soft', 'Soft blend'], ['solid', 'Solid']], o.mode, v => { o.mode = v; save(); renderPanel(); dirty = true; }),
         h('div', { style: 'height:4px' }),
@@ -7247,8 +7248,8 @@ const MapView = (() => {
       panel.append(grid);
       if (stamp.kind === 'symbol') {
         const s0 = SYMBOLS.get(stamp.sym);
-        panel.append(SYMBOLS.picker(stamp.sym, s => { stamp.sym = s.key; hint.textContent = `Tap the map to place: ${s.name}`; }, { compact: true }));
-        const hint = h('div', { class: 'tiny muted', style: 'margin:4px 0 6px' }, `Tap the map to place: ${s0 ? s0.name : ''}`);
+        panel.append(SYMBOLS.picker(stamp.sym, s => { stamp.sym = s.key; hint.textContent = `Click the map to place: ${s.name}`; }, { compact: true }));
+        const hint = h('div', { class: 'tiny muted', style: 'margin:4px 0 6px' }, `Click the map to place: ${s0 ? s0.name : ''}`);
         panel.append(hint, h('div', { class: 'row' }, h('div', { class: 'grow tiny muted' }, `${SYMBOLS.list.length} symbols · an Undo button appears after each one`), h('button', { class: 'btn small', onclick: () => placesSheet() }, icon('list', 16), 'Places')));
         requestAnimationFrame(() => { const on = grid.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' }); });
         panel.classList.add('show'); return;
@@ -7256,7 +7257,7 @@ const MapView = (() => {
       if (!st.line) panel.append(slider('Size', 10, 160, stamp.size, v => { stamp.size = v; dirty = true; if (amountOut) amountOut.textContent = stampAmountLabel(stamp.amount); }, v => fmtDist(v * 2 * mpp()) + ' wide'));
       if (st.amount) { const row = slider(st.amount, 1, 100, stamp.amount, v => { stamp.amount = v; }, v => stampAmountLabel(v)); amountOut = row.lastChild; panel.append(row); }
       if (stamp.kind === 'river') panel.append(h('button', { class: 'btn small block', style: 'margin:4px 0 2px', onclick: () => { toast('Tracing rivers…', 1500); setTimeout(autoRivers, 60); } }, icon('wand', 16), 'Auto rivers: trace downhill from the high ground in view'));
-      panel.append(h('div', { class: 'tiny muted', style: 'margin:2px 0 6px' }, st.line ? `Drag to draw a ${st.name.toLowerCase()} · two fingers move the map` : `Tap the map to place a ${st.name.toLowerCase()}`),
+      panel.append(h('div', { class: 'tiny muted', style: 'margin:2px 0 6px' }, st.line ? `Drag to draw a ${st.name.toLowerCase()} · right-drag moves the map` : `Click the map to place a ${st.name.toLowerCase()}`),
         h('div', { class: 'row' },
           h('button', { class: 'btn small', disabled: !history.length, onclick: undo }, icon('undo', 16), 'Undo'),
           h('button', { class: 'btn small', disabled: !redo.length, onclick: redoEdit }, icon('redo', 16), 'Redo'),
@@ -7280,8 +7281,8 @@ const MapView = (() => {
       if (mClosed && measure.length > 2) tot += gcAngle(measure[measure.length - 1], measure[0]) * T.RM;
       const mode = TRAVEL[S.ui.travel] ? S.ui.travel : 'foot', days = tot / T.MI / TRAVEL[mode][1], whole = Math.max(1, Math.ceil(days - 0.05));
       panel.append(
-        h('div', { class: 'row' }, h('div', { class: 'grow' }, h('b', { class: 'num', style: 'font-size:18px' }, measure.length > 1 ? fmtDist(tot) : 'Tap points on the map'),
-          measure.length > 1 ? h('div', { class: 'small muted' }, `${TRAVEL[mode][0]} ≈ ${fmtNum(days, 1)} days at ${fmtDist(TRAVEL[mode][1] * T.MI)} a day · ${measure.length} points`) : h('div', { class: 'small muted' }, 'Great-circle distance between the points you tap'))),
+        h('div', { class: 'row' }, h('div', { class: 'grow' }, h('b', { class: 'num', style: 'font-size:18px' }, measure.length > 1 ? fmtDist(tot) : 'Click points on the map'),
+          measure.length > 1 ? h('div', { class: 'small muted' }, `${TRAVEL[mode][0]} ≈ ${fmtNum(days, 1)} days at ${fmtDist(TRAVEL[mode][1] * T.MI)} a day · ${measure.length} points`) : h('div', { class: 'small muted' }, 'Great-circle distance between the points you click'))),
         measure.length > 1 ? h('div', { style: 'margin-top:8px' }, seg(Object.entries(TRAVEL).map(([k, v]) => [k, v[0]]), mode, v => { S.ui.travel = v; save(); renderPanel(); })) : null,
         h('div', { class: 'row', style: 'margin-top:8px' },
           h('button', { class: 'btn small', disabled: !measure.length, onclick: () => { measure.pop(); dirty = true; renderPanel(); } }, icon('undo', 16), 'Remove last'),
@@ -7294,13 +7295,13 @@ const MapView = (() => {
         h('button', { class: 'btn small', onclick: () => measureToLine('road') }, icon('road', 16), 'Make road'),
         h('button', { class: 'btn small', onclick: () => measureToLine('trail') }, icon('trail', 16), 'Trail'),
         h('button', { class: 'btn small', onclick: () => measureToLine('border') }, icon('border', 16), 'Border')));
-      else panel.append(h('div', { class: 'tiny muted', style: 'margin-top:6px' }, 'Taps near a place snap to it. Two or more points unlock the elevation profile, area, and turning the line into a road, trail or border.'));
+      else panel.append(h('div', { class: 'tiny muted', style: 'margin-top:6px' }, 'Clicks near a place snap to it. Two or more points unlock the elevation profile, area, and turning the line into a road, trail or border.'));
     } else if (tool === 'place' && moving) {
       panel.append(h('div', { class: 'row' }, icon('hand', 18), h('div', { class: 'grow small' }, h('b', null, `Moving ${moving.name}`),
-        h('div', { class: 'tiny muted' }, 'Drag its marker, or tap where it should go. Roads that end there follow, and each move can be undone.'))),
+        h('div', { class: 'tiny muted' }, 'Drag its marker, or click where it should go. Roads that end there follow, and each move can be undone.'))),
         h('div', { class: 'row', style: 'margin-top:8px' }, h('div', { class: 'grow' }), h('button', { class: 'btn small primary', onclick: () => { const q = moving; setTool('pan'); openPlace(q); } }, 'Done')));
     } else if (tool === 'place') {
-      panel.append(h('div', { class: 'row' }, icon('pin', 18), h('div', { class: 'grow small' }, 'Tap the map to add a place. Tap a marker to open it, or drag it to move it (its roads follow).'),
+      panel.append(h('div', { class: 'row' }, icon('pin', 18), h('div', { class: 'grow small' }, 'Click the map to add a place. Click a marker to open it, or drag it to move it (its roads follow).'),
         h('button', { class: 'btn small', onclick: () => placesSheet() }, 'List')),
         h('div', { class: 'row', style: 'margin:8px 0' },
           h('button', { class: 'btn small', style: 'flex:1', onclick: () => { toast('Founding settlements…', 1200); setTimeout(autoSettlements, 60); } }, icon('village', 16), 'Auto settlements'),
@@ -7472,18 +7473,15 @@ const MapView = (() => {
     const url = URL.createObjectURL(blob);
     const ext = blob.type === 'image/jpeg' ? 'jpg' : 'png';
     const name = (title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'map') + '.' + ext;
-    const file = new File([blob], name, { type: blob.type });
-    const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
     const save = () => { const a = h('a', { href: url, download: name }); document.body.append(a); a.click(); a.remove(); };
     let sh;
     sh = openSheet({ title: heading, wide: true, onClose: () => setTimeout(() => URL.revokeObjectURL(url), 2000), body: h('div', null,
       h('img', { src: url, alt: title, style: 'display:block;width:100%;max-height:62vh;object-fit:contain' }),
       h('div', { class: 'tiny muted', style: 'margin-top:6px' }, `${w} × ${hgt} px · ${fmtNum(blob.size / 1024 / 1024, 1)} MB · ${name}`),
-      h('p', { class: 'small muted' }, canShare ? 'Share sends it to Photos, Messages, social apps or AirPrint.' : 'Print sends it to your printer. Save downloads the image.')),
+      h('p', { class: 'small muted' }, 'Print sends it to your printer. Save downloads the image.')),
     foot: [
-      canShare ? h('button', { class: 'btn primary', onclick: async () => { try { await navigator.share({ files: [file], title }); } catch (e) { if (e && e.name !== 'AbortError') toast('Sharing failed: ' + e.message); } } }, icon('share', 16), 'Share…') : null,
-      navigator.standalone && canShare ? null : h('button', { class: 'btn' + (canShare ? '' : ' primary'), onclick: save }, icon('download', 16), 'Save image'),   // a Home Screen app saves through Share
-      navigator.standalone ? null : h('button', { class: 'btn', onclick: () => printImage(url) }, icon('print', 16), 'Print'),
+      h('button', { class: 'btn primary', onclick: save }, icon('download', 16), 'Save image'),
+      h('button', { class: 'btn', onclick: () => printImage(url) }, icon('print', 16), 'Print'),
       h('div', { class: 'spacer' }), h('button', { class: 'btn', onclick: () => sh.close() }, 'Done')] });
   }
 
@@ -7518,7 +7516,7 @@ const MapView = (() => {
             for (const k of keys) { const hid = !!(lay.hide || {})[k]; box.append(h('button', { type: 'button', class: hid ? 'off' : '', onclick: () => { lay.hide = { ...(lay.hide || {}) }; if (hid) delete lay.hide[k]; else lay.hide[k] = true; save(); dirty = true; draw(); } }, `${groupName(k)} · ${counts[k]}`)); }
           };
           draw(); return box;
-        })(), 'Tap a group to hide or show it.'),
+        })(), 'Click a group to hide or show it.'),
         inv('hideSecret', 'Secret places', 'Untick before sharing your screen or making images for players'),
         tog('symNoLabels', 'Hide names beside land-use and other symbols', 'Just the symbol, for farm, herd, hazard and similar markers'),
         tog('grid', 'Latitude / longitude'), tog('survey', 'Survey grid', 'Sections and townships (1-mile squares), or a 1 km grid in metric')),
@@ -10625,8 +10623,8 @@ const LocalMaps = (() => {
       b('dice', 'Remake', false, remake),
       b('sliders', 'Options', false, optionsSheet),
       b('share', 'Image', false, exportImage));
-    const msg = V.mode && V.mode.t === 'add' ? (city ? 'Tap the map to add a place here: an inn, shop, temple…' : 'Tap the map to mark a monster, treasure, trap…')
-      : V.mode && V.mode.t === 'put' ? `Tap the map to put ${V.mode.q.name} there` : '';
+    const msg = V.mode && V.mode.t === 'add' ? (city ? 'Click the map to add a place here: an inn, shop, temple…' : 'Click the map to mark a monster, treasure, trap…')
+      : V.mode && V.mode.t === 'put' ? `Click the map to put ${V.mode.q.name} there` : '';
     hint.textContent = msg; hint.classList.toggle('show', !!msg);
   }
 
@@ -10987,7 +10985,7 @@ const LocalMaps = (() => {
         h('button', { class: 'build cut', onclick: startBuild }, hic('wrench', 22), 'Build'), h('button', { onclick: optionsSheet }, hic('sliders', 24), 'Options'), h('button', { onclick: exportImage }, hic('print', 24), 'Print'));
     }
     /* hint, for marking */
-    const msg = !E && V.mode && V.mode.t === 'add' ? 'Tap the plan to mark crew, cargo, a hazard…' : '';
+    const msg = !E && V.mode && V.mode.t === 'add' ? 'Click the plan to mark crew, cargo, a hazard…' : '';
     hint.textContent = msg; hint.classList.toggle('show', !!msg);
     /* readouts */
     const sb = solidBox(G), roomsN = Object.entries(R.cnt).reduce((a, [t, n]) => a + (t === 'lift' ? 0 : n), 0);
@@ -11038,7 +11036,7 @@ const LocalMaps = (() => {
       const L = selInfo();
       if (L) E.pl = null;
       if (!L && E.pl) { head('Hull plating', 'Bare hull. Rooms can sit on top of it.'); body.append(tools(hudBtn('trash', 'Remove this piece', () => removePlate(false), { dgr: true }), hudBtn('trash', 'Remove all on this deck', () => removePlate(true), { dgr: true }))); }
-      else if (!L) { head('Select', 'Tap a room to select. Drag to move it.'); body.append(tools(hudBtn('centre', 'Centre on the line', centreDeck))); }
+      else if (!L) { head('Select', 'Click a room to select. Drag to move it.'); body.append(tools(hudBtn('centre', 'Centre on the line', centreDeck))); }
       else {
         const room = L.id > 0, o = room && V.G.rooms[L.id], cur = (room && deckOf().rooms[L.id]) || {}, b = boxOfCells(L.cells);
         head(room ? 'Room' : 'Corridor', room ? `${fmtInt(o.n * CELL * CELL)} m² · pull a handle to resize` : `${L.idx.length * CELL} m of corridor`, h('button', { class: 'hud-fold', 'aria-label': 'Deselect', onclick: () => { E.sel = null; renderPanel(); redrawOv(); } }, hic('close', 18)));
@@ -11060,7 +11058,7 @@ const LocalMaps = (() => {
       }
     } else if (E.mode === 'doors') {
       const d = E.selDoor && V.G.doors.find(q => sameDoor(q, E.selDoor));
-      if (!d) { E.selDoor = null; head('Doors', 'Tap a wall to add. Drag a door to move it.'); body.append(tools(hudBtn('door', 'Redo all doors', () => { const D = editable(); D.doors = D.doors.filter(e => e.k === 'hatch' || e.k === 'bay'); autoDoors(D); pushUndo(); commitDeck(D); toast('Doors laid out again'); }), hudBtn('plus', 'Add missing', fixDoors))); }
+      if (!d) { E.selDoor = null; head('Doors', 'Click a wall to add. Drag a door to move it.'); body.append(tools(hudBtn('door', 'Redo all doors', () => { const D = editable(); D.doors = D.doors.filter(e => e.k === 'hatch' || e.k === 'bay'); autoDoors(D); pushUndo(); commitDeck(D); toast('Doors laid out again'); }), hudBtn('plus', 'Add missing', fixDoors))); }
       else {
         const space = d.k === 'hatch' || d.k === 'bay';
         head(space ? 'Outer hatch' : 'Door', 'Drag it along the walls to move it.', h('button', { class: 'hud-fold', 'aria-label': 'Deselect', onclick: () => { E.selDoor = null; renderPanel(); redrawOv(); } }, hic('close', 18)));
@@ -11069,11 +11067,11 @@ const LocalMaps = (() => {
     } else if (E.mode === 'windows') {
       const dk = deckOf(), st = !dk.win ? 'auto' : dk.win.none && !Object.keys(dk.win.set || {}).length ? 'none' : 'own';
       const setWin = w => { pushUndo(); deckOf().win = w; persist(); rebuild(false); };
-      head('Windows', 'Tap or drag along the outer wall.');
+      head('Windows', 'Click or drag along the outer wall.');
       body.append(tools(hudBtn(null, 'Automatic', () => setWin(null), { on: st === 'auto' }), hudBtn(null, 'All round', () => { const set = {}; for (const [k2] of outerEdges(V.G)) set[k2] = 1; setWin({ none: true, set }); }), hudBtn(null, 'None', () => setWin({ none: true, set: {} }), { on: st === 'none' })));
     } else if (E.mode === 'paint') {
       const nm = RT[E.type][0].toLowerCase();
-      head('Paint', { fill: `Tap a gap to fill it with ${nm}`, fillc: 'Tap a gap to fill it with corridor', room: `Drag a box to make ${nm}`, corr: 'Drag to draw corridor', plate: 'Drag a box of bare hull. Rooms can sit on top of it', erase: 'Drag to cut squares away. Hull plating goes when nothing is on it' }[E.brush]);
+      head('Paint', { fill: `Click a gap to fill it with ${nm}`, fillc: 'Click a gap to fill it with corridor', room: `Drag a box to make ${nm}`, corr: 'Drag to draw corridor', plate: 'Drag a box of bare hull. Rooms can sit on top of it', erase: 'Drag to cut squares away. Hull plating goes when nothing is on it' }[E.brush]);
       body.append(h('div', { class: 'hud-tools', 'data-sc': 'brush' }, [['fill', 'Fill', 'fill'], ['fillc', 'Fill corridor', 'fill'], ['room', 'Room', 'box'], ['corr', 'Corridor', 'corr'], ['plate', 'Hull', 'hull'], ['erase', 'Erase', 'erase']].map(([b2, l, ic]) => hudBtn(ic, l, () => { E.brush = b2; renderPanel(); }, { on: E.brush === b2 }))));
       const pg = E.pg || RT[E.type][2];
       if (E.brush === 'room' || E.brush === 'fill') body.append(h('div', { class: 'hud-tabs', 'data-sc': 'ptabs' }, [...new Set(Object.values(RT).map(v => v[2]))].map(g0 => h('button', { class: 'hud-tab' + (pg === g0 ? ' on' : ''), onclick: () => { E.pg = g0; renderPanel(); } }, g0))));
@@ -11694,7 +11692,7 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
     const E = V.edit, D = editable(), { W, H } = D.Hh, { cell, types } = D, x = Math.floor(wx), y = Math.floor(wy), i0 = y * W + x, corr = E.brush === 'fillc', cx = D.Hh.cx, solid = V.G.solid;
     if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) return;
     if (cell[i0] > 0) {
-      if (corr) { toast('Tap a gap to fill it with corridor'); return; }
+      if (corr) { toast('Click a gap to fill it with corridor'); return; }
       const L = liftable(x, y), T = E.mirror ? twinOf(L) : null; types[cell[i0]] = E.type; delete D.dk.rooms[cell[i0]]; if (T && T.id) { types[T.id] = E.type; delete D.dk.rooms[T.id]; }
       autoDoors(D); pushUndo(); commitDeck(D); return;
     }
@@ -11702,7 +11700,7 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
     const r0 = new Int16Array(H).fill(W), r1 = new Int16Array(H).fill(-1), c0 = new Int16Array(W).fill(H), c1 = new Int16Array(W).fill(-1);
     for (let i = 0; i < cell.length; i++) if (cell[i] >= 0) { const a = i % W, b = (i / W) | 0; if (a < r0[b]) r0[b] = a; if (a > r1[b]) r1[b] = a; if (b < c0[a]) c0[a] = b; if (b > c1[a]) c1[a] = b; }
     const gap = i => { const a = i % W, b = (i / W) | 0; return cell[i] < 0 && a > 0 && b > 0 && a < W - 1 && b < H - 1 && (solid[i] || (a > r0[b] && a < r1[b] && b > c0[a] && b < c1[a])); };
-    if (!gap(i0)) { toast('Tap a gap inside the ship'); return; }
+    if (!gap(i0)) { toast('Click a gap inside the ship'); return; }
     const flood = st => { const q = [st], seen = new Set(q); while (q.length) { const v = q.pop(); for (const u of [v - 1, v + 1, v - W, v + W]) if (!seen.has(u) && gap(u)) { seen.add(u); q.push(u); } } return seen; };
     const put = set => { let id = 0; if (!corr) { types.push(E.type); id = types.length - 1; } for (const i of set) cell[i] = id; };
     const A = flood(i0), m0 = y * W + 2 * cx - x, B = E.mirror && !A.has(m0) && gap(m0) ? flood(m0) : null;
@@ -11988,7 +11986,7 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
     pushUndo(); commitDeck(D); flash([...st.cells.values()], st.t === 'erase' ? '255,106,95' : st.t === 'corr' ? '92,207,230' : '110,235,170');
   }
   function addDoor(wx, wy) {
-    const w = wallEdge(wx, wy); if (!w) { toast('Tap on or near a wall'); return; }
+    const w = wallEdge(wx, wy); if (!w) { toast('Click on or near a wall'); return; }
     const D = editable(); if (D.doors.some(q => q.x === w.x && q.y === w.y && q.v === w.v)) return;
     D.doors.push({ x: w.x, y: w.y, v: w.v, k: doorKind(D, w.a, w.b) }); V.edit.selDoor = { x: w.x, y: w.y, v: w.v };
     if (V.edit.mirror) { const f = flipEdge(w), { W } = D.Hh, a = f.v ? D.cell[f.y * W + f.x - 1] : D.cell[(f.y - 1) * W + f.x], b = D.cell[f.y * W + f.x]; if (a !== b && !D.doors.some(q => q.x === f.x && q.y === f.y && q.v === f.v)) D.doors.push({ x: f.x, y: f.y, v: f.v, k: doorKind(D, a, b) }); }
@@ -12167,20 +12165,20 @@ V science ship|20|26|chev|bridge 7x4|astrolab:4x4 telescope:3x5 lab:4x3 biolab:4
       body = h('div', null,
         h('div', { class: 'grp-title' }, 'On the map'),
         on.length ? on.map(q => h('div', { class: 'list-row tap', onclick: () => go(q.mx, q.my, 1.2) }, h('span', { class: 'poi-ic' }, (POIK()[q.kind] || POIK().other)[0]), h('div', { class: 'main' }, h('div', { class: 'title' }, q.name), h('div', { class: 'sub' }, (POIK()[q.kind] || POIK().other)[1])), icon('chev', 16)))
-          : h('div', { class: 'small muted' }, 'Nothing pinned yet. Tap Pin, then the map.'),
+          : h('div', { class: 'small muted' }, 'Nothing pinned yet. Click Pin, then the map.'),
         off.length ? [h('div', { class: 'grp-title' }, 'Not on the map yet'), off.map(q => h('div', { class: 'list-row' }, h('span', { class: 'poi-ic' }, (POIK()[q.kind] || POIK().other)[0]), h('div', { class: 'main' }, h('div', { class: 'title' }, q.name)),
           h('button', { class: 'btn small', onclick: () => { sh.close(); setMode({ t: 'put', q }); } }, icon('pin', 14), 'Place')))] : null,
         h('div', { class: 'grp-title' }, 'Districts'),
         V.G.wards.map((w, i) => h('div', { class: 'list-row tap', onclick: () => go(w.c[0], w.c[1], 0.8) }, h('div', { class: 'main' }, h('div', { class: 'title' }, (V.m.city.names || {})[i] || w.name), (V.m.city.notes || {})[i] ? h('div', { class: 'sub' }, mdPlain(V.m.city.notes[i]).slice(0, 90)) : null), icon('chev', 16))));
     } else if (V.kind === 'ship') {
       const dk = deckOf(), rs = V.G.rooms.filter(o => o && o.type !== 'lift' && !STRUCT.has(o.type));
-      body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Tap a room to fly to it and write its notes.'),
+      body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Click a room to fly to it and write its notes.'),
         rs.map(o => { const rm = dk.rooms[o.id] || {}; return h('div', { class: 'list-row tap', onclick: () => { go(o.c[0], o.c[1], 36); shipRoomSheet(o.id); } }, typeSwatch(o.type),
           h('div', { class: 'main' }, h('div', { class: 'title' }, rm.name || o.label), h('div', { class: 'sub' }, [rm.name ? RT[o.type][0] : null, rm.note ? mdPlain(rm.note).slice(0, 90) : null].filter(Boolean).join(' · ') || `${o.n * 4} m²`)), icon('chev', 16)); }),
         (dk.marks || []).length ? [h('div', { class: 'grp-title' }, 'Marks'), dk.marks.map(q => { const M = SHIP_MARK[q.kind] || SHIP_MARK.note; return h('div', { class: 'list-row tap', onclick: () => go(q.x, q.y, 36) }, h('span', { class: 'poi-ic', style: `color:rgb(${M[2]})` }, hic(M[0], 22)), h('div', { class: 'main' }, h('div', { class: 'title' }, q.label || M[1]), h('div', { class: 'sub' }, M[1])), icon('chev', 16)); })] : null);
     } else {
       const L = V.m.dun.levels[V.m.dun.cur];
-      body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Tap a room on the map to write its key.'),
+      body = h('div', null, h('div', { class: 'small muted', style: 'margin-bottom:6px' }, 'Click a room on the map to write its key.'),
         V.G.rooms.map(o => { const rm = (L.rooms || {})[o.n] || {}; return h('div', { class: 'list-row tap', onclick: () => { sh.close(); roomSheet(o.n); } }, h('span', { class: 'lm-num' }, String(o.n)),
           h('div', { class: 'main' }, h('div', { class: 'title' + (rm.name ? '' : ' muted') }, rm.name || 'Unnamed'), rm.note ? h('div', { class: 'sub' }, mdPlain(rm.note).slice(0, 100)) : null), icon('chev', 16)); }),
         (L.marks || []).length ? [h('div', { class: 'grp-title' }, 'Marks'), L.marks.map(q => h('div', { class: 'list-row tap', onclick: () => go(q.x, q.y, 24) }, h('span', { class: 'poi-ic' }, (MARKS[q.kind] || MARKS.note)[0]), h('div', { class: 'main' }, h('div', { class: 'title' }, q.label || (MARKS[q.kind] || MARKS.note)[1])), icon('chev', 16)))] : null);
@@ -12732,7 +12730,7 @@ const Chars = (() => {
     sh = openSheet({ title: isNew ? 'New stat or tracker' : s.name, body: h('div', null, presets,
       field('Name', name), field('Kind', segBox), h('div', { class: 'cols2' }, field('Value', val), maxBox), resetBox,
       isNew && S.chars.some(o => o !== c && o.role === 'PC') ? h('label', { class: 'check' }, all, 'Add it to the other PCs too') : null,
-      h('p', { class: 'tiny muted' }, 'Numbers sit in tiles (tap to change them). Bars and pips have a maximum and can refill when the character rests.')),
+      h('p', { class: 'tiny muted' }, 'Numbers sit in tiles (click to change them). Bars and pips have a maximum and can refill when the character rests.')),
     foot: [
       !isNew ? h('button', { class: 'btn danger', onclick: () => { const u = undoable(['chars']); c.stats = c.stats.filter(x => x !== s); sh.close(); commit(); u(`Removed ${s.name}`); } }, icon('trash', 16)) : null,
       !isNew ? h('button', { class: 'btn', 'aria-label': 'Move up', onclick: () => move(-1) }, '↑') : null,
@@ -13378,7 +13376,7 @@ const Chars = (() => {
     });
     sh = openSheet({ title: 'Relationship web', wide: true, body: h('div', { class: 'web' }, svg,
       h('div', { class: 'chips', style: 'justify-content:center;margin-top:8px' }, ATTS.map(a => h('span', { class: 'badge', style: `background:${a[2]}22;color:${a[2]}` }, a[1]))),
-      h('p', { class: 'tiny muted', style: 'text-align:center' }, 'Arrows point from how someone feels to whom. Tap a person to open them.')) });
+      h('p', { class: 'tiny muted', style: 'text-align:center' }, 'Arrows point from how someone feels to whom. Click a person to open them.')) });
   }
   // everything in a character's life, in order: birth, children, events they were in, sessions they played, death
   function lifeCard(c) {
@@ -13799,8 +13797,8 @@ const Timeline = (() => {
     hint.textContent = (spanDays < 1.5 ? '1 day' : spanDays < 60 ? `${fmtNum(spanDays, 0)} days` : spanDays < D * 3 ? `${fmtNum(spanDays / (D / 12), 0)} months` : `${spanDays / D >= 1e6 ? fmtYearCompact(Math.round(spanDays / D)).replace(' ' + S.meta.epoch, '') : fmtInt(spanDays / D)} years`) + ' on screen';
     if (!S.events.length && laid.every(it => it.now || it.epoch)) {
       ctx.fillStyle = muted; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      ctx.font = `200 30px ${TF}`; ctx.fillStyle = white; ctx.fillText('Tap to add an event', rail + 28, H * .5);
-      ctx.font = `300 15px ${TF}`; ctx.fillStyle = muted; ctx.fillText('Drag through time. Pinch from days to aeons.', rail + 28, H * .5 + 42);
+      ctx.font = `200 30px ${TF}`; ctx.fillStyle = white; ctx.fillText('Click to add an event', rail + 28, H * .5);
+      ctx.font = `300 15px ${TF}`; ctx.fillStyle = muted; ctx.fillText('Drag through time. Scroll from days to aeons.', rail + 28, H * .5 + 42);
     }
   }
 
@@ -14038,7 +14036,7 @@ function editEra(e, day) {
 function erasSheet() {
   const list = h('div'); let sh;
   const items = [...S.eras].sort((a, b) => a.start - b.start);
-  if (!items.length) list.append(h('div', { class: 'empty' }, 'Eras shade spans of history on the timeline: ages, reigns, wars, the seasons of your campaign. Tapping the strip under the timeline’s dates also adds one.'));
+  if (!items.length) list.append(h('div', { class: 'empty' }, 'Eras shade spans of history on the timeline: ages, reigns, wars, the seasons of your campaign. Clicking the strip under the timeline’s dates also adds one.'));
   for (const e of items) list.append(h('div', { class: 'list-row tap', onclick: () => { sh.close(); editEra(e); } }, h('i', { class: 'att', style: { background: safeColor(e.color) } }),
     h('div', { class: 'main' }, h('div', { class: 'title' }, e.name), h('div', { class: 'sub' }, `${Cal.fmt(e.start)} – ${e.end != null ? Cal.fmt(e.end) : 'now'} · ${Cal.span((e.end ?? S.meta.today) - e.start)}`)),
     h('button', { class: 'icon-btn', 'aria-label': 'Show on the timeline', onclick: ev => { ev.stopPropagation(); sh.close(); Timeline.focusSpan(e.start, e.end ?? S.meta.today); } }, icon('target', 18))));
@@ -14281,7 +14279,7 @@ const Codex = (() => {
       field('Title', e.kind === 'session' ? title : Names.field(title, () => NAME_KIND[e.kind] || 'place')),
       h('div', { class: 'cols2' }, field('Type', kindSel), field('Tags', tagEditor(e.tags, touch, 'codex-tags'))),
       extra, ed,
-      h('p', { class: 'tiny muted' }, 'Use [[Name]] to link to entries, characters, places and events (a link to something that does not exist yet becomes a new entry when tapped), {2d6} for a roll anyone can tap, and - [ ] for objectives.'));
+      h('p', { class: 'tiny muted' }, 'Use [[Name]] to link to entries, characters, places and events (a link to something that does not exist yet becomes a new entry when clicked), {2d6} for a roll anyone can click, and - [ ] for objectives.'));
   }
   function entryMenu(e) {
     let ms;
@@ -14321,17 +14319,12 @@ const Codex = (() => {
 })();
 
 /* ===================== settings ===================== */
-// write a world to a .json file: the share sheet on iPhone/iPad (Save to Files), a download elsewhere
+// write a world to a .json file
 async function downloadWorld(st, label) {
   const json = JSON.stringify({ app: 'world-manager', format: 1, exported: new Date().toISOString(), name: label || st.meta.name, state: st });
   const slug = (label || st.meta.name || 'world').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'world';
   const name = `${slug}-${new Date().toISOString().slice(0, 10)}.json`;
   const blob = new Blob([json], { type: 'application/json' });
-  const touch = navigator.maxTouchPoints > 0 && /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
-  if (touch && navigator.canShare) {
-    try { const f = new File([blob], name, { type: 'application/json' }); if (navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: name }); return; } }
-    catch (e) { if (e && e.name === 'AbortError') return; }
-  }
   const a = h('a', { href: URL.createObjectURL(blob), download: name });
   document.body.append(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
@@ -14695,12 +14688,12 @@ const Settings = (() => {
   }
   function about() {
     return h('div', { class: 'card help' }, h('h3', null, 'Using World Manager', h('span', { class: 'grow' }), h('button', { class: 'btn small', onclick: shortcutsSheet }, icon('keyboard', 14), 'Shortcuts')),
-      h('p', null, h('b', null, 'On iPhone or iPad: '), 'open this page in Safari, tap Share, then "Add to Home Screen". It then opens full-screen like an app, and works offline when the page is served over https.'),
+      h('p', null, h('b', null, 'Install it: '), 'in Chrome or Edge, press the install button at the right of the address bar. It then opens in its own window like an app, and works offline when the page is served over https.'),
       h('p', null, h('b', null, 'Search & dice: '), 'the magnifier at the top finds anything (characters, items, places, lore, events) and runs commands; type a roll like 2d6+3 to roll it. The die button opens the dice roller with saved rolls and history. On a keyboard press / to search and R to roll.'),
-      h('p', null, h('b', null, 'Map: '), 'pinch or scroll to zoom from the whole planet (Robinson projection) down to about a mile across, where it becomes a USGS-style topographic sheet with contours, spot heights and the survey grid. Tap anywhere for coordinates, elevation and the nearest place. The tools along the bottom add places (or found whole settlements and roads automatically), sculpt terrain, paint biomes, stamp rivers, lakes, landforms and roads, and measure distances and journeys; while drawing, use two fingers to move the map. Layers holds the legend and saved views; the share button turns any area into an image.'),
+      h('p', null, h('b', null, 'Map: '), 'scroll to zoom from the whole planet (Robinson projection) down to about a mile across, where it becomes a USGS-style topographic sheet with contours, spot heights and the survey grid. Click anywhere for coordinates, elevation and the nearest place. The tools along the bottom add places (or found whole settlements and roads automatically), sculpt terrain, paint biomes, stamp rivers, lakes, landforms and roads, and measure distances and journeys; while drawing, drag with the right button to move the map. Layers holds the legend and saved views; the share button turns any area into an image.'),
       h('p', null, h('b', null, 'Characters: '), 'HP, stats and trackers, afflictions and blessings, inventory, magic, fertility, portraits, tags, relationships and a life story built from the timeline. The Party sheet damages, heals, rests, moves and rolls initiative for several at once.'),
       h('p', null, h('b', null, 'Codex: '), 'a wiki for lore, factions and places, quests with checkbox objectives, and a session journal. [[Double brackets]] link anything to anything, in any notes field.'),
-      h('p', null, h('b', null, 'Timeline: '), 'drag to move through time, pinch to zoom from days to billions of years, tap empty space to add an event, tap an event to read it. Eras, holidays and moons (Settings, Calendar) appear in the strip under the dates.'),
+      h('p', null, h('b', null, 'Timeline: '), 'drag to move through time, scroll to zoom from days to billions of years, click empty space to add an event, click an event to read it. Eras, holidays and moons (Settings, Calendar) appear in the strip under the dates.'),
       h('p', null, h('b', null, 'Saving: '), 'everything is kept automatically. The disk button at the top keeps named saves of whole worlds that you can load, export or start fresh from, and it makes an automatic save before anything that replaces your world. Deleting something shows an Undo button for a few seconds.'),
       h('p', { class: 'tiny muted' }, 'World Manager · all data stays on this device unless you export it.'));
   }
@@ -14816,11 +14809,10 @@ function openSearch(initial = '') {
 function shortcutsSheet() {
   const K = (keys, what) => [h('div', null, keys.split(' ').flatMap((k, i) => (i ? [' ', h('kbd', null, k)] : [h('kbd', null, k)]))), h('div', null, what)];
   openSheet({ title: 'Keyboard shortcuts', body: h('div', null, h('div', { class: 'keys' },
-    K('/', 'Search everything'), K('Ctrl+K', 'Search (⌘K on a Mac)'), K('R', 'Dice roller'), K('1 2 3 4 5', 'Map · Characters · Timeline · Codex · Settings'),
+    K('/', 'Search everything'), K('Ctrl+K', 'Search (⌘K on a Mac)'), K('R', 'Dice roller'), K('0 M', 'Home menu'), K('1 2 3 4 5', 'Map · Characters · Timeline · Codex · Settings'),
     K('N', 'New thing on this tab'), K('[ ]', 'Campaign date back or forward a day'), K('{ }', 'Back or forward a week'), K('D', 'Campaign date & almanac'),
     K('P', 'Party sheet'), K('Ctrl+S', 'Save a snapshot'), K('Esc', 'Close the top sheet'),
-    K('+ −', 'Map: zoom in or out'), K('H', 'Map: whole planet'), K('Ctrl+Z', 'Map: undo the last edit'), K('Ctrl+Shift+Z', 'Map: redo'), K('?', 'This list')),
-    h('p', { class: 'tiny muted', style: 'margin-top:14px' }, 'On iPhone and iPad, the search and dice buttons sit in the top bar.')) });
+    K('+ −', 'Map: zoom in or out'), K('H', 'Map: whole planet'), K('E', 'Map: walk in 3D from here'), K('Ctrl+Z', 'Map: undo the last edit'), K('Ctrl+Shift+Z', 'Map: redo'), K('?', 'This list'))) });
 }
 function newInTab() {
   const t = S.ui.tab;
@@ -15752,6 +15744,8 @@ void main() {}`;
     refreshLabels();
     const coarseHelp = 'Left stick to move · drag to look', mouseHelp = 'WASD to move · drag to look · click to capture the mouse · Shift runs · F flies · T changes the time · Esc leaves';
     setTimeout(() => { if (E) showNote(coarse ? coarseHelp : mouseHelp, 7000); }, 900);
+    const gx = gl.getExtension('WEBGL_debug_renderer_info'), gpu = gx ? gl.getParameter(gx.UNMASKED_RENDERER_WEBGL) : '';
+    if (/Intel/.test(gpu) && !/Arc/.test(gpu) && !S.ui.exploreGpuNote) { S.ui.exploreGpuNote = true; setTimeout(() => { if (E) showNote('Running on the Intel graphics chip. If this PC has a graphics card too, set this browser to High performance in Windows Settings → Display → Graphics.', 12000); }, 8200); }
     E.raf = requestAnimationFrame(loop);
   }
   function close(toMap = true) {
